@@ -28,12 +28,14 @@ export function activate(context: vscode.ExtensionContext): void {
   // registerLanguageModelChatProvider returns a Disposable.
   // We store it in context.subscriptions so VS Code cleans it up on deactivation.
   const chatProvider = new OpenAICompatChatProvider();
+  context.subscriptions.push(chatProvider);
 
   const providerDisposable = vscode.lm.registerLanguageModelChatProvider(
     VENDOR_ID,
     chatProvider
   );
   context.subscriptions.push(providerDisposable);
+  chatProvider.refreshModels();
 
   // ── 2. Register all management commands ──────────────────────────────────
   registerCommands(context);
@@ -53,10 +55,8 @@ export function activate(context: vscode.ExtensionContext): void {
   // they may need to re-open the Copilot Chat panel to see new models.
   const settingsWatcher = vscode.workspace.onDidChangeConfiguration(event => {
     if (event.affectsConfiguration('openai-compat-provider.providers')) {
-      console.log('[openai-compat-provider] Provider settings changed – model list will refresh on next LM access.');
-      // The onDidChangeConfiguration fires after our command-based saves too,
-      // so no additional action is needed here. VS Code will call
-      // provideLanguageModelChatInformation fresh when it next needs the list.
+      console.log('[openai-compat-provider] Provider settings changed – refreshing model list.');
+      chatProvider.refreshModels();
       
       // Show a subtle status-bar notification (not a popup) to indicate refresh
       const statusMsg = vscode.window.setStatusBarMessage(

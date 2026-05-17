@@ -17,12 +17,23 @@
 
 import * as vscode from 'vscode';
 import { getProviders } from './config';
-import { OpenAIStreamChunk, ProviderConfig } from './types';
+import { OpenAIStreamChunk, ProviderConfig, ReasoningLevel } from './types';
 
 /** Separator between provider ID and model ID in the compound LM id */
 const ID_SEP = '::';
 
 export class OpenAICompatChatProvider implements vscode.LanguageModelChatProvider {
+  private readonly changeEmitter = new vscode.EventEmitter<void>();
+
+  readonly onDidChangeLanguageModelChatInformation = this.changeEmitter.event;
+
+  refreshModels(): void {
+    this.changeEmitter.fire();
+  }
+
+  dispose(): void {
+    this.changeEmitter.dispose();
+  }
 
   // ─────────────────────────────────────────────────────────────────────────
   // provideLanguageModelChatInformation
@@ -77,8 +88,12 @@ export class OpenAICompatChatProvider implements vscode.LanguageModelChatProvide
           tooltip: `Provider: ${provider.displayName}\nBase URL: ${provider.baseUrl}\nModel ID: ${model.id}`,
           capabilities: {
             toolCalling: model.supportsToolCalling,
+            imageInput: model.supportsVision ?? false,
           },
-        });
+          // Newer Copilot pickers filter the chat dropdown more strictly than
+          // the Manage Models editor, so keep extension models explicitly selectable.
+          isUserSelectable: true,
+        } as vscode.LanguageModelChatInformation & { isUserSelectable: true });
       }
     }
 
@@ -107,16 +122,33 @@ export class OpenAICompatChatProvider implements vscode.LanguageModelChatProvide
       );
     }
 
+    const selectedModel = provider.models.find(m => m.id === modelId);
+    if (!selectedModel) {
+      throw new Error(`Model "${modelId}" not found in provider "${provider.displayName}".`);
+    }
+
     // ── 2. Convert VS Code messages → OpenAI message format ───────────────
     const apiMessages = this.convertMessages(messages);
+    const hasImageInput = this.hasImageInput(messages);
+    if (hasImageInput && !selectedModel.supportsVision) {
+      throw new Error(
+        `Model "${selectedModel.name}" does not support vision/image input. ` +
+        `Please switch to a model with supportsVision=true.`
+      );
+    }
 
     // ── 3. Build the fetch request ─────────────────────────────────────────
     const requestUrl = `${provider.baseUrl}/chat/completions`;
+    const reasoningLevel = this.resolveReasoningLevel(
+      options.modelOptions,
+      selectedModel.defaultReasoningLevel
+    );
     const requestBody: any = {
       model: modelId,
       messages: apiMessages,
       stream: true,           // Request streaming SSE responses
       max_tokens: model.maxOutputTokens,
+      reasoning_effort: reasoningLevel,
     };
 
     if (options.tools && options.tools.length > 0) {
@@ -179,6 +211,43 @@ export class OpenAICompatChatProvider implements vscode.LanguageModelChatProvide
     } finally {
       cancelSub.dispose();
     }
+  }
+
+  private resolveReasoningLevel(
+    modelOptions: { readonly [name: string]: any } | undefined,
+    modelDefault?: ReasoningLevel
+  ): ReasoningLevel {
+    const level = this.readReasoningLevel(modelOptions);
+    if (level === 'none' || level === 'low' || level === 'medium' || level === 'high' || level === 'xhigh' || level === 'max') {
+      return level;
+    }
+    return modelDefault ?? 'medium';
+  }
+
+  private readReasoningLevel(
+    modelOptions: { readonly [name: string]: any } | undefined
+  ): unknown {
+    if (!modelOptions) {
+      return undefined;
+    }
+
+    return modelOptions.reasoningLevel
+      ?? modelOptions.reasoning_level
+      ?? modelOptions.reasoning_effort;
+  }
+
+  private hasImageInput(messages: readonly vscode.LanguageModelChatRequestMessage[]): boolean {
+    for (const msg of messages) {
+      for (const part of msg.content) {
+        if (part instanceof vscode.LanguageModelDataPart) {
+          const mime = part.mimeType?.toLowerCase() ?? '';
+          if (mime.startsWith('image/')) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
   }
 
   // ─────────────────────────────────────────────────────────────────────────

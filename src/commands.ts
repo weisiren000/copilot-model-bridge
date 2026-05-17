@@ -22,7 +22,7 @@ import {
   addModel,
   removeModel,
 } from './config';
-import { ModelConfig } from './types';
+import { ModelConfig, ReasoningLevel } from './types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Registration entry-point
@@ -238,7 +238,7 @@ async function cmdAddModel(preselectedProviderId?: string): Promise<void> {
 
   // ── Step 1: Model ID ──────────────────────────────────────────────────────
   const modelId = await vscode.window.showInputBox({
-    title: `Add Model to "${providerLabel}" (1/3) – Model ID`,
+    title: `Add Model to "${providerLabel}" (1/5) – Model ID`,
     prompt: 'The model identifier as the API expects it',
     placeHolder: 'e.g. nvidia/llama-3.1-nemotron-ultra-253b-v1',
     validateInput: v => v.trim() ? undefined : 'Model ID cannot be empty',
@@ -247,7 +247,7 @@ async function cmdAddModel(preselectedProviderId?: string): Promise<void> {
 
   // ── Step 2: Display Name ──────────────────────────────────────────────────
   const modelName = await vscode.window.showInputBox({
-    title: `Add Model to "${providerLabel}" (2/3) – Display Name`,
+    title: `Add Model to "${providerLabel}" (2/5) – Display Name`,
     prompt: 'Human-readable name shown in the Copilot model picker',
     placeHolder: 'e.g. Llama 3.1 Nemotron Ultra 253B',
     validateInput: v => v.trim() ? undefined : 'Display name cannot be empty',
@@ -256,7 +256,7 @@ async function cmdAddModel(preselectedProviderId?: string): Promise<void> {
 
   // ── Step 3: Context size ──────────────────────────────────────────────────
   const ctxStr = await vscode.window.showInputBox({
-    title: `Add Model to "${providerLabel}" (3/3) – Max Input Tokens`,
+    title: `Add Model to "${providerLabel}" (3/5) – Max Input Tokens`,
     prompt: 'Maximum input context window in tokens',
     value: '128000',
     validateInput: v => isNaN(parseInt(v)) ? 'Must be a number' : undefined,
@@ -273,12 +273,36 @@ async function cmdAddModel(preselectedProviderId?: string): Promise<void> {
   );
   if (!toolChoice) { return; }
 
+  const visionChoice = await vscode.window.showQuickPick(
+    [
+      { label: '$(device-camera) Yes – model supports vision/image input', value: true },
+      { label: '$(circle-slash) No – no image input support', value: false },
+    ],
+    { placeHolder: 'Does this model support image/vision input? (4/5)' }
+  );
+  if (!visionChoice) { return; }
+
+  const reasoningChoice = await vscode.window.showQuickPick(
+    [
+      { label: 'none', description: 'No extra reasoning effort', value: 'none' as ReasoningLevel },
+      { label: 'low', description: 'Faster, lower reasoning effort', value: 'low' as ReasoningLevel },
+      { label: 'medium', description: 'Balanced default', value: 'medium' as ReasoningLevel },
+      { label: 'high', description: 'Higher reasoning effort', value: 'high' as ReasoningLevel },
+      { label: 'xhigh', description: 'Very high reasoning effort', value: 'xhigh' as ReasoningLevel },
+      { label: 'max', description: 'Maximum reasoning effort', value: 'max' as ReasoningLevel },
+    ],
+    { placeHolder: 'Default reasoning level when not specified by request (5/5)' }
+  );
+  if (!reasoningChoice) { return; }
+
   const model: ModelConfig = {
     id: modelId.trim(),
     name: modelName.trim(),
     maxInputTokens: parseInt(ctxStr),
     maxOutputTokens: 4096,   // Conservative default; user can edit settings.json if needed
     supportsToolCalling: toolChoice.value,
+    supportsVision: visionChoice.value,
+    defaultReasoningLevel: reasoningChoice.value,
   };
 
   try {
@@ -375,7 +399,7 @@ async function cmdListProviders(): Promise<void> {
         items.push({
           label: `  $(circuit-board) ${m.name}`,
           description: m.id,
-          detail: `  Input: ${m.maxInputTokens.toLocaleString()} tokens · Tools: ${m.supportsToolCalling ? 'yes' : 'no'}`,
+          detail: `  Input: ${m.maxInputTokens.toLocaleString()} tokens · Tools: ${m.supportsToolCalling ? 'yes' : 'no'} · Vision: ${m.supportsVision ? 'yes' : 'no'} · Reasoning: ${m.defaultReasoningLevel ?? 'medium'}`,
         });
       }
     }

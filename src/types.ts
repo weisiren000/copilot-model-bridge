@@ -7,6 +7,8 @@
  */
 
 /** Represents a single model entry within a provider */
+export type ReasoningLevel = 'none' | 'low' | 'medium' | 'high' | 'xhigh' | 'max';
+
 export interface ModelConfig {
   /** The model ID string as the API expects it (e.g. "nvidia/llama-3.1-nemotron-ultra-253b-v1") */
   id: string;
@@ -18,6 +20,10 @@ export interface ModelConfig {
   maxOutputTokens: number;
   /** Whether the model supports tool/function calling */
   supportsToolCalling: boolean;
+  /** Whether the model supports image/vision inputs */
+  supportsVision?: boolean;
+  /** Default reasoning effort when request does not explicitly set one */
+  defaultReasoningLevel?: ReasoningLevel;
 }
 
 /** Represents a fully configured OpenAI-compatible provider entry */

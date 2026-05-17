@@ -5,6 +5,7 @@
   "version": "0.1.1",
   "publisher": "calgan",
   "license": "MIT",
+  "icon": "images/icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/calganaygun/copilot-oai-provider"
@@ -136,6 +137,24 @@
                       "type": "boolean",
                       "default": true,
                       "description": "Whether the model supports tool/function calling"
+                    },
+                    "supportsVision": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Whether the model supports image/vision inputs"
+                    },
+                    "defaultReasoningLevel": {
+                      "type": "string",
+                      "default": "medium",
+                      "enum": [
+                        "none",
+                        "low",
+                        "medium",
+                        "high",
+                        "xhigh",
+                        "max"
+                      ],
+                      "description": "Default reasoning effort when a request does not explicitly provide one"
                     }
                   }
                 }
