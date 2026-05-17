@@ -17,7 +17,13 @@
 
 import * as vscode from 'vscode';
 import { getProviders } from './config';
-import { OpenAIStreamChunk, ProviderConfig, ReasoningLevel } from './types';
+import {
+  buildOpenAIContent,
+  buildReasoningConfigurationSchema,
+  createOpenAIImagePart,
+  resolveReasoningLevel,
+} from './openai';
+import { OpenAIStreamChunk, ProviderConfig } from './types';
 
 /** Separator between provider ID and model ID in the compound LM id */
 const ID_SEP = '::';
@@ -93,7 +99,11 @@ export class OpenAICompatChatProvider implements vscode.LanguageModelChatProvide
           // Newer Copilot pickers filter the chat dropdown more strictly than
           // the Manage Models editor, so keep extension models explicitly selectable.
           isUserSelectable: true,
-        } as vscode.LanguageModelChatInformation & { isUserSelectable: true });
+          configurationSchema: buildReasoningConfigurationSchema(model.defaultReasoningLevel ?? 'medium'),
+        } as vscode.LanguageModelChatInformation & {
+          isUserSelectable: true;
+          configurationSchema: Record<string, unknown>;
+        });
       }
     }
 
@@ -139,9 +149,10 @@ export class OpenAICompatChatProvider implements vscode.LanguageModelChatProvide
 
     // ── 3. Build the fetch request ─────────────────────────────────────────
     const requestUrl = `${provider.baseUrl}/chat/completions`;
-    const reasoningLevel = this.resolveReasoningLevel(
+    const reasoningLevel = resolveReasoningLevel(
       options.modelOptions,
-      selectedModel.defaultReasoningLevel
+      this.readModelConfiguration(options),
+      selectedModel.defaultReasoningLevel ?? 'medium'
     );
     const requestBody: any = {
       model: modelId,
@@ -213,27 +224,14 @@ export class OpenAICompatChatProvider implements vscode.LanguageModelChatProvide
     }
   }
 
-  private resolveReasoningLevel(
-    modelOptions: { readonly [name: string]: any } | undefined,
-    modelDefault?: ReasoningLevel
-  ): ReasoningLevel {
-    const level = this.readReasoningLevel(modelOptions);
-    if (level === 'none' || level === 'low' || level === 'medium' || level === 'high' || level === 'xhigh' || level === 'max') {
-      return level;
-    }
-    return modelDefault ?? 'medium';
-  }
-
-  private readReasoningLevel(
-    modelOptions: { readonly [name: string]: any } | undefined
-  ): unknown {
-    if (!modelOptions) {
-      return undefined;
-    }
-
-    return modelOptions.reasoningLevel
-      ?? modelOptions.reasoning_level
-      ?? modelOptions.reasoning_effort;
+  private readModelConfiguration(
+    options: vscode.ProvideLanguageModelChatResponseOptions
+  ): { readonly [name: string]: unknown } | undefined {
+    const candidate = (options as vscode.ProvideLanguageModelChatResponseOptions & {
+      readonly modelConfiguration?: { readonly [name: string]: unknown };
+      readonly configuration?: { readonly [name: string]: unknown };
+    });
+    return candidate.modelConfiguration ?? candidate.configuration;
   }
 
   private hasImageInput(messages: readonly vscode.LanguageModelChatRequestMessage[]): boolean {
@@ -302,12 +300,18 @@ export class OpenAICompatChatProvider implements vscode.LanguageModelChatProvide
       const role = msg.role === vscode.LanguageModelChatMessageRole.User ? 'user' : 'assistant';
 
       let textContent = '';
+      const imageContent: ReturnType<typeof createOpenAIImagePart>[] = [];
       const toolCalls: any[] = [];
       const toolResults: any[] = [];
 
       for (const part of msg.content) {
         if (part instanceof vscode.LanguageModelTextPart) {
           textContent += part.value;
+        } else if (part instanceof vscode.LanguageModelDataPart) {
+          const mime = part.mimeType?.toLowerCase() ?? '';
+          if (mime.startsWith('image/')) {
+            imageContent.push(createOpenAIImagePart(part.data, mime));
+          }
         } else if (part instanceof vscode.LanguageModelToolCallPart) {
           toolCallIdToName[part.callId] = part.name;
           toolCalls.push({
@@ -348,7 +352,7 @@ export class OpenAICompatChatProvider implements vscode.LanguageModelChatProvide
       }
 
       if (textContent || toolCalls.length > 0 || toolResults.length === 0) {
-        const apiMsg: any = { role, content: textContent || null };
+        const apiMsg: any = { role, content: buildOpenAIContent(textContent, imageContent) };
         if (toolCalls.length > 0) {
           apiMsg.tool_calls = toolCalls;
         }
