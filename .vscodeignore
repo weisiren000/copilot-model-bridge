@@ -7,3 +7,8 @@ src/**
 **/*.ts
 !out/**
 node_modules/**
+.env
+AGENTS.md
+.agents/
+docs/project-logo.png
+README.md
