@@ -1,4 +1,4 @@
-import { EditToolName, ModelConfig, ReasoningLevel } from './types';
+import { EditToolName, ModelConfig, ReasoningLevel, ToolChoiceMode } from './types';
 
 const REASONING_LEVELS: readonly ReasoningLevel[] = ['none', 'low', 'medium', 'high', 'xhigh', 'max'];
 const EDIT_TOOLS: readonly EditToolName[] = [
@@ -13,6 +13,14 @@ const DEFAULT_EDIT_TOOLS: readonly EditToolName[] = [
   'apply-patch',
 ];
 const DEFAULT_REASONING_LEVEL: ReasoningLevel = 'medium';
+const COPILOT_METADATA_MIME_TYPES = new Set([
+  'cache_control',
+  'stateful_marker',
+  'thinking',
+  'context_management',
+  'phase_data',
+  'response_output_message_id',
+]);
 const REASONING_LABELS: Record<ReasoningLevel, string> = {
   none: 'None',
   low: 'Low',
@@ -62,6 +70,14 @@ export interface ModelBillingMetadata {
   multiplierNumeric?: number;
 }
 
+export type RequestedToolMode = 'auto' | 'required' | 'none';
+
+export interface ResolveToolChoiceOptions {
+  hasTools: boolean;
+  requestedToolMode?: RequestedToolMode;
+  toolChoiceMode?: ToolChoiceMode;
+}
+
 export function createOpenAIImagePart(data: Uint8Array, mimeType: string): OpenAIImageContentPart {
   return {
     type: 'image_url',
@@ -81,6 +97,10 @@ export function createOpenAIDataPartContent(
   policy: AttachmentPolicy
 ): OpenAIContentPart[] {
   const normalizedMime = normalizeMimeType(mimeType);
+
+  if (COPILOT_METADATA_MIME_TYPES.has(normalizedMime)) {
+    return [];
+  }
 
   if (normalizedMime.startsWith('image/')) {
     return [createOpenAIImagePart(data, normalizedMime)];
@@ -204,6 +224,31 @@ export function resolveReasoningLevel(
   const defaultLevel = levels.includes(modelDefault) ? modelDefault : levels[0];
   const level = readReasoningLevel(modelConfiguration) ?? readReasoningLevel(modelOptions);
   return isReasoningLevel(level) && levels.includes(level) ? level : defaultLevel;
+}
+
+export function resolveToolChoice(options: ResolveToolChoiceOptions): 'auto' | 'required' | 'none' | undefined {
+  if (!options.hasTools) {
+    return undefined;
+  }
+
+  const strategy = options.toolChoiceMode ?? 'required';
+  if (strategy === 'omit') {
+    return undefined;
+  }
+  if (strategy === 'none') {
+    return 'none';
+  }
+
+  const requestedMode = options.requestedToolMode ?? 'auto';
+  if (requestedMode === 'none') {
+    return 'none';
+  }
+
+  if (requestedMode === 'auto') {
+    return 'auto';
+  }
+
+  return strategy;
 }
 
 function readReasoningLevel(options: { readonly [name: string]: unknown } | undefined): unknown {

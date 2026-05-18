@@ -261,6 +261,8 @@ supportsFileInput?: boolean;
 
 ## Feature 5: Tool Choice Semantics
 
+> 状态：已完成（2026-05-19）
+
 ### Problem
 
 当前实现中，如果 `options.toolMode === Required`，请求体设置：

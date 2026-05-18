@@ -9,6 +9,7 @@
 /** Represents a single model entry within a provider */
 export type ReasoningLevel = 'none' | 'low' | 'medium' | 'high' | 'xhigh' | 'max';
 export type EditToolName = 'find-replace' | 'multi-find-replace' | 'apply-patch' | 'code-rewrite';
+export type ToolChoiceMode = 'auto' | 'required' | 'none' | 'omit';
 
 export interface ModelConfig {
   /** The model ID string as the API expects it (e.g. "nvidia/llama-3.1-nemotron-ultra-253b-v1") */
@@ -31,6 +32,8 @@ export interface ModelConfig {
   supportsEditTools?: boolean;
   /** Preferred edit tools for file modifications in Agent mode */
   preferredEditTools?: EditToolName[];
+  /** OpenAI-compatible tool_choice strategy for VS Code tool modes */
+  toolChoiceMode?: ToolChoiceMode;
   /** Whether the model exposes configurable reasoning effort */
   supportsReasoning?: boolean;
   /** Reasoning effort values this model accepts */

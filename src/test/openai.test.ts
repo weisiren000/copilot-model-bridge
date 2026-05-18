@@ -8,6 +8,7 @@ import {
   createOpenAIDataPartContent,
   buildReasoningConfigurationSchema,
   createOpenAIImagePart,
+  resolveToolChoice,
   resolveReasoningLevel,
 } from '../openai';
 
@@ -46,6 +47,25 @@ test('converts JSON data parts to serialized text content', () => {
     createOpenAIDataPartContent(new TextEncoder().encode('{"ok":true}'), 'application/json', {}),
     [{ type: 'text', text: '{"ok":true}' }]
   );
+});
+
+test('ignores Copilot cache control data parts instead of treating them as file attachments', () => {
+  assert.deepEqual(
+    createOpenAIDataPartContent(new TextEncoder().encode('ephemeral'), 'cache_control', {}),
+    []
+  );
+});
+
+test('ignores Copilot state metadata data parts instead of treating them as file attachments', () => {
+  for (const mimeType of [
+    'stateful_marker',
+    'thinking',
+    'context_management',
+    'phase_data',
+    'response_output_message_id',
+  ]) {
+    assert.deepEqual(createOpenAIDataPartContent(new Uint8Array([1]), mimeType, {}), []);
+  }
 });
 
 test('converts image data parts to OpenAI-compatible image content', () => {
@@ -293,4 +313,41 @@ test('ignores invalid billing multiplier numeric values', () => {
   assert.deepEqual(buildModelBillingMetadata({ multiplier: 'High', multiplierNumeric: Number.NaN }), {
     multiplier: 'High',
   });
+});
+
+test('maps auto tool mode to OpenAI auto tool choice when tools exist', () => {
+  assert.equal(resolveToolChoice({
+    hasTools: true,
+    requestedToolMode: 'auto',
+  }), 'auto');
+});
+
+test('maps required tool mode to required when model supports it', () => {
+  assert.equal(resolveToolChoice({
+    hasTools: true,
+    requestedToolMode: 'required',
+  }), 'required');
+});
+
+test('falls back to auto for required tool mode when configured', () => {
+  assert.equal(resolveToolChoice({
+    hasTools: true,
+    requestedToolMode: 'required',
+    toolChoiceMode: 'auto',
+  }), 'auto');
+});
+
+test('omits tool choice when backend does not support the field', () => {
+  assert.equal(resolveToolChoice({
+    hasTools: true,
+    requestedToolMode: 'required',
+    toolChoiceMode: 'omit',
+  }), undefined);
+});
+
+test('does not send tool choice when no tools are available', () => {
+  assert.equal(resolveToolChoice({
+    hasTools: false,
+    requestedToolMode: 'required',
+  }), undefined);
 });

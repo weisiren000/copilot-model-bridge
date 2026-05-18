@@ -1,10 +1,12 @@
-import { EditToolName, ModelConfig, ReasoningLevel } from './types';
+import { EditToolName, ModelConfig, ReasoningLevel, ToolChoiceMode } from './types';
 
 const DEFAULT_INPUT_TOKENS = 128000;
 const DEFAULT_OUTPUT_TOKENS = 4096;
 const DEFAULT_REASONING_LEVEL: ReasoningLevel = 'medium';
+const DEFAULT_TOOL_CHOICE_MODE: ToolChoiceMode = 'required';
 const DEFAULT_MULTIPLIER = '0x';
 const VALID_REASONING_LEVELS: readonly ReasoningLevel[] = ['none', 'low', 'medium', 'high', 'xhigh', 'max'];
+const VALID_TOOL_CHOICE_MODES: readonly ToolChoiceMode[] = ['auto', 'required', 'none', 'omit'];
 const VALID_EDIT_TOOLS: readonly EditToolName[] = [
   'find-replace',
   'multi-find-replace',
@@ -31,6 +33,7 @@ export function normalizeModelConfig(model: RawModelConfig): ModelConfig {
     supportsFileInput: model.supportsFileInput ?? false,
     supportsEditTools,
     preferredEditTools: normalizeEditTools(model.preferredEditTools),
+    toolChoiceMode: normalizeToolChoiceMode(model.toolChoiceMode),
     supportsReasoning,
     supportedReasoningLevels: normalizeSupportedReasoningLevels(
       model.supportedReasoningLevels,
@@ -98,6 +101,14 @@ function normalizeEditTools(tools: unknown): EditToolName[] | undefined {
 
 function isEditToolName(value: unknown): value is EditToolName {
   return typeof value === 'string' && VALID_EDIT_TOOLS.includes(value as EditToolName);
+}
+
+function normalizeToolChoiceMode(mode: unknown): ToolChoiceMode {
+  return isToolChoiceMode(mode) ? mode : DEFAULT_TOOL_CHOICE_MODE;
+}
+
+function isToolChoiceMode(value: unknown): value is ToolChoiceMode {
+  return typeof value === 'string' && VALID_TOOL_CHOICE_MODES.includes(value as ToolChoiceMode);
 }
 
 function normalizeMultiplierLabel(multiplier: unknown): string {

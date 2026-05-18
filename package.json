@@ -173,6 +173,17 @@
                         ]
                       }
                     },
+                    "toolChoiceMode": {
+                      "type": "string",
+                      "default": "required",
+                      "enum": [
+                        "auto",
+                        "required",
+                        "none",
+                        "omit"
+                      ],
+                      "description": "OpenAI-compatible tool_choice strategy. required maps VS Code Required to tool_choice=required; auto falls back to auto; none sends none; omit does not send tool_choice."
+                    },
                     "supportsReasoning": {
                       "type": "boolean",
                       "default": false,

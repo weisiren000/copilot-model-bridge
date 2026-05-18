@@ -25,6 +25,7 @@ import {
   createOpenAIDataPartContent,
   OpenAIContentPart,
   resolveReasoningLevel,
+  resolveToolChoice,
 } from './openai';
 import { OpenAIStreamChunk, ProviderConfig } from './types';
 
@@ -190,7 +191,23 @@ export class OpenAICompatChatProvider implements vscode.LanguageModelChatProvide
         }
       }));
       if (options.toolMode === vscode.LanguageModelChatToolMode.Required) {
-        requestBody.tool_choice = 'auto';
+        const toolChoice = resolveToolChoice({
+          hasTools: true,
+          requestedToolMode: 'required',
+          toolChoiceMode: selectedModel.toolChoiceMode,
+        });
+        if (toolChoice !== undefined) {
+          requestBody.tool_choice = toolChoice;
+        }
+      } else {
+        const toolChoice = resolveToolChoice({
+          hasTools: true,
+          requestedToolMode: 'auto',
+          toolChoiceMode: selectedModel.toolChoiceMode,
+        });
+        if (toolChoice !== undefined) {
+          requestBody.tool_choice = toolChoice;
+        }
       }
     }
 

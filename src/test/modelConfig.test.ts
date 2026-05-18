@@ -18,6 +18,7 @@ test('does not add a default reasoning level to non-reasoning models', () => {
       supportsVision: false,
       supportsEditTools: true,
       preferredEditTools: undefined,
+      toolChoiceMode: 'required',
       supportsReasoning: false,
       supportedReasoningLevels: undefined,
       defaultReasoningLevel: undefined,
@@ -158,4 +159,33 @@ test('keeps configured multimodal attachment policy flags', () => {
 
   assert.equal(model.supportsVideo, true);
   assert.equal(model.supportsFileInput, true);
+});
+
+test('defaults tool choice mode to required semantics', () => {
+  const model = normalizeModelConfig({
+    id: 'tool-choice-model',
+    name: 'Tool Choice Model',
+  });
+
+  assert.equal(model.toolChoiceMode, 'required');
+});
+
+test('keeps valid configured tool choice mode', () => {
+  const model = normalizeModelConfig({
+    id: 'legacy-tool-choice-model',
+    name: 'Legacy Tool Choice Model',
+    toolChoiceMode: 'omit',
+  });
+
+  assert.equal(model.toolChoiceMode, 'omit');
+});
+
+test('ignores invalid configured tool choice mode', () => {
+  const model = normalizeModelConfig({
+    id: 'invalid-tool-choice-model',
+    name: 'Invalid Tool Choice Model',
+    toolChoiceMode: 'invalid' as never,
+  });
+
+  assert.equal(model.toolChoiceMode, 'required');
 });
