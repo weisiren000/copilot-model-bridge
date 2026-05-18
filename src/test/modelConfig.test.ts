@@ -189,3 +189,13 @@ test('ignores invalid configured tool choice mode', () => {
 
   assert.equal(model.toolChoiceMode, 'required');
 });
+
+test('preserves unknown user-defined model fields during normalization', () => {
+  const model = normalizeModelConfig({
+    id: 'custom-model',
+    name: 'Custom Model',
+    customField: 'keep-me',
+  } as never);
+
+  assert.equal((model as never as { customField: string }).customField, 'keep-me');
+});

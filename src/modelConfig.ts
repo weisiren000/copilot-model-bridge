@@ -23,6 +23,7 @@ export function normalizeModelConfig(model: RawModelConfig): ModelConfig {
   const defaultReasoningLevel = normalizeDefaultReasoningLevel(model.defaultReasoningLevel, supportsReasoning);
 
   return {
+    ...model,
     id: model.id,
     name: model.name,
     maxInputTokens: model.maxInputTokens ?? DEFAULT_INPUT_TOKENS,

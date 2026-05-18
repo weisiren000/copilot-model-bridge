@@ -48,6 +48,15 @@ export async function saveProviders(providers: ProviderConfig[]): Promise<void> 
   await config.update(PROVIDERS_KEY, providers, vscode.ConfigurationTarget.Global);
 }
 
+export async function updateProviders(
+  updater: (providers: ProviderConfig[]) => ProviderConfig[]
+): Promise<ProviderConfig[]> {
+  const providers = getProviders();
+  const nextProviders = updater(providers);
+  await saveProviders(nextProviders);
+  return nextProviders;
+}
+
 
 /**
  * Add a brand-new provider entry. Throws if a provider with the same ID already exists.

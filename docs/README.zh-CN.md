@@ -19,7 +19,9 @@ Copilot Model Bridge 是一个 VS Code 扩展，基于官方 `LanguageModelChatP
 - 支持 Agent 编辑工具能力提示
 - 支持视觉能力开关
 - reasoning 模型可选显示 Thinking Effort 配置
+- 支持更完整的模型 metadata 展示
 - 通过命令面板向导完成配置，无需手改 JSON
+- 支持编辑、复制、导入和校验 provider/model 配置
 
 ## 运行要求
 
@@ -90,7 +92,10 @@ Copilot Model Bridge: Add Model
 4. 是否支持工具调用
 5. 是否向 Agent 模式提供编辑工具提示
 6. 是否支持视觉输入
-7. 是否支持可配置 reasoning effort
+7. 视频附件策略
+8. 通用文件附件策略
+9. 成本倍率
+10. 是否支持可配置 reasoning effort
 
 对于 reasoning 模型，向导还会继续询问支持的思考层级和默认思考层级。
 
@@ -125,8 +130,13 @@ Kimi K2.5 (NVIDIA NIM)
 | --- | --- |
 | `Copilot Model Bridge: Manage Providers` | 管理入口 |
 | `Copilot Model Bridge: Add Provider` | 新增 provider |
+| `Copilot Model Bridge: Edit Provider` | 修改 provider 显示名称、Base URL 或 API Key |
 | `Copilot Model Bridge: Remove Provider` | 删除 provider 及其模型 |
 | `Copilot Model Bridge: Add Model` | 给 provider 添加模型 |
+| `Copilot Model Bridge: Edit Model` | 修改模型显示名称和 token 限制 |
+| `Copilot Model Bridge: Duplicate Model` | 复制已有模型配置 |
+| `Copilot Model Bridge: Import Models from JSON` | 从 JSON 数组导入模型 |
+| `Copilot Model Bridge: Validate Provider Config` | 检查重复 ID 和配置不一致 |
 | `Copilot Model Bridge: Remove Model` | 删除模型 |
 | `Copilot Model Bridge: List Providers` | 查看当前所有 provider 和模型 |
 
@@ -162,7 +172,12 @@ Kimi K2.5 (NVIDIA NIM)
         "supportsReasoning": true,
         "supportedReasoningLevels": ["low", "medium", "high"],
         "defaultReasoningLevel": "high",
-        "multiplier": "1x"
+        "multiplier": "1x",
+        "family": "kimi",
+        "version": "2026-05-18",
+        "categoryLabel": "Reasoning",
+        "categoryOrder": 10,
+        "statusIcon": "sparkle"
       }
     ]
   },
@@ -194,6 +209,7 @@ Kimi K2.5 (NVIDIA NIM)
 `supportsEditTools` 决定 Agent 模式是否接收模型偏好的编辑工具提示。它默认跟随 `supportsToolCalling`；启用但未配置 `preferredEditTools` 时，默认提示为 `find-replace`、`multi-find-replace` 和 `apply-patch`。`preferredEditTools` 中的未知值会被过滤；如果配置的值全部未知，则不会声明编辑工具提示。`supportsToolCalling: false` 的模型永远不会声明编辑工具提示。
 `supportsVideo` 和 `supportsFileInput` 定义附件边界。图片会按 OpenAI 兼容的 `image_url` 发送，文本和 JSON data part 会转成文本；视频和未知二进制附件会明确报错，不再静默忽略。
 `multiplier` 决定 VS Code 中显示的成本倍率标签，默认是 `0x`；`1x`、`0.5x` 这类标签会自动推导 `multiplierNumeric`，除非你显式配置了 `multiplierNumeric`。
+`family`、`version`、`categoryLabel`、`categoryOrder` 和 `statusIcon` 用于改善 VS Code 模型选择器和 Manage Models 中的 metadata 展示。`family` 未配置时会从模型 ID 推导，分类字段默认不声明，`statusIcon` 只接受安全的 VS Code ThemeIcon ID，例如 `sparkle` 或 `warning`。
 
 Token count 是估算值。文本使用每 4 个字符约等于 1 token 的粗估规则，图片按每张 1024 tokens 估算，工具调用、工具结果、JSON 和文本 data part 会按序列化后的文本估算。该值用于 VS Code 上下文预算，可能与具体 provider 的 tokenizer 结果不同。
 

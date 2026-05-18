@@ -351,6 +351,8 @@ toolChoiceMode?: 'auto' | 'required' | 'none' | 'omit';
 
 ## Feature 7: Model Metadata Polish
 
+> 状态：已完成（2026-05-19）
+
 ### Problem
 
 Copilot Model Bridge 当前 metadata 基本可用，但和 Copilot 原生模型相比，hover 和管理页信息还不够完整。
@@ -400,6 +402,8 @@ statusIcon?: string;
 
 ## Feature 8: Provider Management UX
 
+> 状态：已完成（2026-05-19）
+
 ### Problem
 
 当前管理命令能添加 provider/model，但更新已有 provider、编辑模型、批量导入、能力复核不够方便。
@@ -436,6 +440,157 @@ statusIcon?: string;
 3. Validate 命令。
 4. Import 命令。
 
+## Feature 9: Persistent Configuration Manager
+
+### Problem
+
+当前 provider/model 配置主要依赖 `Ctrl+Shift+P` 打开的 `QuickPick` / `InputBox` 多步向导。
+
+这类临时输入 UI 适合选择一个命令或输入一个短字段，但不适合维护复杂模型配置。用户在配置过程中需要切换 VS Code Tab、复制 Base URL / API Key、查看 README 或切到浏览器查资料时，当前输入界面可能自动关闭，导致配置流程中断。
+
+随着模型字段增加，命令面板问答式配置还有以下问题：
+
+- 步骤多，无法在提交前整体复核。
+- 无法同时查看 provider、model 和能力配置之间的关系。
+- 不适合批量导入、复制、校验和高级字段编辑。
+- 用户容易被迫回到 settings JSON 手动编辑。
+
+### Goal
+
+新增一个 VS Code 内部持久配置页，让用户在不手写 JSON 的情况下完成 provider/model 的常见维护，并避免切屏导致配置流程丢失。
+
+主入口：
+
+```text
+Copilot Model Bridge: Open Config Manager
+```
+
+同时将 `languageModelChatProviders.managementCommand` 从临时管理菜单改为打开该配置页。
+
+### Proposed UX
+
+使用 VS Code `WebviewPanel`，在 VS Code 内部编辑器 Tab 中打开，不跳转外部浏览器。
+
+页面布局：
+
+```text
+左侧：Provider 列表
+中间：当前 Provider 的 Model 列表
+右侧：Provider / Model 编辑表单
+底部或顶部：Validate / Save / Import JSON / Duplicate / Delete / Open Settings JSON
+```
+
+Provider 表单字段：
+
+- `id`
+- `displayName`
+- `baseUrl`
+- `apiKey`
+
+Model 表单字段：
+
+- `id`
+- `name`
+- `maxInputTokens`
+- `maxOutputTokens`
+- `supportsToolCalling`
+- `supportsVision`
+- `supportsVideo`
+- `supportsFileInput`
+- `supportsEditTools`
+- `preferredEditTools`
+- `toolChoiceMode`
+- `supportsReasoning`
+- `supportedReasoningLevels`
+- `defaultReasoningLevel`
+- `multiplier`
+- `multiplierNumeric`
+- `family`
+- `version`
+- `categoryLabel`
+- `categoryOrder`
+- `statusIcon`
+
+### Proposed Architecture
+
+新增模块建议：
+
+```text
+src/configManagerPanel.ts
+src/configManagerHtml.ts
+src/configManagerMessages.ts
+```
+
+继续复用：
+
+```text
+src/config.ts
+src/configManagement.ts
+src/modelConfig.ts
+```
+
+数据流：
+
+```text
+Open Config Manager
+→ extension 读取 getProviders()
+→ WebviewPanel 初始化并发送 provider 配置快照
+→ 用户在 Webview 中编辑表单
+→ Webview 通过 postMessage 请求 validate / save / import / duplicate / delete
+→ extension 侧调用 configManagement helper
+→ saveProviders()
+→ chatProvider.refreshModels()
+→ Webview 显示保存或校验结果
+```
+
+Webview 安全约束：
+
+- 使用 Content Security Policy。
+- 不加载外部脚本。
+- 只允许访问扩展自身资源，或完全内联最小 CSS/JS。
+- Webview 不直接访问 VS Code API，只通过 message 协议与 extension 通信。
+- 可使用 `retainContextWhenHidden` 保持切 Tab 后 UI 状态，但要注意内存成本；同时应维护可恢复的前端状态，避免只依赖 Webview 保活。
+
+### Short-Term Mitigation
+
+在 Webview 配置页实现前，先给现有 `showQuickPick` / `showInputBox` 添加：
+
+```ts
+ignoreFocusOut: true
+```
+
+这能立刻缓解切屏导致配置流程关闭的问题，但不作为长期主配置体验。
+
+### Acceptance Criteria
+
+- 打开配置页后，切换 VS Code Tab、切到浏览器、再切回，未保存输入不丢失。
+- 能在一个页面中查看 provider 列表、model 列表和当前选中项配置。
+- 能新增、编辑、删除、复制 provider/model。
+- 能从 JSON 数组导入 models。
+- 保存前能执行 validate，并展示：
+  - 重复 model id。
+  - base URL 非法。
+  - reasoning 配置不一致。
+  - 视频 / 文件输入能力与当前转换支持边界冲突。
+  - unsafe `statusIcon`。
+- 保存时保留未知字段，避免覆盖用户手写扩展配置。
+- 保存成功后刷新 Copilot 模型列表。
+- 原有命令继续可用，但主管理入口优先打开持久配置页。
+- README / 中文 README 更新配置入口说明。
+- 单元测试覆盖 message reducer / 配置更新 helper。
+- VSIX 打包后在本地 VS Code 验证 Webview 打开、切屏、保存、刷新流程。
+
+### Suggested Plan Split
+
+1. 给现有 QuickPick / InputBox 增加 `ignoreFocusOut`。
+2. 新增 `Open Config Manager` 命令和空 WebviewPanel。
+3. Webview 只读展示 provider/model 配置。
+4. 接入 Provider / Model 基础字段编辑和保存。
+5. 接入高级字段、折叠分组和校验结果展示。
+6. 接入 duplicate / import / delete 操作。
+7. 将 `managementCommand` 切换到持久配置页。
+8. 文档、测试、VSIX 打包和本地安装验证。
+
 ## Recommended Implementation Order
 
 1. Reasoning Capability Gating
@@ -446,6 +601,7 @@ statusIcon?: string;
 6. Token Counting Improvements
 7. Model Metadata Polish
 8. Provider Management UX
+9. Persistent Configuration Manager
 
 理由：
 
@@ -453,7 +609,8 @@ statusIcon?: string;
 - 3 能降低工具调用不稳定风险。
 - 4 解决用户可感知的附件丢失问题。
 - 5、6、7 提升管理页和长对话体验。
-- 8 是 UX 增强，可最后做。
+- 8 补齐命令式管理能力。
+- 9 解决复杂配置场景的根体验问题，让 provider/model 配置从临时命令面板升级为持久配置页。
 
 ## Non-Goals
 

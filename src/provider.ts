@@ -30,6 +30,7 @@ import {
   resolveToolChoice,
   TokenEstimatePart,
 } from './openai';
+import { buildModelMetadata } from './modelMetadata';
 import { OpenAIStreamChunk, ProviderConfig } from './types';
 
 /** Separator between provider ID and model ID in the compound LM id */
@@ -88,23 +89,20 @@ export class OpenAICompatChatProvider implements vscode.LanguageModelChatProvide
     for (const provider of providers) {
       for (const model of provider.models) {
         const billingMetadata = buildModelBillingMetadata(model);
+        const baseMetadata = buildModelMetadata({
+          compoundId: `${provider.id}${ID_SEP}${model.id}`,
+          provider,
+          model,
+        });
         const metadata: vscode.LanguageModelChatInformation & {
           isUserSelectable: true;
           configurationSchema?: Record<string, unknown>;
           multiplier?: string;
           multiplierNumeric?: number;
+          category?: unknown;
+          statusIcon?: string;
         } = {
-          // Compound ID encodes both provider and model so we can route later
-          id: `${provider.id}${ID_SEP}${model.id}`,
-          // Name shown in the Copilot model picker
-          name: `${model.name} (${provider.displayName})`,
-          // Family/version are informational strings
-          family: provider.displayName,
-          version: '1.0.0',
-          maxInputTokens: model.maxInputTokens,
-          maxOutputTokens: model.maxOutputTokens,
-          detail: `via ${provider.baseUrl}`,
-          tooltip: `Provider: ${provider.displayName}\nBase URL: ${provider.baseUrl}\nModel ID: ${model.id}`,
+          ...baseMetadata,
           multiplier: billingMetadata.multiplier,
           capabilities: buildModelCapabilities(model),
           // Newer Copilot pickers filter the chat dropdown more strictly than

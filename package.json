@@ -64,10 +64,40 @@
         "icon": "$(trash)"
       },
       {
+        "command": "copilot-model-bridge.editProvider",
+        "title": "Edit Provider",
+        "category": "Copilot Model Bridge",
+        "icon": "$(edit)"
+      },
+      {
         "command": "copilot-model-bridge.addModel",
         "title": "Add Model",
         "category": "Copilot Model Bridge",
         "icon": "$(add)"
+      },
+      {
+        "command": "copilot-model-bridge.editModel",
+        "title": "Edit Model",
+        "category": "Copilot Model Bridge",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "copilot-model-bridge.duplicateModel",
+        "title": "Duplicate Model",
+        "category": "Copilot Model Bridge",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "copilot-model-bridge.validateConfig",
+        "title": "Validate Provider Config",
+        "category": "Copilot Model Bridge",
+        "icon": "$(checklist)"
+      },
+      {
+        "command": "copilot-model-bridge.importModelsFromJson",
+        "title": "Import Models from JSON",
+        "category": "Copilot Model Bridge",
+        "icon": "$(json)"
       },
       {
         "command": "copilot-model-bridge.removeModel",
@@ -225,6 +255,27 @@
                       "type": "number",
                       "minimum": 0,
                       "description": "Numeric form of multiplier for VS Code cost comparisons. If unset, labels like 1x or 0.5x are inferred automatically."
+                    },
+                    "family": {
+                      "type": "string",
+                      "description": "Opaque model family shown in VS Code selectors and management surfaces. Defaults to a value inferred from the model id."
+                    },
+                    "version": {
+                      "type": "string",
+                      "description": "Opaque model version shown in VS Code selectors."
+                    },
+                    "categoryLabel": {
+                      "type": "string",
+                      "description": "Optional category label for newer VS Code model management surfaces."
+                    },
+                    "categoryOrder": {
+                      "type": "number",
+                      "description": "Optional category sort order for newer VS Code model management surfaces."
+                    },
+                    "statusIcon": {
+                      "type": "string",
+                      "pattern": "^[a-zA-Z][a-zA-Z0-9-]*$",
+                      "description": "Optional VS Code ThemeIcon id, such as sparkle or warning. The extension ignores unsafe icon ids."
                     }
                   }
                 }

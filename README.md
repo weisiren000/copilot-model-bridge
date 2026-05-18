@@ -19,7 +19,9 @@ It lets you expose models from NVIDIA NIM, Ollama, LM Studio, vLLM, Together AI,
 - Agent edit tool capability hints
 - Vision capability flags
 - Optional Thinking Effort controls for reasoning models
+- Polished model metadata in VS Code model surfaces
 - Command-based setup without manually editing JSON
+- Editing, duplicating, importing, and validating provider/model configs
 
 ## Requirements
 
@@ -90,7 +92,10 @@ The wizard lets you configure:
 4. Tool calling support
 5. Edit tool hints for Agent mode
 6. Vision support
-7. Whether the model supports configurable reasoning effort
+7. Video attachment policy
+8. Generic file attachment policy
+9. Cost multiplier
+10. Whether the model supports configurable reasoning effort
 
 For reasoning models, the wizard also asks for supported reasoning levels and the default reasoning level.
 
@@ -125,8 +130,13 @@ Kimi K2.5 (NVIDIA NIM)
 | --- | --- |
 | `Copilot Model Bridge: Manage Providers` | Main management entry |
 | `Copilot Model Bridge: Add Provider` | Add a new provider |
+| `Copilot Model Bridge: Edit Provider` | Update provider display name, base URL, or API key |
 | `Copilot Model Bridge: Remove Provider` | Remove a provider and its models |
 | `Copilot Model Bridge: Add Model` | Add a model to a provider |
+| `Copilot Model Bridge: Edit Model` | Update model display name and token limits |
+| `Copilot Model Bridge: Duplicate Model` | Copy an existing model configuration |
+| `Copilot Model Bridge: Import Models from JSON` | Append models from a pasted JSON array |
+| `Copilot Model Bridge: Validate Provider Config` | Find duplicate IDs and inconsistent settings |
 | `Copilot Model Bridge: Remove Model` | Remove a model from a provider |
 | `Copilot Model Bridge: List Providers` | Show all configured providers and models |
 
@@ -162,7 +172,12 @@ Example:
         "supportsReasoning": true,
         "supportedReasoningLevels": ["low", "medium", "high"],
         "defaultReasoningLevel": "high",
-        "multiplier": "1x"
+        "multiplier": "1x",
+        "family": "kimi",
+        "version": "2026-05-18",
+        "categoryLabel": "Reasoning",
+        "categoryOrder": 10,
+        "statusIcon": "sparkle"
       }
     ]
   },
@@ -194,6 +209,7 @@ Example:
 `supportsEditTools` controls whether Agent mode receives preferred edit tool hints. It defaults to `supportsToolCalling`; if enabled without `preferredEditTools`, the default hints are `find-replace`, `multi-find-replace`, and `apply-patch`. Unknown values in `preferredEditTools` are filtered; if all configured values are unknown, no edit tool hints are declared. Models with `supportsToolCalling: false` never declare edit tool hints.
 `supportsVideo` and `supportsFileInput` define the attachment boundary. Images are sent as OpenAI-compatible `image_url` parts, text and JSON data parts are converted to text, and video or unknown binary attachments are rejected with a clear error instead of being silently ignored.
 `multiplier` controls the cost label shown by VS Code. It defaults to `0x`; labels like `1x` and `0.5x` automatically provide `multiplierNumeric` unless you set `multiplierNumeric` explicitly.
+`family`, `version`, `categoryLabel`, `categoryOrder`, and `statusIcon` polish the metadata shown by VS Code model picker and Manage Models surfaces. `family` is inferred from the model id when omitted, category fields are optional, and `statusIcon` only accepts safe VS Code ThemeIcon ids such as `sparkle` or `warning`.
 
 Token counts are estimates. Text uses a simple 4 characters per token heuristic, images are counted as 1024 tokens each, and tool calls, tool results, JSON, and text data parts are estimated from their serialized text. The value is intended for VS Code context budgeting and may differ from the provider's tokenizer.
 

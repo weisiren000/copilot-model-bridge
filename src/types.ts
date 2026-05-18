@@ -11,6 +11,11 @@ export type ReasoningLevel = 'none' | 'low' | 'medium' | 'high' | 'xhigh' | 'max
 export type EditToolName = 'find-replace' | 'multi-find-replace' | 'apply-patch' | 'code-rewrite';
 export type ToolChoiceMode = 'auto' | 'required' | 'none' | 'omit';
 
+export interface ModelCategoryConfig {
+  label: string;
+  order?: number;
+}
+
 export interface ModelConfig {
   /** The model ID string as the API expects it (e.g. "nvidia/llama-3.1-nemotron-ultra-253b-v1") */
   id: string;
@@ -44,6 +49,16 @@ export interface ModelConfig {
   multiplier?: string;
   /** Numeric request cost multiplier used by VS Code for cost comparisons */
   multiplierNumeric?: number;
+  /** Opaque model family shown to VS Code selectors and management UI */
+  family?: string;
+  /** Opaque model version shown to VS Code selectors */
+  version?: string;
+  /** Optional category label used by newer VS Code model management surfaces */
+  categoryLabel?: string;
+  /** Optional category sort order used by newer VS Code model management surfaces */
+  categoryOrder?: number;
+  /** Optional safe VS Code ThemeIcon id for status display */
+  statusIcon?: string;
 }
 
 /** Represents a fully configured OpenAI-compatible provider entry */

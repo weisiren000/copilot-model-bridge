@@ -20,8 +20,16 @@ import {
   addProvider,
   removeProvider,
   addModel,
-  removeModel,
 } from './config';
+import {
+  cmdDuplicateModel,
+  cmdEditModel,
+  cmdEditProvider,
+  cmdImportModelsFromJson,
+  cmdListProviders,
+  cmdRemoveModel,
+  cmdValidateProviderConfig,
+} from './managementCommands';
 import { EditToolName, ModelConfig, ReasoningLevel } from './types';
 
 const EDIT_TOOL_ITEMS: Array<vscode.QuickPickItem & { value: EditToolName }> = [
@@ -44,10 +52,7 @@ const REASONING_LEVEL_ITEMS: Array<vscode.QuickPickItem & { value: ReasoningLeve
 // Registration entry-point
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Register all commands and return their disposables so the extension host
- * can clean up on deactivation.
- */
+/** Register all commands and return their disposables. */
 export function registerCommands(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand('copilot-model-bridge.manage',         cmdManage),
@@ -56,12 +61,13 @@ export function registerCommands(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('copilot-model-bridge.addModel',       cmdAddModel),
     vscode.commands.registerCommand('copilot-model-bridge.removeModel',    cmdRemoveModel),
     vscode.commands.registerCommand('copilot-model-bridge.listProviders',  cmdListProviders),
+    vscode.commands.registerCommand('copilot-model-bridge.editProvider',   cmdEditProvider),
+    vscode.commands.registerCommand('copilot-model-bridge.editModel',      cmdEditModel),
+    vscode.commands.registerCommand('copilot-model-bridge.duplicateModel', cmdDuplicateModel),
+    vscode.commands.registerCommand('copilot-model-bridge.validateConfig', cmdValidateProviderConfig),
+    vscode.commands.registerCommand('copilot-model-bridge.importModelsFromJson', cmdImportModelsFromJson),
   );
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Command implementations
-// ─────────────────────────────────────────────────────────────────────────────
 
 /** Management hub – shows a quick-pick menu with available actions */
 async function cmdManage(): Promise<void> {
@@ -81,9 +87,34 @@ async function cmdManage(): Promise<void> {
         action: 'remove',
       },
       {
+        label: '$(edit) Edit Provider',
+        description: 'Update provider display name, base URL, or API key',
+        action: 'editProvider',
+      },
+      {
         label: '$(circuit-board) Add Model to Provider',
         description: 'Add a model ID to an existing provider',
         action: 'addModel',
+      },
+      {
+        label: '$(edit) Edit Model',
+        description: 'Update model display name and token limits',
+        action: 'editModel',
+      },
+      {
+        label: '$(copy) Duplicate Model',
+        description: 'Create a new model from an existing model configuration',
+        action: 'duplicateModel',
+      },
+      {
+        label: '$(json) Import Models from JSON',
+        description: 'Append models to an existing provider without hand-editing settings',
+        action: 'importModels',
+      },
+      {
+        label: '$(checklist) Validate Provider Config',
+        description: 'Find duplicate model IDs and inconsistent settings',
+        action: 'validate',
       },
       {
         label: '$(close) Remove Model from Provider',
@@ -109,7 +140,12 @@ async function cmdManage(): Promise<void> {
   switch (choice.action) {
     case 'add':        await cmdAddProvider();   break;
     case 'remove':     await cmdRemoveProvider(); break;
+    case 'editProvider': await cmdEditProvider(); break;
     case 'addModel':   await cmdAddModel();       break;
+    case 'editModel':  await cmdEditModel();      break;
+    case 'duplicateModel': await cmdDuplicateModel(); break;
+    case 'importModels': await cmdImportModelsFromJson(); break;
+    case 'validate':   await cmdValidateProviderConfig(); break;
     case 'removeModel':await cmdRemoveModel();    break;
     case 'list':       await cmdListProviders();  break;
     case 'openSettings':
@@ -426,96 +462,3 @@ async function cmdAddModel(preselectedProviderId?: string): Promise<void> {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Remove a model from a provider */
-async function cmdRemoveModel(): Promise<void> {
-  const providers = getProviders();
-  if (providers.length === 0) {
-    vscode.window.showInformationMessage('No providers configured.');
-    return;
-  }
-
-  // Pick provider
-  const providerChoice = await vscode.window.showQuickPick(
-    providers.map(p => ({
-      label: p.displayName,
-      description: `${p.models.length} model(s)`,
-      id: p.id,
-    })),
-    { placeHolder: 'Select a provider' }
-  );
-  if (!providerChoice) { return; }
-
-  const provider = providers.find(p => p.id === providerChoice.id)!;
-  if (provider.models.length === 0) {
-    vscode.window.showInformationMessage(`Provider "${provider.displayName}" has no models.`);
-    return;
-  }
-
-  // Pick model
-  const modelChoice = await vscode.window.showQuickPick(
-    provider.models.map(m => ({
-      label: m.name,
-      description: m.id,
-      id: m.id,
-    })),
-    { placeHolder: 'Select a model to remove' }
-  );
-  if (!modelChoice) { return; }
-
-  const confirm = await vscode.window.showWarningMessage(
-    `Remove model "${modelChoice.label}" from "${provider.displayName}"?`,
-    { modal: true },
-    'Remove'
-  );
-  if (confirm !== 'Remove') { return; }
-
-  const removed = await removeModel(provider.id, modelChoice.id);
-  if (removed) {
-    vscode.window.showInformationMessage(`Model "${modelChoice.label}" removed.`);
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-
-/** Display a readable summary of all configured providers */
-async function cmdListProviders(): Promise<void> {
-  const providers = getProviders();
-
-  if (providers.length === 0) {
-    vscode.window.showInformationMessage(
-      'No providers configured yet. Use "Add Provider" to get started.'
-    );
-    return;
-  }
-
-  // Build quick-pick items – one group per provider with its models as children
-  type Item = vscode.QuickPickItem & { action?: string; providerId?: string };
-  const items: Item[] = [];
-
-  for (const p of providers) {
-    // Provider header (separator style)
-    items.push({
-      label: `$(server) ${p.displayName}`,
-      description: p.baseUrl,
-      kind: vscode.QuickPickItemKind.Separator,
-    });
-
-    if (p.models.length === 0) {
-      items.push({ label: '  $(warning) No models configured', description: 'Add a model to use this provider' });
-    } else {
-      for (const m of p.models) {
-        items.push({
-          label: `  $(circuit-board) ${m.name}`,
-          description: m.id,
-          detail: `  Input: ${m.maxInputTokens.toLocaleString()} tokens · Tools: ${m.supportsToolCalling ? 'yes' : 'no'} · Edit: ${m.supportsEditTools ? 'yes' : 'no'} · Vision: ${m.supportsVision ? 'yes' : 'no'} · Video: ${m.supportsVideo ? 'yes' : 'no'} · Files: ${m.supportsFileInput ? 'yes' : 'no'} · Reasoning: ${m.supportsReasoning ? (m.defaultReasoningLevel ?? 'medium') : 'no'} · Cost: ${m.multiplier ?? '0x'}`,
-        });
-      }
-    }
-  }
-
-  await vscode.window.showQuickPick(items, {
-    placeHolder: `${providers.length} provider(s) configured`,
-    matchOnDescription: true,
-    matchOnDetail: true,
-  });
-}
