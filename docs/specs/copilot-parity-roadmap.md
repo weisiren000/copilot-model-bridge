@@ -1,11 +1,11 @@
-# OAIProvider Copilot Parity Specs
+# Copilot Model Bridge Copilot Parity Specs
 
 > 日期：2026-05-18  
-> 目标：记录 OAIProvider 与当前 VS Code / GitHub Copilot 语言模型能力之间的差距，作为后续逐项编写 implementation plan 的规格依据。
+> 目标：记录 Copilot Model Bridge 与当前 VS Code / GitHub Copilot 语言模型能力之间的差距，作为后续逐项编写 implementation plan 的规格依据。
 
 ## 背景
 
-OAIProvider 当前已经具备以下基础能力：
+Copilot Model Bridge 当前已经具备以下基础能力：
 
 - 通过 `LanguageModelChatProvider` 注册 OpenAI 兼容模型。
 - 在 Copilot Chat 模型选择器中显示自定义模型。
@@ -49,7 +49,7 @@ DeepSeek 适配是 provider 专属协议差异，不放进通用 parity feature 
 
 ### Problem
 
-当前 OAIProvider 会给所有模型挂载 `configurationSchema`，因此所有模型都可能显示 Thinking Effort 子菜单。
+当前 Copilot Model Bridge 会给所有模型挂载 `configurationSchema`，因此所有模型都可能显示 Thinking Effort 子菜单。
 
 官方行为是：只有 reasoning 模型显示 Thinking Effort。非 reasoning 模型，例如 GPT-4.1、GPT-4o，不显示该菜单。
 
@@ -105,7 +105,7 @@ defaultReasoningLevel?: ReasoningLevel;
 
 ### Problem
 
-VS Code proposed API 支持 `capabilities.editTools`，用于提示模型适合哪些编辑工具。当前 OAIProvider 只声明：
+VS Code proposed API 支持 `capabilities.editTools`，用于提示模型适合哪些编辑工具。当前 Copilot Model Bridge 只声明：
 
 ```ts
 capabilities: {
@@ -162,7 +162,7 @@ preferredEditTools?: Array<'find-replace' | 'multi-find-replace' | 'apply-patch'
 
 ### Problem
 
-Copilot 模型选择器和模型管理页会展示 premium request multiplier / billing details。OAIProvider 目前不声明 `multiplier` 或 `multiplierNumeric`，因此自定义模型缺少费用/倍率提示。
+Copilot 模型选择器和模型管理页会展示 premium request multiplier / billing details。Copilot Model Bridge 目前不声明 `multiplier` 或 `multiplierNumeric`，因此自定义模型缺少费用/倍率提示。
 
 BYOK 模型不一定使用 GitHub premium request 计费，但提供倍率字段可以让用户给模型增加成本提示。
 
@@ -206,9 +206,11 @@ multiplierNumeric?: number;
 
 ## Feature 4: Multimodal Attachment Policy
 
+> 状态：已完成（2026-05-18）
+
 ### Problem
 
-Copilot 最新支持图片和视频附件。OAIProvider 当前只处理 `image/*` 的 `LanguageModelDataPart`，其他 MIME 类型会被忽略。
+Copilot 最新支持图片和视频附件。Copilot Model Bridge 当前只处理 `image/*` 的 `LanguageModelDataPart`，其他 MIME 类型会被忽略。
 
 静默忽略附件会导致用户误以为模型收到了文件或视频，实际请求中没有。
 
@@ -347,7 +349,7 @@ toolChoiceMode?: 'auto' | 'required' | 'none' | 'omit';
 
 ### Problem
 
-OAIProvider 当前 metadata 基本可用，但和 Copilot 原生模型相比，hover 和管理页信息还不够完整。
+Copilot Model Bridge 当前 metadata 基本可用，但和 Copilot 原生模型相比，hover 和管理页信息还不够完整。
 
 ### Goal
 
@@ -406,11 +408,11 @@ statusIcon?: string;
 
 新增或增强：
 
-- `OAIProvider: Edit Provider`
-- `OAIProvider: Edit Model`
-- `OAIProvider: Duplicate Model`
-- `OAIProvider: Validate Provider Config`
-- `OAIProvider: Import Models from JSON`
+- `Copilot Model Bridge: Edit Provider`
+- `Copilot Model Bridge: Edit Model`
+- `Copilot Model Bridge: Duplicate Model`
+- `Copilot Model Bridge: Validate Provider Config`
+- `Copilot Model Bridge: Import Models from JSON`
 
 ### Acceptance Criteria
 
@@ -471,3 +473,4 @@ statusIcon?: string;
 - 独立 commit message。
 
 推荐每个 feature 一次独立提交；如果 feature 较大，则按“类型/纯函数/Provider 接入/文档”拆成多次提交。
+

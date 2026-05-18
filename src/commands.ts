@@ -6,12 +6,12 @@
  * flow so the user never needs to hand-edit settings.json.
  *
  * Commands:
- *   openai-compat-provider.manage       – Main management hub (lists providers, routes to others)
- *   openai-compat-provider.addProvider  – Wizard to add a new provider
- *   openai-compat-provider.removeProvider – Pick and remove a provider
- *   openai-compat-provider.addModel     – Pick a provider, then add a model to it
- *   openai-compat-provider.removeModel  – Pick a provider + model, then delete the model
- *   openai-compat-provider.listProviders – Show a summary of all providers and their models
+ *   copilot-model-bridge.manage       – Main management hub (lists providers, routes to others)
+ *   copilot-model-bridge.addProvider  – Wizard to add a new provider
+ *   copilot-model-bridge.removeProvider – Pick and remove a provider
+ *   copilot-model-bridge.addModel     – Pick a provider, then add a model to it
+ *   copilot-model-bridge.removeModel  – Pick a provider + model, then delete the model
+ *   copilot-model-bridge.listProviders – Show a summary of all providers and their models
  */
 
 import * as vscode from 'vscode';
@@ -50,12 +50,12 @@ const REASONING_LEVEL_ITEMS: Array<vscode.QuickPickItem & { value: ReasoningLeve
  */
 export function registerCommands(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand('openai-compat-provider.manage',         cmdManage),
-    vscode.commands.registerCommand('openai-compat-provider.addProvider',    cmdAddProvider),
-    vscode.commands.registerCommand('openai-compat-provider.removeProvider', cmdRemoveProvider),
-    vscode.commands.registerCommand('openai-compat-provider.addModel',       cmdAddModel),
-    vscode.commands.registerCommand('openai-compat-provider.removeModel',    cmdRemoveModel),
-    vscode.commands.registerCommand('openai-compat-provider.listProviders',  cmdListProviders),
+    vscode.commands.registerCommand('copilot-model-bridge.manage',         cmdManage),
+    vscode.commands.registerCommand('copilot-model-bridge.addProvider',    cmdAddProvider),
+    vscode.commands.registerCommand('copilot-model-bridge.removeProvider', cmdRemoveProvider),
+    vscode.commands.registerCommand('copilot-model-bridge.addModel',       cmdAddModel),
+    vscode.commands.registerCommand('copilot-model-bridge.removeModel',    cmdRemoveModel),
+    vscode.commands.registerCommand('copilot-model-bridge.listProviders',  cmdListProviders),
   );
 }
 
@@ -97,7 +97,7 @@ async function cmdManage(): Promise<void> {
       },
       {
         label: '$(settings-gear) Open Settings JSON',
-        description: 'Manually edit openai-compat-provider.providers',
+        description: 'Manually edit copilot-model-bridge.providers',
         action: 'openSettings',
       },
     ],
@@ -115,7 +115,7 @@ async function cmdManage(): Promise<void> {
     case 'openSettings':
       vscode.commands.executeCommand(
         'workbench.action.openSettings',
-        'openai-compat-provider.providers'
+        'copilot-model-bridge.providers'
       );
       break;
   }
@@ -254,7 +254,7 @@ async function cmdAddModel(preselectedProviderId?: string): Promise<void> {
 
   // ── Step 1: Model ID ──────────────────────────────────────────────────────
   const modelId = await vscode.window.showInputBox({
-    title: `Add Model to "${providerLabel}" (1/8) – Model ID`,
+    title: `Add Model to "${providerLabel}" (1/10) – Model ID`,
     prompt: 'The model identifier as the API expects it',
     placeHolder: 'e.g. nvidia/llama-3.1-nemotron-ultra-253b-v1',
     validateInput: v => v.trim() ? undefined : 'Model ID cannot be empty',
@@ -263,7 +263,7 @@ async function cmdAddModel(preselectedProviderId?: string): Promise<void> {
 
   // ── Step 2: Display Name ──────────────────────────────────────────────────
   const modelName = await vscode.window.showInputBox({
-    title: `Add Model to "${providerLabel}" (2/8) – Display Name`,
+    title: `Add Model to "${providerLabel}" (2/10) – Display Name`,
     prompt: 'Human-readable name shown in the Copilot model picker',
     placeHolder: 'e.g. Llama 3.1 Nemotron Ultra 253B',
     validateInput: v => v.trim() ? undefined : 'Display name cannot be empty',
@@ -272,7 +272,7 @@ async function cmdAddModel(preselectedProviderId?: string): Promise<void> {
 
   // ── Step 3: Context size ──────────────────────────────────────────────────
   const ctxStr = await vscode.window.showInputBox({
-    title: `Add Model to "${providerLabel}" (3/8) – Max Input Tokens`,
+    title: `Add Model to "${providerLabel}" (3/10) – Max Input Tokens`,
     prompt: 'Maximum input context window in tokens',
     value: '128000',
     validateInput: v => isNaN(parseInt(v)) ? 'Must be a number' : undefined,
@@ -285,7 +285,7 @@ async function cmdAddModel(preselectedProviderId?: string): Promise<void> {
       { label: '$(check) Yes – model supports tool/function calling', value: true },
       { label: '$(close) No – text only', value: false },
     ],
-    { placeHolder: 'Does this model support tool calling? (4/8)' }
+    { placeHolder: 'Does this model support tool calling? (4/10)' }
   );
   if (!toolChoice) { return; }
 
@@ -298,7 +298,7 @@ async function cmdAddModel(preselectedProviderId?: string): Promise<void> {
         { label: '$(checklist) Yes – choose edit tools', value: 'custom' },
         { label: '$(circle-slash) No – no edit tool hints', value: 'disabled' },
       ],
-      { placeHolder: 'Should Agent mode receive edit tool hints? (5/8)' }
+      { placeHolder: 'Should Agent mode receive edit tool hints? (5/10)' }
     );
     if (!editToolsChoice) { return; }
 
@@ -319,7 +319,7 @@ async function cmdAddModel(preselectedProviderId?: string): Promise<void> {
       [
         { label: '$(circle-slash) No – tool calling is disabled, so edit tool hints will not be declared', value: false },
       ],
-      { placeHolder: 'Should Agent mode receive edit tool hints? (5/8)' }
+      { placeHolder: 'Should Agent mode receive edit tool hints? (5/10)' }
     );
     if (!editToolsChoice) { return; }
     supportsEditTools = editToolsChoice.value;
@@ -330,12 +330,30 @@ async function cmdAddModel(preselectedProviderId?: string): Promise<void> {
       { label: '$(device-camera) Yes – model supports vision/image input', value: true },
       { label: '$(circle-slash) No – no image input support', value: false },
     ],
-    { placeHolder: 'Does this model support image/vision input? (6/8)' }
+    { placeHolder: 'Does this model support image/vision input? (6/10)' }
   );
   if (!visionChoice) { return; }
 
+  const videoChoice = await vscode.window.showQuickPick(
+    [
+      { label: '$(device-camera-video) Yes – declare video attachment support', value: true },
+      { label: '$(circle-slash) No – reject video attachments clearly', value: false },
+    ],
+    { placeHolder: 'Does this model support video attachments? (7/10)' }
+  );
+  if (!videoChoice) { return; }
+
+  const fileInputChoice = await vscode.window.showQuickPick(
+    [
+      { label: '$(files) Yes – declare generic file attachment support', value: true },
+      { label: '$(circle-slash) No – reject unknown file attachments clearly', value: false },
+    ],
+    { placeHolder: 'Does this model support generic file attachments? (8/10)' }
+  );
+  if (!fileInputChoice) { return; }
+
   const multiplier = await vscode.window.showInputBox({
-    title: `Add Model to "${providerLabel}" (7/8) – Cost Multiplier`,
+    title: `Add Model to "${providerLabel}" (9/10) – Cost Multiplier`,
     prompt: 'Request cost multiplier label shown in VS Code model UI',
     value: '0x',
     placeHolder: '0x, 1x, 0.5x, High',
@@ -348,7 +366,7 @@ async function cmdAddModel(preselectedProviderId?: string): Promise<void> {
       { label: '$(lightbulb) Yes – show Thinking Effort', value: true },
       { label: '$(circle-slash) No – hide Thinking Effort', value: false },
     ],
-    { placeHolder: 'Does this model support configurable reasoning effort? (8/8)' }
+    { placeHolder: 'Does this model support configurable reasoning effort? (10/10)' }
   );
   if (!reasoningSupportChoice) { return; }
 
@@ -381,6 +399,8 @@ async function cmdAddModel(preselectedProviderId?: string): Promise<void> {
     maxOutputTokens: 4096,   // Conservative default; user can edit settings.json if needed
     supportsToolCalling: toolChoice.value,
     supportsVision: visionChoice.value,
+    supportsVideo: videoChoice.value,
+    supportsFileInput: fileInputChoice.value,
     supportsEditTools,
     supportsReasoning: reasoningSupportChoice.value,
     multiplier: multiplier.trim(),
@@ -487,7 +507,7 @@ async function cmdListProviders(): Promise<void> {
         items.push({
           label: `  $(circuit-board) ${m.name}`,
           description: m.id,
-          detail: `  Input: ${m.maxInputTokens.toLocaleString()} tokens · Tools: ${m.supportsToolCalling ? 'yes' : 'no'} · Edit: ${m.supportsEditTools ? 'yes' : 'no'} · Vision: ${m.supportsVision ? 'yes' : 'no'} · Reasoning: ${m.supportsReasoning ? (m.defaultReasoningLevel ?? 'medium') : 'no'} · Cost: ${m.multiplier ?? '0x'}`,
+          detail: `  Input: ${m.maxInputTokens.toLocaleString()} tokens · Tools: ${m.supportsToolCalling ? 'yes' : 'no'} · Edit: ${m.supportsEditTools ? 'yes' : 'no'} · Vision: ${m.supportsVision ? 'yes' : 'no'} · Video: ${m.supportsVideo ? 'yes' : 'no'} · Files: ${m.supportsFileInput ? 'yes' : 'no'} · Reasoning: ${m.supportsReasoning ? (m.defaultReasoningLevel ?? 'medium') : 'no'} · Cost: ${m.multiplier ?? '0x'}`,
         });
       }
     }

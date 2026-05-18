@@ -1,11 +1,11 @@
-# OAIProvider
+# Copilot Model Bridge
 
 [English](../README.md)
 
-[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/calgan.oai-provider?label=VS%20Code%20Marketplace&logo=visualstudiocode&color=blue)](https://marketplace.visualstudio.com/items?itemName=calgan.oai-provider)
+[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/weisiren.copilot-model-bridge?label=VS%20Code%20Marketplace&logo=visualstudiocode&color=blue)](https://marketplace.visualstudio.com/items?itemName=weisiren.copilot-model-bridge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](../LICENSE)
 
-OAIProvider 是一个 VS Code 扩展，基于官方 `LanguageModelChatProvider` API，把任意 OpenAI 兼容接口接入 GitHub Copilot Chat。
+Copilot Model Bridge 是一个 VS Code 扩展，基于官方 `LanguageModelChatProvider` API，把任意 OpenAI 兼容接口接入 GitHub Copilot Chat。
 
 它可以把 NVIDIA NIM、Ollama、LM Studio、vLLM、Together AI、Groq、OpenRouter 等 OpenAI 格式服务中的模型直接暴露到 Copilot 的模型选择器里。
 
@@ -38,15 +38,15 @@ OAIProvider 是一个 VS Code 扩展，基于官方 `LanguageModelChatProvider` 
 
 从 Marketplace 安装：
 
-- 打开 [OAIProvider 扩展页面](https://marketplace.visualstudio.com/items?itemName=calgan.oai-provider)
+- 打开 [Copilot Model Bridge 扩展页面](https://marketplace.visualstudio.com/items?itemName=weisiren.copilot-model-bridge)
 - 点击 `Install`
 - 重载 VS Code
 
 从源码运行：
 
 ```bash
-git clone https://github.com/calganaygun/copilot-oai-provider.git
-cd copilot-oai-provider
+git clone https://github.com/weisiren000/copilot-model-bridge.git
+cd copilot-model-bridge
 npm install
 npm run compile
 ```
@@ -58,7 +58,7 @@ npm run compile
 打开命令面板并执行：
 
 ```text
-OAIProvider: Add Provider
+Copilot Model Bridge: Add Provider
 ```
 
 向导会依次要求输入：
@@ -79,7 +79,7 @@ OAIProvider: Add Provider
 执行：
 
 ```text
-OAIProvider: Add Model
+Copilot Model Bridge: Add Model
 ```
 
 向导支持配置：
@@ -105,7 +105,7 @@ OAIProvider: Add Model
 
 ### 4. 在 Copilot Chat 中使用
 
-打开 Copilot Chat，在模型选择器中选择由 OAIProvider 提供的模型。
+打开 Copilot Chat，在模型选择器中选择由 Copilot Model Bridge 提供的模型。
 
 模型展示格式为：
 
@@ -123,25 +123,25 @@ Kimi K2.5 (NVIDIA NIM)
 
 | 命令 | 说明 |
 | --- | --- |
-| `OAIProvider: Manage Providers` | 管理入口 |
-| `OAIProvider: Add Provider` | 新增 provider |
-| `OAIProvider: Remove Provider` | 删除 provider 及其模型 |
-| `OAIProvider: Add Model` | 给 provider 添加模型 |
-| `OAIProvider: Remove Model` | 删除模型 |
-| `OAIProvider: List Providers` | 查看当前所有 provider 和模型 |
+| `Copilot Model Bridge: Manage Providers` | 管理入口 |
+| `Copilot Model Bridge: Add Provider` | 新增 provider |
+| `Copilot Model Bridge: Remove Provider` | 删除 provider 及其模型 |
+| `Copilot Model Bridge: Add Model` | 给 provider 添加模型 |
+| `Copilot Model Bridge: Remove Model` | 删除模型 |
+| `Copilot Model Bridge: List Providers` | 查看当前所有 provider 和模型 |
 
 ## 配置说明
 
 扩展把数据保存到：
 
 ```json
-"openai-compat-provider.providers"
+"copilot-model-bridge.providers"
 ```
 
 示例：
 
 ```json
-"openai-compat-provider.providers": [
+"copilot-model-bridge.providers": [
   {
     "id": "nvidia-nim",
     "displayName": "NVIDIA NIM",
@@ -157,6 +157,8 @@ Kimi K2.5 (NVIDIA NIM)
         "supportsEditTools": true,
         "preferredEditTools": ["find-replace", "multi-find-replace", "apply-patch"],
         "supportsVision": true,
+        "supportsVideo": false,
+        "supportsFileInput": false,
         "supportsReasoning": true,
         "supportedReasoningLevels": ["low", "medium", "high"],
         "defaultReasoningLevel": "high",
@@ -178,6 +180,8 @@ Kimi K2.5 (NVIDIA NIM)
         "supportsToolCalling": false,
         "supportsEditTools": false,
         "supportsVision": false,
+        "supportsVideo": false,
+        "supportsFileInput": false,
         "supportsReasoning": false,
         "multiplier": "0x"
       }
@@ -188,6 +192,7 @@ Kimi K2.5 (NVIDIA NIM)
 
 `supportsReasoning` 决定 VS Code 是否为该模型显示 Thinking Effort。为了兼容旧配置，已经写过 `defaultReasoningLevel` 且没有写 `supportsReasoning` 的模型会被视为支持 reasoning；如果显式写了 `supportsReasoning: false`，则不会显示 Thinking Effort。
 `supportsEditTools` 决定 Agent 模式是否接收模型偏好的编辑工具提示。它默认跟随 `supportsToolCalling`；启用但未配置 `preferredEditTools` 时，默认提示为 `find-replace`、`multi-find-replace` 和 `apply-patch`。`preferredEditTools` 中的未知值会被过滤；如果配置的值全部未知，则不会声明编辑工具提示。`supportsToolCalling: false` 的模型永远不会声明编辑工具提示。
+`supportsVideo` 和 `supportsFileInput` 定义附件边界。图片会按 OpenAI 兼容的 `image_url` 发送，文本和 JSON data part 会转成文本；视频和未知二进制附件会明确报错，不再静默忽略。
 `multiplier` 决定 VS Code 中显示的成本倍率标签，默认是 `0x`；`1x`、`0.5x` 这类标签会自动推导 `multiplierNumeric`，除非你显式配置了 `multiplierNumeric`。
 
 ## 兼容服务示例
@@ -212,7 +217,7 @@ Kimi K2.5 (NVIDIA NIM)
 4. 向 `<baseUrl>/chat/completions` 发送流式请求
 5. 把文本片段和工具调用片段持续回传给 VS Code
 
-如果模型被标记为不支持视觉输入，扩展会在发请求前直接拦截图片输入。
+如果模型被标记为不支持视觉输入，扩展会在发请求前直接拦截图片输入。不支持的视频和未知二进制附件也会在发请求前明确报错。
 
 ## 开发
 
@@ -238,3 +243,4 @@ src/commands.ts
 src/config.ts
 src/types.ts
 ```
+

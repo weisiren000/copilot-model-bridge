@@ -2,15 +2,20 @@
  * config.ts
  *
  * Helpers for reading and writing provider configurations from VS Code settings.
- * All provider data lives under the "openai-compat-provider.providers" array in settings.json.
+ * Provider data lives under the "copilot-model-bridge.providers" array in settings.json.
+ * The legacy "openai-compat-provider.providers" key remains readable for migration.
  */
 
 import * as vscode from 'vscode';
 import { normalizeModelConfig } from './modelConfig';
 import { ProviderConfig, ModelConfig } from './types';
+import {
+  CONFIG_SECTION,
+  LEGACY_CONFIG_SECTION,
+  selectConfiguredProviders,
+} from './configKeys';
 
 /** The VS Code configuration section key */
-const CONFIG_SECTION = 'openai-compat-provider';
 const PROVIDERS_KEY = 'providers';
 
 /**
@@ -19,7 +24,11 @@ const PROVIDERS_KEY = 'providers';
  */
 export function getProviders(): ProviderConfig[] {
   const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
-  const rawProviders = config.get<ProviderConfig[]>(PROVIDERS_KEY, []);
+  const legacyConfig = vscode.workspace.getConfiguration(LEGACY_CONFIG_SECTION);
+  const rawProviders = selectConfiguredProviders(
+    config.get<ProviderConfig[] | undefined>(PROVIDERS_KEY),
+    legacyConfig.get<ProviderConfig[] | undefined>(PROVIDERS_KEY)
+  );
 
   // Ensure defaults for optional fields so the rest of the code never has to guard for undefined
   return rawProviders.map(p => ({
@@ -38,6 +47,7 @@ export async function saveProviders(providers: ProviderConfig[]): Promise<void> 
   const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
   await config.update(PROVIDERS_KEY, providers, vscode.ConfigurationTarget.Global);
 }
+
 
 /**
  * Add a brand-new provider entry. Throws if a provider with the same ID already exists.

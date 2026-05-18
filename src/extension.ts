@@ -16,12 +16,13 @@
 import * as vscode from 'vscode';
 import { OpenAICompatChatProvider } from './provider';
 import { registerCommands } from './commands';
+import { CONFIG_SECTION, LEGACY_CONFIG_SECTION } from './configKeys';
 
 /** The vendor ID must exactly match the "vendor" field in package.json contributes */
-const VENDOR_ID = 'openai-compat-provider';
+const VENDOR_ID = 'copilot-model-bridge';
 
 export function activate(context: vscode.ExtensionContext): void {
-  console.log('[openai-compat-provider] Extension activating…');
+  console.log('[copilot-model-bridge] Extension activating...');
 
   // ── 1. Instantiate and register the LM provider ─────────────────────────
   //
@@ -42,7 +43,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // ── 3. Watch for settings changes ────────────────────────────────────────
   //
-  // When the user edits the "openai-compat-provider.providers" setting
+  // When the user edits the provider settings
   // (either via our commands or manually in settings.json), we need to tell
   // VS Code to re-fetch the model list so the Copilot model picker is updated.
   //
@@ -54,13 +55,16 @@ export function activate(context: vscode.ExtensionContext): void {
   // Here we simply notify the user when the setting changes so they know
   // they may need to re-open the Copilot Chat panel to see new models.
   const settingsWatcher = vscode.workspace.onDidChangeConfiguration(event => {
-    if (event.affectsConfiguration('openai-compat-provider.providers')) {
-      console.log('[openai-compat-provider] Provider settings changed – refreshing model list.');
+    if (
+      event.affectsConfiguration(`${CONFIG_SECTION}.providers`)
+      || event.affectsConfiguration(`${LEGACY_CONFIG_SECTION}.providers`)
+    ) {
+      console.log('[copilot-model-bridge] Provider settings changed, refreshing model list.');
       chatProvider.refreshModels();
       
       // Show a subtle status-bar notification (not a popup) to indicate refresh
       const statusMsg = vscode.window.setStatusBarMessage(
-        '$(sync~spin) OpenAI-Compat: model list updated',
+        '$(sync~spin) Copilot Model Bridge: model list updated',
         3000   // auto-dismiss after 3 seconds
       );
       context.subscriptions.push(statusMsg);
@@ -68,9 +72,9 @@ export function activate(context: vscode.ExtensionContext): void {
   });
   context.subscriptions.push(settingsWatcher);
 
-  console.log('[openai-compat-provider] Extension activated successfully.');
+  console.log('[copilot-model-bridge] Extension activated successfully.');
 }
 
 export function deactivate(): void {
-  console.log('[openai-compat-provider] Extension deactivated.');
+  console.log('[copilot-model-bridge] Extension deactivated.');
 }

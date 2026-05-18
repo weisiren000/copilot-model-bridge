@@ -1,11 +1,11 @@
-# OAIProvider
+# Copilot Model Bridge
 
 [中文说明](docs/README.zh-CN.md)
 
-[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/calgan.oai-provider?label=VS%20Code%20Marketplace&logo=visualstudiocode&color=blue)](https://marketplace.visualstudio.com/items?itemName=calgan.oai-provider)
+[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/weisiren.copilot-model-bridge?label=VS%20Code%20Marketplace&logo=visualstudiocode&color=blue)](https://marketplace.visualstudio.com/items?itemName=weisiren.copilot-model-bridge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-OAIProvider is a VS Code extension that plugs any OpenAI-compatible endpoint into GitHub Copilot Chat through the official `LanguageModelChatProvider` API.
+Copilot Model Bridge is a VS Code extension that plugs any OpenAI-compatible endpoint into GitHub Copilot Chat through the official `LanguageModelChatProvider` API.
 
 It lets you expose models from NVIDIA NIM, Ollama, LM Studio, vLLM, Together AI, Groq, OpenRouter, and similar OpenAI-format services directly in the Copilot model picker.
 
@@ -38,15 +38,15 @@ It lets you expose models from NVIDIA NIM, Ollama, LM Studio, vLLM, Together AI,
 
 From Marketplace:
 
-- Open the [OAIProvider extension page](https://marketplace.visualstudio.com/items?itemName=calgan.oai-provider)
+- Open the [Copilot Model Bridge extension page](https://marketplace.visualstudio.com/items?itemName=weisiren.copilot-model-bridge)
 - Click `Install`
 - Reload VS Code
 
 From source:
 
 ```bash
-git clone https://github.com/calganaygun/copilot-oai-provider.git
-cd copilot-oai-provider
+git clone https://github.com/weisiren000/copilot-model-bridge.git
+cd copilot-model-bridge
 npm install
 npm run compile
 ```
@@ -58,7 +58,7 @@ Then press `F5` in VS Code to launch an Extension Development Host.
 Open the command palette and run:
 
 ```text
-OAIProvider: Add Provider
+Copilot Model Bridge: Add Provider
 ```
 
 The wizard asks for:
@@ -79,7 +79,7 @@ Example:
 Run:
 
 ```text
-OAIProvider: Add Model
+Copilot Model Bridge: Add Model
 ```
 
 The wizard lets you configure:
@@ -105,7 +105,7 @@ Supported reasoning levels:
 
 ### 4. Use the model in Copilot Chat
 
-Open Copilot Chat, switch the model picker, and choose the model contributed by OAIProvider.
+Open Copilot Chat, switch the model picker, and choose the model contributed by Copilot Model Bridge.
 
 Model names are shown as:
 
@@ -123,25 +123,25 @@ Kimi K2.5 (NVIDIA NIM)
 
 | Command | Description |
 | --- | --- |
-| `OAIProvider: Manage Providers` | Main management entry |
-| `OAIProvider: Add Provider` | Add a new provider |
-| `OAIProvider: Remove Provider` | Remove a provider and its models |
-| `OAIProvider: Add Model` | Add a model to a provider |
-| `OAIProvider: Remove Model` | Remove a model from a provider |
-| `OAIProvider: List Providers` | Show all configured providers and models |
+| `Copilot Model Bridge: Manage Providers` | Main management entry |
+| `Copilot Model Bridge: Add Provider` | Add a new provider |
+| `Copilot Model Bridge: Remove Provider` | Remove a provider and its models |
+| `Copilot Model Bridge: Add Model` | Add a model to a provider |
+| `Copilot Model Bridge: Remove Model` | Remove a model from a provider |
+| `Copilot Model Bridge: List Providers` | Show all configured providers and models |
 
 ## Configuration
 
 The extension stores data in:
 
 ```json
-"openai-compat-provider.providers"
+"copilot-model-bridge.providers"
 ```
 
 Example:
 
 ```json
-"openai-compat-provider.providers": [
+"copilot-model-bridge.providers": [
   {
     "id": "nvidia-nim",
     "displayName": "NVIDIA NIM",
@@ -157,6 +157,8 @@ Example:
         "supportsEditTools": true,
         "preferredEditTools": ["find-replace", "multi-find-replace", "apply-patch"],
         "supportsVision": true,
+        "supportsVideo": false,
+        "supportsFileInput": false,
         "supportsReasoning": true,
         "supportedReasoningLevels": ["low", "medium", "high"],
         "defaultReasoningLevel": "high",
@@ -178,6 +180,8 @@ Example:
         "supportsToolCalling": false,
         "supportsEditTools": false,
         "supportsVision": false,
+        "supportsVideo": false,
+        "supportsFileInput": false,
         "supportsReasoning": false,
         "multiplier": "0x"
       }
@@ -188,6 +192,7 @@ Example:
 
 `supportsReasoning` controls whether VS Code shows Thinking Effort for the model. Existing configs that already set `defaultReasoningLevel` and omit `supportsReasoning` are treated as reasoning-capable for compatibility. If `supportsReasoning` is explicitly `false`, Thinking Effort stays disabled.
 `supportsEditTools` controls whether Agent mode receives preferred edit tool hints. It defaults to `supportsToolCalling`; if enabled without `preferredEditTools`, the default hints are `find-replace`, `multi-find-replace`, and `apply-patch`. Unknown values in `preferredEditTools` are filtered; if all configured values are unknown, no edit tool hints are declared. Models with `supportsToolCalling: false` never declare edit tool hints.
+`supportsVideo` and `supportsFileInput` define the attachment boundary. Images are sent as OpenAI-compatible `image_url` parts, text and JSON data parts are converted to text, and video or unknown binary attachments are rejected with a clear error instead of being silently ignored.
 `multiplier` controls the cost label shown by VS Code. It defaults to `0x`; labels like `1x` and `0.5x` automatically provide `multiplierNumeric` unless you set `multiplierNumeric` explicitly.
 
 ## Compatible Provider Examples
@@ -212,7 +217,7 @@ At runtime the extension:
 4. Sends streaming requests to `<baseUrl>/chat/completions`
 5. Streams text and tool-call parts back into VS Code
 
-If a model is marked as non-vision, image input is rejected before the outbound request is sent.
+If a model is marked as non-vision, image input is rejected before the outbound request is sent. Unsupported video and unknown binary attachments are also rejected before the API call.
 
 ## Development
 
@@ -238,4 +243,5 @@ src/commands.ts
 src/config.ts
 src/types.ts
 ```
+
 

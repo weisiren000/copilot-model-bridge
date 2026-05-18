@@ -5,6 +5,7 @@ import {
   buildModelCapabilities,
   buildModelBillingMetadata,
   buildModelReasoningConfigurationSchema,
+  createOpenAIDataPartContent,
   buildReasoningConfigurationSchema,
   createOpenAIImagePart,
   resolveReasoningLevel,
@@ -31,6 +32,50 @@ test('keeps text and image parts together for multimodal messages', () => {
       },
     },
   ]);
+});
+
+test('converts text data parts to OpenAI-compatible text content', () => {
+  assert.deepEqual(
+    createOpenAIDataPartContent(new TextEncoder().encode('hello attachment'), 'text/plain', {}),
+    [{ type: 'text', text: 'hello attachment' }]
+  );
+});
+
+test('converts JSON data parts to serialized text content', () => {
+  assert.deepEqual(
+    createOpenAIDataPartContent(new TextEncoder().encode('{"ok":true}'), 'application/json', {}),
+    [{ type: 'text', text: '{"ok":true}' }]
+  );
+});
+
+test('converts image data parts to OpenAI-compatible image content', () => {
+  assert.deepEqual(
+    createOpenAIDataPartContent(new Uint8Array([1, 2, 3]), 'image/png', {}),
+    [{
+      type: 'image_url',
+      image_url: {
+        url: 'data:image/png;base64,AQID',
+      },
+    }]
+  );
+});
+
+test('rejects unsupported video data parts with a clear error', () => {
+  assert.throws(
+    () => createOpenAIDataPartContent(new Uint8Array([1]), 'video/mp4', { supportsVideo: false }),
+    /Video attachments are not supported/
+  );
+});
+
+test('rejects unknown binary data parts with a clear error', () => {
+  assert.throws(
+    () => createOpenAIDataPartContent(
+      new Uint8Array([1]),
+      'application/octet-stream',
+      { supportsFileInput: false }
+    ),
+    /Unsupported attachment MIME type "application\/octet-stream"/
+  );
 });
 
 test('prefers official modelConfiguration reasoningEffort over legacy options', () => {

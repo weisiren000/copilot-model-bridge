@@ -1,14 +1,14 @@
 # DeepSeek Provider Adapter Specs
 
 > 日期：2026-05-18  
-> 目标：为 OAIProvider 增加 DeepSeek 专用适配规格，解决 DeepSeek V4 thinking mode、tool calls、`reasoning_content` 回放与 OpenAI-compatible 通用实现之间的差异。
+> 目标：为 Copilot Model Bridge 增加 DeepSeek 专用适配规格，解决 DeepSeek V4 thinking mode、tool calls、`reasoning_content` 回放与 OpenAI-compatible 通用实现之间的差异。
 
 ## 背景
 
 DeepSeek API 兼容 OpenAI Chat Completions，但并不是“纯 OpenAI 行为”。DeepSeek V4 的 thinking mode 有额外协议要求：
 
 - 官方 OpenAI 格式 base URL：`https://api.deepseek.com`
-- OAIProvider 当前会自动拼接 `/chat/completions`，因此 DeepSeek 官方配置推荐使用 `https://api.deepseek.com`
+- Copilot Model Bridge 当前会自动拼接 `/chat/completions`，因此 DeepSeek 官方配置推荐使用 `https://api.deepseek.com`
 - 当前主模型：`deepseek-v4-flash`、`deepseek-v4-pro`
 - 旧模型别名：`deepseek-chat`、`deepseek-reasoner`
 - `deepseek-chat` 和 `deepseek-reasoner` 计划在 2026-07-24 后废弃
@@ -73,7 +73,7 @@ The reasoning_content in the thinking mode must be passed back to the API.
 
 ## Current State
 
-OAIProvider 当前以通用 OpenAI-compatible provider 方式处理所有模型：
+Copilot Model Bridge 当前以通用 OpenAI-compatible provider 方式处理所有模型：
 
 - 统一发送 `/chat/completions`
 - 统一转换 VS Code messages 到 OpenAI messages
@@ -572,3 +572,4 @@ DeepSeek thinking mode with tool calls must not send a follow-up request without
 - Phase 1 默认禁用。
 - replay cache 先只保存在内存。
 - replay 未实现前不允许显式开启 thinking + tools，避免 400。
+

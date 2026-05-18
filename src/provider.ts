@@ -5,7 +5,7 @@
  *
  * A single instance of OpenAICompatChatProvider is registered with VS Code.
  * It exposes ALL models from ALL configured providers under the single vendor
- * "openai-compat-provider". Each LanguageModelChatInformation ID is prefixed
+ * "copilot-model-bridge". Each LanguageModelChatInformation ID is prefixed
  * with the provider ID so we can route requests to the correct base URL:
  *
  *   id = "<providerId>/<modelId>"   e.g.  "nvidia-nim/meta/llama-3.1-8b-instruct"
@@ -22,7 +22,8 @@ import {
   buildModelCapabilities,
   buildModelReasoningConfigurationSchema,
   buildOpenAIContent,
-  createOpenAIImagePart,
+  createOpenAIDataPartContent,
+  OpenAIContentPart,
   resolveReasoningLevel,
 } from './openai';
 import { OpenAIStreamChunk, ProviderConfig } from './types';
@@ -68,7 +69,7 @@ export class OpenAICompatChatProvider implements vscode.LanguageModelChatProvide
         'Manage Providers'
       ).then(choice => {
         if (choice === 'Manage Providers') {
-          vscode.commands.executeCommand('openai-compat-provider.manage');
+          vscode.commands.executeCommand('copilot-model-bridge.manage');
         }
       });
     }
@@ -140,7 +141,7 @@ export class OpenAICompatChatProvider implements vscode.LanguageModelChatProvide
     if (!provider) {
       throw new Error(
         `Provider not found for model "${model.id}". ` +
-        `Please check your openai-compat-provider.providers settings.`
+        `Please check your copilot-model-bridge.providers settings.`
       );
     }
 
@@ -150,7 +151,10 @@ export class OpenAICompatChatProvider implements vscode.LanguageModelChatProvide
     }
 
     // ── 2. Convert VS Code messages → OpenAI message format ───────────────
-    const apiMessages = this.convertMessages(messages);
+    const apiMessages = this.convertMessages(messages, {
+      supportsVideo: selectedModel.supportsVideo,
+      supportsFileInput: selectedModel.supportsFileInput,
+    });
     const hasImageInput = this.hasImageInput(messages);
     if (hasImageInput && !selectedModel.supportsVision) {
       throw new Error(
@@ -305,7 +309,11 @@ export class OpenAICompatChatProvider implements vscode.LanguageModelChatProvide
    * including handling of ToolCalls and ToolResults.
    */
   private convertMessages(
-    messages: readonly vscode.LanguageModelChatRequestMessage[]
+    messages: readonly vscode.LanguageModelChatRequestMessage[],
+    attachmentPolicy: {
+      supportsVideo?: boolean;
+      supportsFileInput?: boolean;
+    }
   ): Array<any> {
     const result: any[] = [];
     const toolCallIdToName: Record<string, string> = {};
@@ -314,7 +322,7 @@ export class OpenAICompatChatProvider implements vscode.LanguageModelChatProvide
       const role = msg.role === vscode.LanguageModelChatMessageRole.User ? 'user' : 'assistant';
 
       let textContent = '';
-      const imageContent: ReturnType<typeof createOpenAIImagePart>[] = [];
+      const dataContent: OpenAIContentPart[] = [];
       const toolCalls: any[] = [];
       const toolResults: any[] = [];
 
@@ -322,10 +330,7 @@ export class OpenAICompatChatProvider implements vscode.LanguageModelChatProvide
         if (part instanceof vscode.LanguageModelTextPart) {
           textContent += part.value;
         } else if (part instanceof vscode.LanguageModelDataPart) {
-          const mime = part.mimeType?.toLowerCase() ?? '';
-          if (mime.startsWith('image/')) {
-            imageContent.push(createOpenAIImagePart(part.data, mime));
-          }
+          dataContent.push(...createOpenAIDataPartContent(part.data, part.mimeType, attachmentPolicy));
         } else if (part instanceof vscode.LanguageModelToolCallPart) {
           toolCallIdToName[part.callId] = part.name;
           toolCalls.push({
@@ -366,7 +371,7 @@ export class OpenAICompatChatProvider implements vscode.LanguageModelChatProvide
       }
 
       if (textContent || toolCalls.length > 0 || toolResults.length === 0) {
-        const apiMsg: any = { role, content: buildOpenAIContent(textContent, imageContent) };
+        const apiMsg: any = { role, content: buildOpenAIContent(textContent, dataContent) };
         if (toolCalls.length > 0) {
           apiMsg.tool_calls = toolCalls;
         }

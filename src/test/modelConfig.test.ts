@@ -21,6 +21,8 @@ test('does not add a default reasoning level to non-reasoning models', () => {
       supportsReasoning: false,
       supportedReasoningLevels: undefined,
       defaultReasoningLevel: undefined,
+      supportsVideo: false,
+      supportsFileInput: false,
       multiplier: '0x',
       multiplierNumeric: undefined,
     }
@@ -134,4 +136,26 @@ test('keeps configured billing multiplier fields during normalization', () => {
 
   assert.equal(model.multiplier, '2x');
   assert.equal(model.multiplierNumeric, 2);
+});
+
+test('defaults multimodal attachment policy flags to disabled', () => {
+  const model = normalizeModelConfig({
+    id: 'attachment-model',
+    name: 'Attachment Model',
+  });
+
+  assert.equal(model.supportsVideo, false);
+  assert.equal(model.supportsFileInput, false);
+});
+
+test('keeps configured multimodal attachment policy flags', () => {
+  const model = normalizeModelConfig({
+    id: 'multimodal-model',
+    name: 'Multimodal Model',
+    supportsVideo: true,
+    supportsFileInput: true,
+  });
+
+  assert.equal(model.supportsVideo, true);
+  assert.equal(model.supportsFileInput, true);
 });

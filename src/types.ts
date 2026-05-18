@@ -3,7 +3,7 @@
  * 
  * Shared TypeScript types used across the extension.
  * These mirror the structure stored in VS Code settings under
- * "openai-compat-provider.providers".
+ * "copilot-model-bridge.providers".
  */
 
 /** Represents a single model entry within a provider */
@@ -23,6 +23,10 @@ export interface ModelConfig {
   supportsToolCalling: boolean;
   /** Whether the model supports image/vision inputs */
   supportsVision?: boolean;
+  /** Whether the model supports video attachments */
+  supportsVideo?: boolean;
+  /** Whether the model supports non-image file attachments */
+  supportsFileInput?: boolean;
   /** Whether the model should hint preferred edit tools to Copilot Agent */
   supportsEditTools?: boolean;
   /** Preferred edit tools for file modifications in Agent mode */

@@ -27,6 +27,8 @@ export function normalizeModelConfig(model: RawModelConfig): ModelConfig {
     maxOutputTokens: model.maxOutputTokens ?? DEFAULT_OUTPUT_TOKENS,
     supportsToolCalling,
     supportsVision: model.supportsVision ?? false,
+    supportsVideo: model.supportsVideo ?? false,
+    supportsFileInput: model.supportsFileInput ?? false,
     supportsEditTools,
     preferredEditTools: normalizeEditTools(model.preferredEditTools),
     supportsReasoning,
