@@ -151,6 +151,8 @@ Kimi K2.5 (NVIDIA NIM)
         "maxOutputTokens": 8192,
         "supportsToolCalling": true,
         "supportsVision": true,
+        "supportsReasoning": true,
+        "supportedReasoningLevels": ["low", "medium", "high"],
         "defaultReasoningLevel": "high"
       }
     ]
@@ -168,12 +170,15 @@ Kimi K2.5 (NVIDIA NIM)
         "maxOutputTokens": 4096,
         "supportsToolCalling": false,
         "supportsVision": false,
-        "defaultReasoningLevel": "medium"
+        "supportsReasoning": false
       }
     ]
   }
 ]
 ```
+
+`supportsReasoning` 决定 VS Code 是否为该模型显示 Thinking Effort。
+为了兼容旧配置，已经写过 `defaultReasoningLevel` 的模型会被视为支持 reasoning。
 
 ## 兼容服务示例
 

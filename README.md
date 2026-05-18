@@ -151,6 +151,8 @@ Example:
         "maxOutputTokens": 8192,
         "supportsToolCalling": true,
         "supportsVision": true,
+        "supportsReasoning": true,
+        "supportedReasoningLevels": ["low", "medium", "high"],
         "defaultReasoningLevel": "high"
       }
     ]
@@ -168,12 +170,15 @@ Example:
         "maxOutputTokens": 4096,
         "supportsToolCalling": false,
         "supportsVision": false,
-        "defaultReasoningLevel": "medium"
+        "supportsReasoning": false
       }
     ]
   }
 ]
 ```
+
+`supportsReasoning` controls whether VS Code shows Thinking Effort for the model.
+Existing configs that already set `defaultReasoningLevel` are treated as reasoning-capable for compatibility.
 
 ## Compatible Provider Examples
 
@@ -223,4 +228,3 @@ src/commands.ts
 src/config.ts
 src/types.ts
 ```
-

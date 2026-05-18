@@ -17,6 +17,27 @@ function normalizeReasoningLevel(level: unknown): ReasoningLevel {
   return 'medium';
 }
 
+function normalizeSupportedReasoningLevels(levels: unknown): ReasoningLevel[] | undefined {
+  if (!Array.isArray(levels)) {
+    return undefined;
+  }
+
+  const normalized = levels
+    .filter((level): level is ReasoningLevel => (
+      typeof level === 'string' && VALID_REASONING_LEVELS.has(level as ReasoningLevel)
+    ))
+    .filter((level, index, values) => values.indexOf(level) === index);
+
+  return normalized.length > 0 ? normalized : undefined;
+}
+
+function shouldSupportReasoning(model: ModelConfig): boolean {
+  if (model.supportsReasoning !== undefined) {
+    return model.supportsReasoning;
+  }
+  return model.defaultReasoningLevel !== undefined;
+}
+
 /** The VS Code configuration section key */
 const CONFIG_SECTION = 'openai-compat-provider';
 const PROVIDERS_KEY = 'providers';
@@ -42,6 +63,8 @@ export function getProviders(): ProviderConfig[] {
       maxOutputTokens: m.maxOutputTokens ?? 4096,
       supportsToolCalling: m.supportsToolCalling ?? true,
       supportsVision: m.supportsVision ?? false,
+      supportsReasoning: shouldSupportReasoning(m),
+      supportedReasoningLevels: normalizeSupportedReasoningLevels(m.supportedReasoningLevels),
       defaultReasoningLevel: normalizeReasoningLevel(m.defaultReasoningLevel),
     })),
   }));

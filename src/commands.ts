@@ -24,6 +24,15 @@ import {
 } from './config';
 import { ModelConfig, ReasoningLevel } from './types';
 
+const REASONING_LEVEL_ITEMS: Array<vscode.QuickPickItem & { value: ReasoningLevel }> = [
+  { label: 'none', description: 'No extra reasoning effort', value: 'none' },
+  { label: 'low', description: 'Faster, lower reasoning effort', value: 'low' },
+  { label: 'medium', description: 'Balanced default', value: 'medium' },
+  { label: 'high', description: 'Higher reasoning effort', value: 'high' },
+  { label: 'xhigh', description: 'Very high reasoning effort', value: 'xhigh' },
+  { label: 'max', description: 'Maximum reasoning effort', value: 'max' },
+];
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Registration entry-point
 // ─────────────────────────────────────────────────────────────────────────────
@@ -282,18 +291,36 @@ async function cmdAddModel(preselectedProviderId?: string): Promise<void> {
   );
   if (!visionChoice) { return; }
 
-  const reasoningChoice = await vscode.window.showQuickPick(
+  const reasoningSupportChoice = await vscode.window.showQuickPick(
     [
-      { label: 'none', description: 'No extra reasoning effort', value: 'none' as ReasoningLevel },
-      { label: 'low', description: 'Faster, lower reasoning effort', value: 'low' as ReasoningLevel },
-      { label: 'medium', description: 'Balanced default', value: 'medium' as ReasoningLevel },
-      { label: 'high', description: 'Higher reasoning effort', value: 'high' as ReasoningLevel },
-      { label: 'xhigh', description: 'Very high reasoning effort', value: 'xhigh' as ReasoningLevel },
-      { label: 'max', description: 'Maximum reasoning effort', value: 'max' as ReasoningLevel },
+      { label: '$(lightbulb) Yes – show Thinking Effort', value: true },
+      { label: '$(circle-slash) No – hide Thinking Effort', value: false },
     ],
-    { placeHolder: 'Default reasoning level when not specified by request (5/5)' }
+    { placeHolder: 'Does this model support configurable reasoning effort? (5/5)' }
   );
-  if (!reasoningChoice) { return; }
+  if (!reasoningSupportChoice) { return; }
+
+  let supportedReasoningLevels: ReasoningLevel[] | undefined;
+  let defaultReasoningLevel: ReasoningLevel | undefined;
+  if (reasoningSupportChoice.value) {
+    const selectedLevels = await vscode.window.showQuickPick(
+      REASONING_LEVEL_ITEMS,
+      {
+        canPickMany: true,
+        placeHolder: 'Select reasoning effort levels this model supports',
+      }
+    );
+    if (!selectedLevels || selectedLevels.length === 0) { return; }
+    supportedReasoningLevels = selectedLevels.map(item => item.value);
+
+    const defaultChoices = REASONING_LEVEL_ITEMS.filter(item => supportedReasoningLevels?.includes(item.value));
+    const reasoningChoice = await vscode.window.showQuickPick(
+      defaultChoices,
+      { placeHolder: 'Default reasoning level when not specified by request' }
+    );
+    if (!reasoningChoice) { return; }
+    defaultReasoningLevel = reasoningChoice.value;
+  }
 
   const model: ModelConfig = {
     id: modelId.trim(),
@@ -302,8 +329,12 @@ async function cmdAddModel(preselectedProviderId?: string): Promise<void> {
     maxOutputTokens: 4096,   // Conservative default; user can edit settings.json if needed
     supportsToolCalling: toolChoice.value,
     supportsVision: visionChoice.value,
-    defaultReasoningLevel: reasoningChoice.value,
+    supportsReasoning: reasoningSupportChoice.value,
   };
+  if (reasoningSupportChoice.value) {
+    model.supportedReasoningLevels = supportedReasoningLevels;
+    model.defaultReasoningLevel = defaultReasoningLevel;
+  }
 
   try {
     await addModel(providerId, model);
@@ -399,7 +430,7 @@ async function cmdListProviders(): Promise<void> {
         items.push({
           label: `  $(circuit-board) ${m.name}`,
           description: m.id,
-          detail: `  Input: ${m.maxInputTokens.toLocaleString()} tokens · Tools: ${m.supportsToolCalling ? 'yes' : 'no'} · Vision: ${m.supportsVision ? 'yes' : 'no'} · Reasoning: ${m.defaultReasoningLevel ?? 'medium'}`,
+          detail: `  Input: ${m.maxInputTokens.toLocaleString()} tokens · Tools: ${m.supportsToolCalling ? 'yes' : 'no'} · Vision: ${m.supportsVision ? 'yes' : 'no'} · Reasoning: ${m.supportsReasoning ? (m.defaultReasoningLevel ?? 'medium') : 'no'}`,
         });
       }
     }

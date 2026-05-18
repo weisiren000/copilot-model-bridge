@@ -22,6 +22,10 @@ export interface ModelConfig {
   supportsToolCalling: boolean;
   /** Whether the model supports image/vision inputs */
   supportsVision?: boolean;
+  /** Whether the model exposes configurable reasoning effort */
+  supportsReasoning?: boolean;
+  /** Reasoning effort values this model accepts */
+  supportedReasoningLevels?: ReasoningLevel[];
   /** Default reasoning effort when request does not explicitly set one */
   defaultReasoningLevel?: ReasoningLevel;
 }
