@@ -254,7 +254,7 @@ async function cmdAddModel(preselectedProviderId?: string): Promise<void> {
 
   // ── Step 1: Model ID ──────────────────────────────────────────────────────
   const modelId = await vscode.window.showInputBox({
-    title: `Add Model to "${providerLabel}" (1/7) – Model ID`,
+    title: `Add Model to "${providerLabel}" (1/8) – Model ID`,
     prompt: 'The model identifier as the API expects it',
     placeHolder: 'e.g. nvidia/llama-3.1-nemotron-ultra-253b-v1',
     validateInput: v => v.trim() ? undefined : 'Model ID cannot be empty',
@@ -263,7 +263,7 @@ async function cmdAddModel(preselectedProviderId?: string): Promise<void> {
 
   // ── Step 2: Display Name ──────────────────────────────────────────────────
   const modelName = await vscode.window.showInputBox({
-    title: `Add Model to "${providerLabel}" (2/7) – Display Name`,
+    title: `Add Model to "${providerLabel}" (2/8) – Display Name`,
     prompt: 'Human-readable name shown in the Copilot model picker',
     placeHolder: 'e.g. Llama 3.1 Nemotron Ultra 253B',
     validateInput: v => v.trim() ? undefined : 'Display name cannot be empty',
@@ -272,7 +272,7 @@ async function cmdAddModel(preselectedProviderId?: string): Promise<void> {
 
   // ── Step 3: Context size ──────────────────────────────────────────────────
   const ctxStr = await vscode.window.showInputBox({
-    title: `Add Model to "${providerLabel}" (3/7) – Max Input Tokens`,
+    title: `Add Model to "${providerLabel}" (3/8) – Max Input Tokens`,
     prompt: 'Maximum input context window in tokens',
     value: '128000',
     validateInput: v => isNaN(parseInt(v)) ? 'Must be a number' : undefined,
@@ -285,7 +285,7 @@ async function cmdAddModel(preselectedProviderId?: string): Promise<void> {
       { label: '$(check) Yes – model supports tool/function calling', value: true },
       { label: '$(close) No – text only', value: false },
     ],
-    { placeHolder: 'Does this model support tool calling? (4/7)' }
+    { placeHolder: 'Does this model support tool calling? (4/8)' }
   );
   if (!toolChoice) { return; }
 
@@ -298,7 +298,7 @@ async function cmdAddModel(preselectedProviderId?: string): Promise<void> {
         { label: '$(checklist) Yes – choose edit tools', value: 'custom' },
         { label: '$(circle-slash) No – no edit tool hints', value: 'disabled' },
       ],
-      { placeHolder: 'Should Agent mode receive edit tool hints? (5/7)' }
+      { placeHolder: 'Should Agent mode receive edit tool hints? (5/8)' }
     );
     if (!editToolsChoice) { return; }
 
@@ -319,7 +319,7 @@ async function cmdAddModel(preselectedProviderId?: string): Promise<void> {
       [
         { label: '$(circle-slash) No – tool calling is disabled, so edit tool hints will not be declared', value: false },
       ],
-      { placeHolder: 'Should Agent mode receive edit tool hints? (5/7)' }
+      { placeHolder: 'Should Agent mode receive edit tool hints? (5/8)' }
     );
     if (!editToolsChoice) { return; }
     supportsEditTools = editToolsChoice.value;
@@ -330,16 +330,25 @@ async function cmdAddModel(preselectedProviderId?: string): Promise<void> {
       { label: '$(device-camera) Yes – model supports vision/image input', value: true },
       { label: '$(circle-slash) No – no image input support', value: false },
     ],
-    { placeHolder: 'Does this model support image/vision input? (6/7)' }
+    { placeHolder: 'Does this model support image/vision input? (6/8)' }
   );
   if (!visionChoice) { return; }
+
+  const multiplier = await vscode.window.showInputBox({
+    title: `Add Model to "${providerLabel}" (7/8) – Cost Multiplier`,
+    prompt: 'Request cost multiplier label shown in VS Code model UI',
+    value: '0x',
+    placeHolder: '0x, 1x, 0.5x, High',
+    validateInput: v => v.trim() ? undefined : 'Multiplier cannot be empty',
+  });
+  if (!multiplier) { return; }
 
   const reasoningSupportChoice = await vscode.window.showQuickPick(
     [
       { label: '$(lightbulb) Yes – show Thinking Effort', value: true },
       { label: '$(circle-slash) No – hide Thinking Effort', value: false },
     ],
-    { placeHolder: 'Does this model support configurable reasoning effort? (7/7)' }
+    { placeHolder: 'Does this model support configurable reasoning effort? (8/8)' }
   );
   if (!reasoningSupportChoice) { return; }
 
@@ -374,6 +383,7 @@ async function cmdAddModel(preselectedProviderId?: string): Promise<void> {
     supportsVision: visionChoice.value,
     supportsEditTools,
     supportsReasoning: reasoningSupportChoice.value,
+    multiplier: multiplier.trim(),
   };
   if (preferredEditTools) {
     model.preferredEditTools = preferredEditTools;
@@ -477,7 +487,7 @@ async function cmdListProviders(): Promise<void> {
         items.push({
           label: `  $(circuit-board) ${m.name}`,
           description: m.id,
-          detail: `  Input: ${m.maxInputTokens.toLocaleString()} tokens · Tools: ${m.supportsToolCalling ? 'yes' : 'no'} · Edit: ${m.supportsEditTools ? 'yes' : 'no'} · Vision: ${m.supportsVision ? 'yes' : 'no'} · Reasoning: ${m.supportsReasoning ? (m.defaultReasoningLevel ?? 'medium') : 'no'}`,
+          detail: `  Input: ${m.maxInputTokens.toLocaleString()} tokens · Tools: ${m.supportsToolCalling ? 'yes' : 'no'} · Edit: ${m.supportsEditTools ? 'yes' : 'no'} · Vision: ${m.supportsVision ? 'yes' : 'no'} · Reasoning: ${m.supportsReasoning ? (m.defaultReasoningLevel ?? 'medium') : 'no'} · Cost: ${m.multiplier ?? '0x'}`,
         });
       }
     }

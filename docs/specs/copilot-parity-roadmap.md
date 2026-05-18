@@ -158,6 +158,8 @@ preferredEditTools?: Array<'find-replace' | 'multi-find-replace' | 'apply-patch'
 
 ## Feature 3: Model Billing Multiplier Metadata
 
+> 状态：已完成（2026-05-18）
+
 ### Problem
 
 Copilot 模型选择器和模型管理页会展示 premium request multiplier / billing details。OAIProvider 目前不声明 `multiplier` 或 `multiplierNumeric`，因此自定义模型缺少费用/倍率提示。

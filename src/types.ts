@@ -33,6 +33,10 @@ export interface ModelConfig {
   supportedReasoningLevels?: ReasoningLevel[];
   /** Default reasoning effort when request does not explicitly set one */
   defaultReasoningLevel?: ReasoningLevel;
+  /** Human-readable request cost multiplier shown in VS Code model UI */
+  multiplier?: string;
+  /** Numeric request cost multiplier used by VS Code for cost comparisons */
+  multiplierNumeric?: number;
 }
 
 /** Represents a fully configured OpenAI-compatible provider entry */

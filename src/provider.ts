@@ -18,6 +18,7 @@
 import * as vscode from 'vscode';
 import { getProviders } from './config';
 import {
+  buildModelBillingMetadata,
   buildModelCapabilities,
   buildModelReasoningConfigurationSchema,
   buildOpenAIContent,
@@ -81,9 +82,12 @@ export class OpenAICompatChatProvider implements vscode.LanguageModelChatProvide
 
     for (const provider of providers) {
       for (const model of provider.models) {
+        const billingMetadata = buildModelBillingMetadata(model);
         const metadata: vscode.LanguageModelChatInformation & {
           isUserSelectable: true;
           configurationSchema?: Record<string, unknown>;
+          multiplier?: string;
+          multiplierNumeric?: number;
         } = {
           // Compound ID encodes both provider and model so we can route later
           id: `${provider.id}${ID_SEP}${model.id}`,
@@ -96,11 +100,16 @@ export class OpenAICompatChatProvider implements vscode.LanguageModelChatProvide
           maxOutputTokens: model.maxOutputTokens,
           detail: `via ${provider.baseUrl}`,
           tooltip: `Provider: ${provider.displayName}\nBase URL: ${provider.baseUrl}\nModel ID: ${model.id}`,
+          multiplier: billingMetadata.multiplier,
           capabilities: buildModelCapabilities(model),
           // Newer Copilot pickers filter the chat dropdown more strictly than
           // the Manage Models editor, so keep extension models explicitly selectable.
           isUserSelectable: true,
         };
+
+        if (billingMetadata.multiplierNumeric !== undefined) {
+          metadata.multiplierNumeric = billingMetadata.multiplierNumeric;
+        }
 
         const configurationSchema = buildModelReasoningConfigurationSchema(model);
         if (configurationSchema) {

@@ -159,7 +159,8 @@ Example:
         "supportsVision": true,
         "supportsReasoning": true,
         "supportedReasoningLevels": ["low", "medium", "high"],
-        "defaultReasoningLevel": "high"
+        "defaultReasoningLevel": "high",
+        "multiplier": "1x"
       }
     ]
   },
@@ -177,7 +178,8 @@ Example:
         "supportsToolCalling": false,
         "supportsEditTools": false,
         "supportsVision": false,
-        "supportsReasoning": false
+        "supportsReasoning": false,
+        "multiplier": "0x"
       }
     ]
   }
@@ -186,6 +188,7 @@ Example:
 
 `supportsReasoning` controls whether VS Code shows Thinking Effort for the model. Existing configs that already set `defaultReasoningLevel` and omit `supportsReasoning` are treated as reasoning-capable for compatibility. If `supportsReasoning` is explicitly `false`, Thinking Effort stays disabled.
 `supportsEditTools` controls whether Agent mode receives preferred edit tool hints. It defaults to `supportsToolCalling`; if enabled without `preferredEditTools`, the default hints are `find-replace`, `multi-find-replace`, and `apply-patch`. Unknown values in `preferredEditTools` are filtered; if all configured values are unknown, no edit tool hints are declared. Models with `supportsToolCalling: false` never declare edit tool hints.
+`multiplier` controls the cost label shown by VS Code. It defaults to `0x`; labels like `1x` and `0.5x` automatically provide `multiplierNumeric` unless you set `multiplierNumeric` explicitly.
 
 ## Compatible Provider Examples
 

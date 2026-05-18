@@ -21,6 +21,8 @@ test('does not add a default reasoning level to non-reasoning models', () => {
       supportsReasoning: false,
       supportedReasoningLevels: undefined,
       defaultReasoningLevel: undefined,
+      multiplier: '0x',
+      multiplierNumeric: undefined,
     }
   );
 });
@@ -110,4 +112,26 @@ test('tool calling disabled overrides explicit edit tools support', () => {
   });
 
   assert.equal(model.supportsEditTools, false);
+});
+
+test('defaults billing multiplier to 0x for normalized models', () => {
+  const model = normalizeModelConfig({
+    id: 'byok-model',
+    name: 'BYOK Model',
+  });
+
+  assert.equal(model.multiplier, '0x');
+  assert.equal(model.multiplierNumeric, undefined);
+});
+
+test('keeps configured billing multiplier fields during normalization', () => {
+  const model = normalizeModelConfig({
+    id: 'paid-model',
+    name: 'Paid Model',
+    multiplier: '2x',
+    multiplierNumeric: 2,
+  });
+
+  assert.equal(model.multiplier, '2x');
+  assert.equal(model.multiplierNumeric, 2);
 });

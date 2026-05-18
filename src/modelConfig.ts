@@ -3,6 +3,7 @@ import { EditToolName, ModelConfig, ReasoningLevel } from './types';
 const DEFAULT_INPUT_TOKENS = 128000;
 const DEFAULT_OUTPUT_TOKENS = 4096;
 const DEFAULT_REASONING_LEVEL: ReasoningLevel = 'medium';
+const DEFAULT_MULTIPLIER = '0x';
 const VALID_REASONING_LEVELS: readonly ReasoningLevel[] = ['none', 'low', 'medium', 'high', 'xhigh', 'max'];
 const VALID_EDIT_TOOLS: readonly EditToolName[] = [
   'find-replace',
@@ -35,6 +36,8 @@ export function normalizeModelConfig(model: RawModelConfig): ModelConfig {
       defaultReasoningLevel
     ),
     defaultReasoningLevel,
+    multiplier: normalizeMultiplierLabel(model.multiplier),
+    multiplierNumeric: normalizeMultiplierNumeric(model.multiplierNumeric),
   };
 }
 
@@ -93,4 +96,12 @@ function normalizeEditTools(tools: unknown): EditToolName[] | undefined {
 
 function isEditToolName(value: unknown): value is EditToolName {
   return typeof value === 'string' && VALID_EDIT_TOOLS.includes(value as EditToolName);
+}
+
+function normalizeMultiplierLabel(multiplier: unknown): string {
+  return typeof multiplier === 'string' && multiplier.trim() ? multiplier.trim() : DEFAULT_MULTIPLIER;
+}
+
+function normalizeMultiplierNumeric(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : undefined;
 }

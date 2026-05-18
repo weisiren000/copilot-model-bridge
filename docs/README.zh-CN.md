@@ -159,7 +159,8 @@ Kimi K2.5 (NVIDIA NIM)
         "supportsVision": true,
         "supportsReasoning": true,
         "supportedReasoningLevels": ["low", "medium", "high"],
-        "defaultReasoningLevel": "high"
+        "defaultReasoningLevel": "high",
+        "multiplier": "1x"
       }
     ]
   },
@@ -177,7 +178,8 @@ Kimi K2.5 (NVIDIA NIM)
         "supportsToolCalling": false,
         "supportsEditTools": false,
         "supportsVision": false,
-        "supportsReasoning": false
+        "supportsReasoning": false,
+        "multiplier": "0x"
       }
     ]
   }
@@ -186,6 +188,7 @@ Kimi K2.5 (NVIDIA NIM)
 
 `supportsReasoning` 决定 VS Code 是否为该模型显示 Thinking Effort。为了兼容旧配置，已经写过 `defaultReasoningLevel` 且没有写 `supportsReasoning` 的模型会被视为支持 reasoning；如果显式写了 `supportsReasoning: false`，则不会显示 Thinking Effort。
 `supportsEditTools` 决定 Agent 模式是否接收模型偏好的编辑工具提示。它默认跟随 `supportsToolCalling`；启用但未配置 `preferredEditTools` 时，默认提示为 `find-replace`、`multi-find-replace` 和 `apply-patch`。`preferredEditTools` 中的未知值会被过滤；如果配置的值全部未知，则不会声明编辑工具提示。`supportsToolCalling: false` 的模型永远不会声明编辑工具提示。
+`multiplier` 决定 VS Code 中显示的成本倍率标签，默认是 `0x`；`1x`、`0.5x` 这类标签会自动推导 `multiplierNumeric`，除非你显式配置了 `multiplierNumeric`。
 
 ## 兼容服务示例
 

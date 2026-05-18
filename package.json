@@ -32,6 +32,9 @@
   "activationEvents": [
     "onStartupFinished"
   ],
+  "enabledApiProposals": [
+    "chatProvider"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "languageModelChatProviders": [
@@ -191,6 +194,16 @@
                         "max"
                       ],
                       "description": "Default reasoning effort when a request does not explicitly provide one"
+                    },
+                    "multiplier": {
+                      "type": "string",
+                      "default": "0x",
+                      "description": "Request cost multiplier label shown in VS Code model UI, such as 0x, 1x, 0.5x, or High"
+                    },
+                    "multiplierNumeric": {
+                      "type": "number",
+                      "minimum": 0,
+                      "description": "Numeric form of multiplier for VS Code cost comparisons. If unset, labels like 1x or 0.5x are inferred automatically."
                     }
                   }
                 }
