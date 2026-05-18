@@ -45,6 +45,8 @@ DeepSeek 适配是 provider 专属协议差异，不放进通用 parity feature 
 
 ## Feature 1: Reasoning Capability Gating
 
+> 状态：已完成（2026-05-18）
+
 ### Problem
 
 当前 OAIProvider 会给所有模型挂载 `configurationSchema`，因此所有模型都可能显示 Thinking Effort 子菜单。
@@ -98,6 +100,8 @@ defaultReasoningLevel?: ReasoningLevel;
 4. 文档与迁移说明。
 
 ## Feature 2: Edit Tools Capability Hints
+
+> 状态：已完成（2026-05-18）
 
 ### Problem
 
