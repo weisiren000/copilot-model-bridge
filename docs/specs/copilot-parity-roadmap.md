@@ -309,6 +309,8 @@ toolChoiceMode?: 'auto' | 'required' | 'none' | 'omit';
 
 ## Feature 6: Token Counting Improvements
 
+> 状态：已完成（2026-05-19）
+
 ### Problem
 
 当前 `provideTokenCount` 使用字符数除以 4 的粗估方法，且只统计文本。图片、工具调用、结构化内容不会被合理计入。

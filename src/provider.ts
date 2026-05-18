@@ -23,9 +23,12 @@ import {
   buildModelReasoningConfigurationSchema,
   buildOpenAIContent,
   createOpenAIDataPartContent,
+  estimateChatMessageTokens,
+  estimateStringTokens,
   OpenAIContentPart,
   resolveReasoningLevel,
   resolveToolChoice,
+  TokenEstimatePart,
 } from './openai';
 import { OpenAIStreamChunk, ProviderConfig } from './types';
 
@@ -293,13 +296,11 @@ export class OpenAICompatChatProvider implements vscode.LanguageModelChatProvide
     text: string | vscode.LanguageModelChatRequestMessage,
     _token: vscode.CancellationToken
   ): Promise<number> {
-    const str = typeof text === 'string'
-      ? text
-      : text.content
-        .filter((p): p is vscode.LanguageModelTextPart => p instanceof vscode.LanguageModelTextPart)
-        .map(p => p.value)
-        .join('');
-    return Math.ceil(str.length / 4);
+    if (typeof text === 'string') {
+      return estimateStringTokens(text);
+    }
+
+    return estimateChatMessageTokens(this.toTokenEstimateParts(text.content));
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -319,6 +320,42 @@ export class OpenAICompatChatProvider implements vscode.LanguageModelChatProvide
     const modelId = compoundId.substring(sepIdx + ID_SEP.length);
     const provider = getProviders().find(p => p.id === providerId);
     return { provider, modelId };
+  }
+
+  private toTokenEstimateParts(
+    parts: readonly vscode.LanguageModelInputPart[] | readonly unknown[]
+  ): TokenEstimatePart[] {
+    const result: TokenEstimatePart[] = [];
+
+    for (const part of parts) {
+      if (part instanceof vscode.LanguageModelTextPart) {
+        result.push({ type: 'text', text: part.value });
+      } else if (part instanceof vscode.LanguageModelDataPart) {
+        result.push({ type: 'data', data: part.data, mimeType: part.mimeType });
+      } else if (part instanceof vscode.LanguageModelToolCallPart) {
+        result.push({ type: 'toolCall', name: part.name, input: part.input });
+      } else if (part instanceof vscode.LanguageModelToolResultPart) {
+        result.push({
+          type: 'toolResult',
+          callId: part.callId,
+          content: this.toTokenEstimateParts(part.content),
+        });
+      } else if (typeof part === 'string') {
+        result.push({ type: 'text', text: part });
+      } else if (part !== undefined && part !== null) {
+        result.push({ type: 'text', text: this.safeTokenText(part) });
+      }
+    }
+
+    return result;
+  }
+
+  private safeTokenText(value: unknown): string {
+    try {
+      return JSON.stringify(value) ?? String(value);
+    } catch {
+      return String(value);
+    }
   }
 
   /**

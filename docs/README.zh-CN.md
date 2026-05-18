@@ -195,6 +195,8 @@ Kimi K2.5 (NVIDIA NIM)
 `supportsVideo` 和 `supportsFileInput` 定义附件边界。图片会按 OpenAI 兼容的 `image_url` 发送，文本和 JSON data part 会转成文本；视频和未知二进制附件会明确报错，不再静默忽略。
 `multiplier` 决定 VS Code 中显示的成本倍率标签，默认是 `0x`；`1x`、`0.5x` 这类标签会自动推导 `multiplierNumeric`，除非你显式配置了 `multiplierNumeric`。
 
+Token count 是估算值。文本使用每 4 个字符约等于 1 token 的粗估规则，图片按每张 1024 tokens 估算，工具调用、工具结果、JSON 和文本 data part 会按序列化后的文本估算。该值用于 VS Code 上下文预算，可能与具体 provider 的 tokenizer 结果不同。
+
 ## 兼容服务示例
 
 | 服务 | Base URL |

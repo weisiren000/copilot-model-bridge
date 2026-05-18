@@ -195,6 +195,8 @@ Example:
 `supportsVideo` and `supportsFileInput` define the attachment boundary. Images are sent as OpenAI-compatible `image_url` parts, text and JSON data parts are converted to text, and video or unknown binary attachments are rejected with a clear error instead of being silently ignored.
 `multiplier` controls the cost label shown by VS Code. It defaults to `0x`; labels like `1x` and `0.5x` automatically provide `multiplierNumeric` unless you set `multiplierNumeric` explicitly.
 
+Token counts are estimates. Text uses a simple 4 characters per token heuristic, images are counted as 1024 tokens each, and tool calls, tool results, JSON, and text data parts are estimated from their serialized text. The value is intended for VS Code context budgeting and may differ from the provider's tokenizer.
+
 ## Compatible Provider Examples
 
 | Provider | Base URL |
