@@ -16,6 +16,7 @@ OAIProvider 是一个 VS Code 扩展，基于官方 `LanguageModelChatProvider` 
 - 基于 `/chat/completions` 的流式响应
 - 每个 provider 独立 API Key
 - 支持工具调用能力开关
+- 支持 Agent 编辑工具能力提示
 - 支持视觉能力开关
 - reasoning 模型可选显示 Thinking Effort 配置
 - 通过命令面板向导完成配置，无需手改 JSON
@@ -87,8 +88,9 @@ OAIProvider: Add Model
 2. 模型显示名称
 3. 最大输入 token
 4. 是否支持工具调用
-5. 是否支持视觉输入
-6. 是否支持可配置 reasoning effort
+5. 是否向 Agent 模式提供编辑工具提示
+6. 是否支持视觉输入
+7. 是否支持可配置 reasoning effort
 
 对于 reasoning 模型，向导还会继续询问支持的思考层级和默认思考层级。
 
@@ -152,6 +154,8 @@ Kimi K2.5 (NVIDIA NIM)
         "maxInputTokens": 131072,
         "maxOutputTokens": 8192,
         "supportsToolCalling": true,
+        "supportsEditTools": true,
+        "preferredEditTools": ["find-replace", "multi-find-replace", "apply-patch"],
         "supportsVision": true,
         "supportsReasoning": true,
         "supportedReasoningLevels": ["low", "medium", "high"],
@@ -171,6 +175,7 @@ Kimi K2.5 (NVIDIA NIM)
         "maxInputTokens": 32000,
         "maxOutputTokens": 4096,
         "supportsToolCalling": false,
+        "supportsEditTools": false,
         "supportsVision": false,
         "supportsReasoning": false
       }
@@ -180,6 +185,7 @@ Kimi K2.5 (NVIDIA NIM)
 ```
 
 `supportsReasoning` 决定 VS Code 是否为该模型显示 Thinking Effort。为了兼容旧配置，已经写过 `defaultReasoningLevel` 且没有写 `supportsReasoning` 的模型会被视为支持 reasoning；如果显式写了 `supportsReasoning: false`，则不会显示 Thinking Effort。
+`supportsEditTools` 决定 Agent 模式是否接收模型偏好的编辑工具提示。它默认跟随 `supportsToolCalling`；启用但未配置 `preferredEditTools` 时，默认提示为 `find-replace`、`multi-find-replace` 和 `apply-patch`。`preferredEditTools` 中的未知值会被过滤；如果配置的值全部未知，则不会声明编辑工具提示。`supportsToolCalling: false` 的模型永远不会声明编辑工具提示。
 
 ## 兼容服务示例
 

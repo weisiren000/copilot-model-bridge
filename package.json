@@ -143,6 +143,23 @@
                       "default": false,
                       "description": "Whether the model supports image/vision inputs"
                     },
+                    "supportsEditTools": {
+                      "type": "boolean",
+                      "description": "Whether the model exposes edit tool hints for Copilot Agent mode. Defaults to supportsToolCalling."
+                    },
+                    "preferredEditTools": {
+                      "type": "array",
+                      "description": "Preferred edit tools for file modifications in Agent mode. Leave unset to use the default edit tools.",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "find-replace",
+                          "multi-find-replace",
+                          "apply-patch",
+                          "code-rewrite"
+                        ]
+                      }
+                    },
                     "supportsReasoning": {
                       "type": "boolean",
                       "default": false,

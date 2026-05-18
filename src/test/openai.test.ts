@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   buildOpenAIContent,
+  buildModelCapabilities,
   buildModelReasoningConfigurationSchema,
   buildReasoningConfigurationSchema,
   createOpenAIImagePart,
@@ -130,4 +131,78 @@ test('returns thinking effort schema for reasoning models', () => {
       },
     },
   });
+});
+
+test('adds default edit tools for tool-calling models', () => {
+  assert.deepEqual(
+    buildModelCapabilities({
+      supportsToolCalling: true,
+      supportsVision: false,
+    }),
+    {
+      toolCalling: true,
+      imageInput: false,
+      editTools: ['find-replace', 'multi-find-replace', 'apply-patch'],
+    }
+  );
+});
+
+test('uses configured edit tools and filters unknown values', () => {
+  assert.deepEqual(
+    buildModelCapabilities({
+      supportsToolCalling: true,
+      supportsVision: true,
+      supportsEditTools: true,
+      preferredEditTools: ['code-rewrite', 'unknown', 'apply-patch', 'code-rewrite'] as never,
+    }),
+    {
+      toolCalling: true,
+      imageInput: true,
+      editTools: ['code-rewrite', 'apply-patch'],
+    }
+  );
+});
+
+test('does not fall back to default edit tools when configured edit tools are all unknown', () => {
+  assert.deepEqual(
+    buildModelCapabilities({
+      supportsToolCalling: true,
+      supportsVision: false,
+      supportsEditTools: true,
+      preferredEditTools: ['unknown'] as never,
+    }),
+    {
+      toolCalling: true,
+      imageInput: false,
+    }
+  );
+});
+
+test('omits edit tools when tool calling is disabled', () => {
+  assert.deepEqual(
+    buildModelCapabilities({
+      supportsToolCalling: false,
+      supportsVision: false,
+      supportsEditTools: true,
+      preferredEditTools: ['apply-patch'],
+    }),
+    {
+      toolCalling: false,
+      imageInput: false,
+    }
+  );
+});
+
+test('omits edit tools when explicitly disabled', () => {
+  assert.deepEqual(
+    buildModelCapabilities({
+      supportsToolCalling: true,
+      supportsVision: false,
+      supportsEditTools: false,
+    }),
+    {
+      toolCalling: true,
+      imageInput: false,
+    }
+  );
 });

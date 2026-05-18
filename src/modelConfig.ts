@@ -1,14 +1,22 @@
-import { ModelConfig, ReasoningLevel } from './types';
+import { EditToolName, ModelConfig, ReasoningLevel } from './types';
 
 const DEFAULT_INPUT_TOKENS = 128000;
 const DEFAULT_OUTPUT_TOKENS = 4096;
 const DEFAULT_REASONING_LEVEL: ReasoningLevel = 'medium';
 const VALID_REASONING_LEVELS: readonly ReasoningLevel[] = ['none', 'low', 'medium', 'high', 'xhigh', 'max'];
+const VALID_EDIT_TOOLS: readonly EditToolName[] = [
+  'find-replace',
+  'multi-find-replace',
+  'apply-patch',
+  'code-rewrite',
+];
 
 type RawModelConfig = Partial<ModelConfig> & Pick<ModelConfig, 'id' | 'name'>;
 
 export function normalizeModelConfig(model: RawModelConfig): ModelConfig {
   const supportsReasoning = shouldSupportReasoning(model);
+  const supportsToolCalling = model.supportsToolCalling ?? true;
+  const supportsEditTools = supportsToolCalling && (model.supportsEditTools ?? true);
   const defaultReasoningLevel = normalizeDefaultReasoningLevel(model.defaultReasoningLevel, supportsReasoning);
 
   return {
@@ -16,8 +24,10 @@ export function normalizeModelConfig(model: RawModelConfig): ModelConfig {
     name: model.name,
     maxInputTokens: model.maxInputTokens ?? DEFAULT_INPUT_TOKENS,
     maxOutputTokens: model.maxOutputTokens ?? DEFAULT_OUTPUT_TOKENS,
-    supportsToolCalling: model.supportsToolCalling ?? true,
+    supportsToolCalling,
     supportsVision: model.supportsVision ?? false,
+    supportsEditTools,
+    preferredEditTools: normalizeEditTools(model.preferredEditTools),
     supportsReasoning,
     supportedReasoningLevels: normalizeSupportedReasoningLevels(
       model.supportedReasoningLevels,
@@ -69,4 +79,18 @@ function normalizeSupportedReasoningLevels(
 
 function isReasoningLevel(value: unknown): value is ReasoningLevel {
   return typeof value === 'string' && VALID_REASONING_LEVELS.includes(value as ReasoningLevel);
+}
+
+function normalizeEditTools(tools: unknown): EditToolName[] | undefined {
+  if (!Array.isArray(tools)) {
+    return undefined;
+  }
+
+  return tools
+    .filter(isEditToolName)
+    .filter((tool, index, values) => values.indexOf(tool) === index);
+}
+
+function isEditToolName(value: unknown): value is EditToolName {
+  return typeof value === 'string' && VALID_EDIT_TOOLS.includes(value as EditToolName);
 }

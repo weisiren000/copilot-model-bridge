@@ -16,6 +16,8 @@ test('does not add a default reasoning level to non-reasoning models', () => {
       maxOutputTokens: 4096,
       supportsToolCalling: true,
       supportsVision: false,
+      supportsEditTools: true,
+      preferredEditTools: undefined,
       supportsReasoning: false,
       supportedReasoningLevels: undefined,
       defaultReasoningLevel: undefined,
@@ -57,4 +59,55 @@ test('keeps invalid configured reasoning levels from expanding to all levels', (
     }).supportedReasoningLevels,
     ['high']
   );
+});
+
+test('defaults edit tools support to tool calling support', () => {
+  const model = normalizeModelConfig({
+    id: 'tools-model',
+    name: 'Tools Model',
+    supportsToolCalling: true,
+  });
+
+  assert.equal(model.supportsEditTools, true);
+});
+
+test('filters unknown configured edit tools during config normalization', () => {
+  const model = normalizeModelConfig({
+    id: 'edit-model',
+    name: 'Edit Model',
+    preferredEditTools: ['apply-patch', 'unknown', 'apply-patch', 'code-rewrite'] as never,
+  });
+
+  assert.deepEqual(model.preferredEditTools, ['apply-patch', 'code-rewrite']);
+});
+
+test('keeps explicitly invalid edit tool configuration empty instead of defaulting it', () => {
+  const model = normalizeModelConfig({
+    id: 'invalid-edit-model',
+    name: 'Invalid Edit Model',
+    preferredEditTools: ['unknown'] as never,
+  });
+
+  assert.deepEqual(model.preferredEditTools, []);
+});
+
+test('does not default edit tools support when tool calling is disabled', () => {
+  const model = normalizeModelConfig({
+    id: 'plain-model',
+    name: 'Plain Model',
+    supportsToolCalling: false,
+  });
+
+  assert.equal(model.supportsEditTools, false);
+});
+
+test('tool calling disabled overrides explicit edit tools support', () => {
+  const model = normalizeModelConfig({
+    id: 'no-tools-model',
+    name: 'No Tools Model',
+    supportsToolCalling: false,
+    supportsEditTools: true,
+  });
+
+  assert.equal(model.supportsEditTools, false);
 });

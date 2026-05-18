@@ -18,6 +18,7 @@
 import * as vscode from 'vscode';
 import { getProviders } from './config';
 import {
+  buildModelCapabilities,
   buildModelReasoningConfigurationSchema,
   buildOpenAIContent,
   createOpenAIImagePart,
@@ -95,10 +96,7 @@ export class OpenAICompatChatProvider implements vscode.LanguageModelChatProvide
           maxOutputTokens: model.maxOutputTokens,
           detail: `via ${provider.baseUrl}`,
           tooltip: `Provider: ${provider.displayName}\nBase URL: ${provider.baseUrl}\nModel ID: ${model.id}`,
-          capabilities: {
-            toolCalling: model.supportsToolCalling,
-            imageInput: model.supportsVision ?? false,
-          },
+          capabilities: buildModelCapabilities(model),
           // Newer Copilot pickers filter the chat dropdown more strictly than
           // the Manage Models editor, so keep extension models explicitly selectable.
           isUserSelectable: true,

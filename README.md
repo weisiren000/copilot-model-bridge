@@ -16,6 +16,7 @@ It lets you expose models from NVIDIA NIM, Ollama, LM Studio, vLLM, Together AI,
 - Streaming chat responses over `/chat/completions`
 - Per-provider API keys
 - Tool-calling capability flags
+- Agent edit tool capability hints
 - Vision capability flags
 - Optional Thinking Effort controls for reasoning models
 - Command-based setup without manually editing JSON
@@ -87,8 +88,9 @@ The wizard lets you configure:
 2. Display name
 3. Max input tokens
 4. Tool calling support
-5. Vision support
-6. Whether the model supports configurable reasoning effort
+5. Edit tool hints for Agent mode
+6. Vision support
+7. Whether the model supports configurable reasoning effort
 
 For reasoning models, the wizard also asks for supported reasoning levels and the default reasoning level.
 
@@ -152,6 +154,8 @@ Example:
         "maxInputTokens": 131072,
         "maxOutputTokens": 8192,
         "supportsToolCalling": true,
+        "supportsEditTools": true,
+        "preferredEditTools": ["find-replace", "multi-find-replace", "apply-patch"],
         "supportsVision": true,
         "supportsReasoning": true,
         "supportedReasoningLevels": ["low", "medium", "high"],
@@ -171,6 +175,7 @@ Example:
         "maxInputTokens": 32000,
         "maxOutputTokens": 4096,
         "supportsToolCalling": false,
+        "supportsEditTools": false,
         "supportsVision": false,
         "supportsReasoning": false
       }
@@ -180,6 +185,7 @@ Example:
 ```
 
 `supportsReasoning` controls whether VS Code shows Thinking Effort for the model. Existing configs that already set `defaultReasoningLevel` and omit `supportsReasoning` are treated as reasoning-capable for compatibility. If `supportsReasoning` is explicitly `false`, Thinking Effort stays disabled.
+`supportsEditTools` controls whether Agent mode receives preferred edit tool hints. It defaults to `supportsToolCalling`; if enabled without `preferredEditTools`, the default hints are `find-replace`, `multi-find-replace`, and `apply-patch`. Unknown values in `preferredEditTools` are filtered; if all configured values are unknown, no edit tool hints are declared. Models with `supportsToolCalling: false` never declare edit tool hints.
 
 ## Compatible Provider Examples
 
