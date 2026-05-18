@@ -150,6 +150,8 @@ Example:
         "maxInputTokens": 131072,
         "maxOutputTokens": 8192,
         "supportsToolCalling": true,
+        "supportsEditTools": true,
+        "preferredEditTools": ["find-replace", "multi-find-replace", "apply-patch"],
         "supportsVision": true,
         "supportsReasoning": true,
         "supportedReasoningLevels": ["low", "medium", "high"],
@@ -169,6 +171,7 @@ Example:
         "maxInputTokens": 32000,
         "maxOutputTokens": 4096,
         "supportsToolCalling": false,
+        "supportsEditTools": false,
         "supportsVision": false,
         "supportsReasoning": false
       }
@@ -179,6 +182,7 @@ Example:
 
 `supportsReasoning` controls whether VS Code shows Thinking Effort for the model.
 Existing configs that already set `defaultReasoningLevel` are treated as reasoning-capable for compatibility.
+`supportsEditTools` controls whether Agent mode receives preferred edit tool hints. It defaults to `supportsToolCalling`.
 
 ## Compatible Provider Examples
 

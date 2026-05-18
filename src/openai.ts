@@ -1,6 +1,17 @@
-import { ModelConfig, ReasoningLevel } from './types';
+import { EditToolName, ModelConfig, ReasoningLevel } from './types';
 
 const REASONING_LEVELS: readonly ReasoningLevel[] = ['none', 'low', 'medium', 'high', 'xhigh', 'max'];
+const EDIT_TOOLS: readonly EditToolName[] = [
+  'find-replace',
+  'multi-find-replace',
+  'apply-patch',
+  'code-rewrite',
+];
+const DEFAULT_EDIT_TOOLS: readonly EditToolName[] = [
+  'find-replace',
+  'multi-find-replace',
+  'apply-patch',
+];
 const REASONING_LABELS: Record<ReasoningLevel, string> = {
   none: 'None',
   low: 'Low',
@@ -32,6 +43,12 @@ export interface OpenAIImageContentPart {
 
 export type OpenAIContent = string | null | Array<OpenAITextContentPart | OpenAIImageContentPart>;
 
+export interface ModelCapabilities {
+  toolCalling: boolean;
+  imageInput: boolean;
+  editTools?: EditToolName[];
+}
+
 export function createOpenAIImagePart(data: Uint8Array, mimeType: string): OpenAIImageContentPart {
   return {
     type: 'image_url',
@@ -55,6 +72,26 @@ export function buildOpenAIContent(
   }
   content.push(...images);
   return content;
+}
+
+export function buildModelCapabilities(
+  model: Pick<ModelConfig, 'supportsToolCalling' | 'supportsVision' | 'supportsEditTools' | 'preferredEditTools'>
+): ModelCapabilities {
+  const capabilities: ModelCapabilities = {
+    toolCalling: model.supportsToolCalling,
+    imageInput: model.supportsVision ?? false,
+  };
+
+  const supportsEditTools = model.supportsEditTools ?? model.supportsToolCalling;
+  if (!model.supportsToolCalling || !supportsEditTools) {
+    return capabilities;
+  }
+
+  const editTools = normalizeEditTools(model.preferredEditTools ?? DEFAULT_EDIT_TOOLS);
+  if (editTools.length > 0) {
+    capabilities.editTools = editTools;
+  }
+  return capabilities;
 }
 
 export function buildReasoningConfigurationSchema(
@@ -124,4 +161,14 @@ export function normalizeSupportedReasoningLevels(
     .filter(isReasoningLevel)
     .filter((level, index, values) => values.indexOf(level) === index);
   return result.length > 0 ? result : [...REASONING_LEVELS];
+}
+
+export function normalizeEditTools(tools: readonly unknown[] | undefined): EditToolName[] {
+  return (tools ?? [])
+    .filter(isEditToolName)
+    .filter((tool, index, values) => values.indexOf(tool) === index);
+}
+
+function isEditToolName(value: unknown): value is EditToolName {
+  return typeof value === 'string' && EDIT_TOOLS.includes(value as EditToolName);
 }

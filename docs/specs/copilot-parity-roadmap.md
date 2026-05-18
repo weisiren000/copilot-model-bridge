@@ -101,6 +101,8 @@ defaultReasoningLevel?: ReasoningLevel;
 
 ## Feature 2: Edit Tools Capability Hints
 
+> 状态：已完成（2026-05-18）
+
 ### Problem
 
 VS Code proposed API 支持 `capabilities.editTools`，用于提示模型适合哪些编辑工具。当前 OAIProvider 只声明：

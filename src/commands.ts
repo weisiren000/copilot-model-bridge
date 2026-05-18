@@ -22,7 +22,14 @@ import {
   addModel,
   removeModel,
 } from './config';
-import { ModelConfig, ReasoningLevel } from './types';
+import { EditToolName, ModelConfig, ReasoningLevel } from './types';
+
+const EDIT_TOOL_ITEMS: Array<vscode.QuickPickItem & { value: EditToolName }> = [
+  { label: 'find-replace', description: 'Find and replace text in one document', value: 'find-replace' },
+  { label: 'multi-find-replace', description: 'Find and replace multiple snippets across documents', value: 'multi-find-replace' },
+  { label: 'apply-patch', description: 'Apply file-oriented patches', value: 'apply-patch' },
+  { label: 'code-rewrite', description: 'Rewrite a snippet and return the replacement', value: 'code-rewrite' },
+];
 
 const REASONING_LEVEL_ITEMS: Array<vscode.QuickPickItem & { value: ReasoningLevel }> = [
   { label: 'none', description: 'No extra reasoning effort', value: 'none' },
@@ -291,6 +298,33 @@ async function cmdAddModel(preselectedProviderId?: string): Promise<void> {
   );
   if (!visionChoice) { return; }
 
+  let supportsEditTools = toolChoice.value;
+  let preferredEditTools: EditToolName[] | undefined;
+  if (toolChoice.value) {
+    const editToolsChoice = await vscode.window.showQuickPick(
+      [
+        { label: '$(tools) Yes – use default edit tools', value: 'default' },
+        { label: '$(checklist) Yes – choose edit tools', value: 'custom' },
+        { label: '$(circle-slash) No – no edit tool hints', value: 'disabled' },
+      ],
+      { placeHolder: 'Should Agent mode receive edit tool hints?' }
+    );
+    if (!editToolsChoice) { return; }
+
+    supportsEditTools = editToolsChoice.value !== 'disabled';
+    if (editToolsChoice.value === 'custom') {
+      const selectedEditTools = await vscode.window.showQuickPick(
+        EDIT_TOOL_ITEMS,
+        {
+          canPickMany: true,
+          placeHolder: 'Select edit tools this model should prefer',
+        }
+      );
+      if (!selectedEditTools || selectedEditTools.length === 0) { return; }
+      preferredEditTools = selectedEditTools.map(item => item.value);
+    }
+  }
+
   const reasoningSupportChoice = await vscode.window.showQuickPick(
     [
       { label: '$(lightbulb) Yes – show Thinking Effort', value: true },
@@ -329,8 +363,12 @@ async function cmdAddModel(preselectedProviderId?: string): Promise<void> {
     maxOutputTokens: 4096,   // Conservative default; user can edit settings.json if needed
     supportsToolCalling: toolChoice.value,
     supportsVision: visionChoice.value,
+    supportsEditTools,
     supportsReasoning: reasoningSupportChoice.value,
   };
+  if (preferredEditTools) {
+    model.preferredEditTools = preferredEditTools;
+  }
   if (reasoningSupportChoice.value) {
     model.supportedReasoningLevels = supportedReasoningLevels;
     model.defaultReasoningLevel = defaultReasoningLevel;
@@ -430,7 +468,7 @@ async function cmdListProviders(): Promise<void> {
         items.push({
           label: `  $(circuit-board) ${m.name}`,
           description: m.id,
-          detail: `  Input: ${m.maxInputTokens.toLocaleString()} tokens · Tools: ${m.supportsToolCalling ? 'yes' : 'no'} · Vision: ${m.supportsVision ? 'yes' : 'no'} · Reasoning: ${m.supportsReasoning ? (m.defaultReasoningLevel ?? 'medium') : 'no'}`,
+          detail: `  Input: ${m.maxInputTokens.toLocaleString()} tokens · Tools: ${m.supportsToolCalling ? 'yes' : 'no'} · Edit: ${m.supportsEditTools ? 'yes' : 'no'} · Vision: ${m.supportsVision ? 'yes' : 'no'} · Reasoning: ${m.supportsReasoning ? (m.defaultReasoningLevel ?? 'medium') : 'no'}`,
         });
       }
     }

@@ -6,9 +6,15 @@
  */
 
 import * as vscode from 'vscode';
-import { ProviderConfig, ModelConfig, ReasoningLevel } from './types';
+import { EditToolName, ProviderConfig, ModelConfig, ReasoningLevel } from './types';
 
 const VALID_REASONING_LEVELS: ReadonlySet<ReasoningLevel> = new Set(['none', 'low', 'medium', 'high', 'xhigh', 'max']);
+const VALID_EDIT_TOOLS: ReadonlySet<EditToolName> = new Set([
+  'find-replace',
+  'multi-find-replace',
+  'apply-patch',
+  'code-rewrite',
+]);
 
 function normalizeReasoningLevel(level: unknown): ReasoningLevel {
   if (typeof level === 'string' && VALID_REASONING_LEVELS.has(level as ReasoningLevel)) {
@@ -38,6 +44,20 @@ function shouldSupportReasoning(model: ModelConfig): boolean {
   return model.defaultReasoningLevel !== undefined;
 }
 
+function normalizeEditTools(tools: unknown): EditToolName[] | undefined {
+  if (!Array.isArray(tools)) {
+    return undefined;
+  }
+
+  const normalized = tools
+    .filter((tool): tool is EditToolName => (
+      typeof tool === 'string' && VALID_EDIT_TOOLS.has(tool as EditToolName)
+    ))
+    .filter((tool, index, values) => values.indexOf(tool) === index);
+
+  return normalized.length > 0 ? normalized : undefined;
+}
+
 /** The VS Code configuration section key */
 const CONFIG_SECTION = 'openai-compat-provider';
 const PROVIDERS_KEY = 'providers';
@@ -63,6 +83,8 @@ export function getProviders(): ProviderConfig[] {
       maxOutputTokens: m.maxOutputTokens ?? 4096,
       supportsToolCalling: m.supportsToolCalling ?? true,
       supportsVision: m.supportsVision ?? false,
+      supportsEditTools: m.supportsEditTools ?? (m.supportsToolCalling ?? true),
+      preferredEditTools: normalizeEditTools(m.preferredEditTools),
       supportsReasoning: shouldSupportReasoning(m),
       supportedReasoningLevels: normalizeSupportedReasoningLevels(m.supportedReasoningLevels),
       defaultReasoningLevel: normalizeReasoningLevel(m.defaultReasoningLevel),

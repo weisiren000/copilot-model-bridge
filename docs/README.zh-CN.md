@@ -150,6 +150,8 @@ Kimi K2.5 (NVIDIA NIM)
         "maxInputTokens": 131072,
         "maxOutputTokens": 8192,
         "supportsToolCalling": true,
+        "supportsEditTools": true,
+        "preferredEditTools": ["find-replace", "multi-find-replace", "apply-patch"],
         "supportsVision": true,
         "supportsReasoning": true,
         "supportedReasoningLevels": ["low", "medium", "high"],
@@ -169,6 +171,7 @@ Kimi K2.5 (NVIDIA NIM)
         "maxInputTokens": 32000,
         "maxOutputTokens": 4096,
         "supportsToolCalling": false,
+        "supportsEditTools": false,
         "supportsVision": false,
         "supportsReasoning": false
       }
@@ -179,6 +182,7 @@ Kimi K2.5 (NVIDIA NIM)
 
 `supportsReasoning` 决定 VS Code 是否为该模型显示 Thinking Effort。
 为了兼容旧配置，已经写过 `defaultReasoningLevel` 的模型会被视为支持 reasoning。
+`supportsEditTools` 决定 Agent 模式是否接收模型偏好的编辑工具提示，默认跟随 `supportsToolCalling`。
 
 ## 兼容服务示例
 
