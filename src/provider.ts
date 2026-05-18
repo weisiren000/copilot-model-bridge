@@ -18,8 +18,8 @@
 import * as vscode from 'vscode';
 import { getProviders } from './config';
 import {
+  buildModelReasoningConfigurationSchema,
   buildOpenAIContent,
-  buildReasoningConfigurationSchema,
   createOpenAIImagePart,
   resolveReasoningLevel,
 } from './openai';
@@ -80,7 +80,10 @@ export class OpenAICompatChatProvider implements vscode.LanguageModelChatProvide
 
     for (const provider of providers) {
       for (const model of provider.models) {
-        result.push({
+        const metadata: vscode.LanguageModelChatInformation & {
+          isUserSelectable: true;
+          configurationSchema?: Record<string, unknown>;
+        } = {
           // Compound ID encodes both provider and model so we can route later
           id: `${provider.id}${ID_SEP}${model.id}`,
           // Name shown in the Copilot model picker
@@ -99,11 +102,13 @@ export class OpenAICompatChatProvider implements vscode.LanguageModelChatProvide
           // Newer Copilot pickers filter the chat dropdown more strictly than
           // the Manage Models editor, so keep extension models explicitly selectable.
           isUserSelectable: true,
-          configurationSchema: buildReasoningConfigurationSchema(model.defaultReasoningLevel ?? 'medium'),
-        } as vscode.LanguageModelChatInformation & {
-          isUserSelectable: true;
-          configurationSchema: Record<string, unknown>;
-        });
+        };
+
+        const configurationSchema = buildModelReasoningConfigurationSchema(model);
+        if (configurationSchema) {
+          metadata.configurationSchema = configurationSchema;
+        }
+        result.push(metadata);
       }
     }
 
@@ -149,18 +154,20 @@ export class OpenAICompatChatProvider implements vscode.LanguageModelChatProvide
 
     // ── 3. Build the fetch request ─────────────────────────────────────────
     const requestUrl = `${provider.baseUrl}/chat/completions`;
-    const reasoningLevel = resolveReasoningLevel(
-      options.modelOptions,
-      this.readModelConfiguration(options),
-      selectedModel.defaultReasoningLevel ?? 'medium'
-    );
     const requestBody: any = {
       model: modelId,
       messages: apiMessages,
       stream: true,           // Request streaming SSE responses
       max_tokens: model.maxOutputTokens,
-      reasoning_effort: reasoningLevel,
     };
+    if (selectedModel.supportsReasoning) {
+      requestBody.reasoning_effort = resolveReasoningLevel(
+        options.modelOptions,
+        this.readModelConfiguration(options),
+        selectedModel.defaultReasoningLevel ?? 'medium',
+        selectedModel.supportedReasoningLevels
+      );
+    }
 
     if (options.tools && options.tools.length > 0) {
       requestBody.tools = options.tools.map(t => ({

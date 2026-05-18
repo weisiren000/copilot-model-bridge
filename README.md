@@ -17,7 +17,7 @@ It lets you expose models from NVIDIA NIM, Ollama, LM Studio, vLLM, Together AI,
 - Per-provider API keys
 - Tool-calling capability flags
 - Vision capability flags
-- Default reasoning level per model
+- Optional Thinking Effort controls for reasoning models
 - Command-based setup without manually editing JSON
 
 ## Requirements
@@ -88,7 +88,9 @@ The wizard lets you configure:
 3. Max input tokens
 4. Tool calling support
 5. Vision support
-6. Default reasoning level
+6. Whether the model supports configurable reasoning effort
+
+For reasoning models, the wizard also asks for supported reasoning levels and the default reasoning level.
 
 Supported reasoning levels:
 
@@ -151,6 +153,8 @@ Example:
         "maxOutputTokens": 8192,
         "supportsToolCalling": true,
         "supportsVision": true,
+        "supportsReasoning": true,
+        "supportedReasoningLevels": ["low", "medium", "high"],
         "defaultReasoningLevel": "high"
       }
     ]
@@ -168,12 +172,14 @@ Example:
         "maxOutputTokens": 4096,
         "supportsToolCalling": false,
         "supportsVision": false,
-        "defaultReasoningLevel": "medium"
+        "supportsReasoning": false
       }
     ]
   }
 ]
 ```
+
+`supportsReasoning` controls whether VS Code shows Thinking Effort for the model. Existing configs that already set `defaultReasoningLevel` and omit `supportsReasoning` are treated as reasoning-capable for compatibility. If `supportsReasoning` is explicitly `false`, Thinking Effort stays disabled.
 
 ## Compatible Provider Examples
 

@@ -24,6 +24,15 @@ import {
 } from './config';
 import { ModelConfig, ReasoningLevel } from './types';
 
+const REASONING_LEVEL_ITEMS: Array<vscode.QuickPickItem & { value: ReasoningLevel }> = [
+  { label: 'none', description: 'No extra reasoning effort', value: 'none' },
+  { label: 'low', description: 'Faster, lower reasoning effort', value: 'low' },
+  { label: 'medium', description: 'Balanced default', value: 'medium' },
+  { label: 'high', description: 'Higher reasoning effort', value: 'high' },
+  { label: 'xhigh', description: 'Very high reasoning effort', value: 'xhigh' },
+  { label: 'max', description: 'Maximum reasoning effort', value: 'max' },
+];
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Registration entry-point
 // ─────────────────────────────────────────────────────────────────────────────
@@ -238,7 +247,7 @@ async function cmdAddModel(preselectedProviderId?: string): Promise<void> {
 
   // ── Step 1: Model ID ──────────────────────────────────────────────────────
   const modelId = await vscode.window.showInputBox({
-    title: `Add Model to "${providerLabel}" (1/5) – Model ID`,
+    title: `Add Model to "${providerLabel}" (1/6) – Model ID`,
     prompt: 'The model identifier as the API expects it',
     placeHolder: 'e.g. nvidia/llama-3.1-nemotron-ultra-253b-v1',
     validateInput: v => v.trim() ? undefined : 'Model ID cannot be empty',
@@ -247,7 +256,7 @@ async function cmdAddModel(preselectedProviderId?: string): Promise<void> {
 
   // ── Step 2: Display Name ──────────────────────────────────────────────────
   const modelName = await vscode.window.showInputBox({
-    title: `Add Model to "${providerLabel}" (2/5) – Display Name`,
+    title: `Add Model to "${providerLabel}" (2/6) – Display Name`,
     prompt: 'Human-readable name shown in the Copilot model picker',
     placeHolder: 'e.g. Llama 3.1 Nemotron Ultra 253B',
     validateInput: v => v.trim() ? undefined : 'Display name cannot be empty',
@@ -256,7 +265,7 @@ async function cmdAddModel(preselectedProviderId?: string): Promise<void> {
 
   // ── Step 3: Context size ──────────────────────────────────────────────────
   const ctxStr = await vscode.window.showInputBox({
-    title: `Add Model to "${providerLabel}" (3/5) – Max Input Tokens`,
+    title: `Add Model to "${providerLabel}" (3/6) – Max Input Tokens`,
     prompt: 'Maximum input context window in tokens',
     value: '128000',
     validateInput: v => isNaN(parseInt(v)) ? 'Must be a number' : undefined,
@@ -269,7 +278,7 @@ async function cmdAddModel(preselectedProviderId?: string): Promise<void> {
       { label: '$(check) Yes – model supports tool/function calling', value: true },
       { label: '$(close) No – text only', value: false },
     ],
-    { placeHolder: 'Does this model support tool calling?' }
+    { placeHolder: 'Does this model support tool calling? (4/6)' }
   );
   if (!toolChoice) { return; }
 
@@ -278,22 +287,40 @@ async function cmdAddModel(preselectedProviderId?: string): Promise<void> {
       { label: '$(device-camera) Yes – model supports vision/image input', value: true },
       { label: '$(circle-slash) No – no image input support', value: false },
     ],
-    { placeHolder: 'Does this model support image/vision input? (4/5)' }
+    { placeHolder: 'Does this model support image/vision input? (5/6)' }
   );
   if (!visionChoice) { return; }
 
-  const reasoningChoice = await vscode.window.showQuickPick(
+  const reasoningSupportChoice = await vscode.window.showQuickPick(
     [
-      { label: 'none', description: 'No extra reasoning effort', value: 'none' as ReasoningLevel },
-      { label: 'low', description: 'Faster, lower reasoning effort', value: 'low' as ReasoningLevel },
-      { label: 'medium', description: 'Balanced default', value: 'medium' as ReasoningLevel },
-      { label: 'high', description: 'Higher reasoning effort', value: 'high' as ReasoningLevel },
-      { label: 'xhigh', description: 'Very high reasoning effort', value: 'xhigh' as ReasoningLevel },
-      { label: 'max', description: 'Maximum reasoning effort', value: 'max' as ReasoningLevel },
+      { label: '$(lightbulb) Yes – show Thinking Effort', value: true },
+      { label: '$(circle-slash) No – hide Thinking Effort', value: false },
     ],
-    { placeHolder: 'Default reasoning level when not specified by request (5/5)' }
+    { placeHolder: 'Does this model support configurable reasoning effort? (6/6)' }
   );
-  if (!reasoningChoice) { return; }
+  if (!reasoningSupportChoice) { return; }
+
+  let supportedReasoningLevels: ReasoningLevel[] | undefined;
+  let defaultReasoningLevel: ReasoningLevel | undefined;
+  if (reasoningSupportChoice.value) {
+    const selectedLevels = await vscode.window.showQuickPick(
+      REASONING_LEVEL_ITEMS,
+      {
+        canPickMany: true,
+        placeHolder: 'Select reasoning effort levels this model supports',
+      }
+    );
+    if (!selectedLevels || selectedLevels.length === 0) { return; }
+    supportedReasoningLevels = selectedLevels.map(item => item.value);
+
+    const defaultChoices = REASONING_LEVEL_ITEMS.filter(item => supportedReasoningLevels?.includes(item.value));
+    const reasoningChoice = await vscode.window.showQuickPick(
+      defaultChoices,
+      { placeHolder: 'Default reasoning level when not specified by request' }
+    );
+    if (!reasoningChoice) { return; }
+    defaultReasoningLevel = reasoningChoice.value;
+  }
 
   const model: ModelConfig = {
     id: modelId.trim(),
@@ -302,8 +329,12 @@ async function cmdAddModel(preselectedProviderId?: string): Promise<void> {
     maxOutputTokens: 4096,   // Conservative default; user can edit settings.json if needed
     supportsToolCalling: toolChoice.value,
     supportsVision: visionChoice.value,
-    defaultReasoningLevel: reasoningChoice.value,
+    supportsReasoning: reasoningSupportChoice.value,
   };
+  if (reasoningSupportChoice.value) {
+    model.supportedReasoningLevels = supportedReasoningLevels;
+    model.defaultReasoningLevel = defaultReasoningLevel;
+  }
 
   try {
     await addModel(providerId, model);
@@ -399,7 +430,7 @@ async function cmdListProviders(): Promise<void> {
         items.push({
           label: `  $(circuit-board) ${m.name}`,
           description: m.id,
-          detail: `  Input: ${m.maxInputTokens.toLocaleString()} tokens · Tools: ${m.supportsToolCalling ? 'yes' : 'no'} · Vision: ${m.supportsVision ? 'yes' : 'no'} · Reasoning: ${m.defaultReasoningLevel ?? 'medium'}`,
+          detail: `  Input: ${m.maxInputTokens.toLocaleString()} tokens · Tools: ${m.supportsToolCalling ? 'yes' : 'no'} · Vision: ${m.supportsVision ? 'yes' : 'no'} · Reasoning: ${m.supportsReasoning ? (m.defaultReasoningLevel ?? 'medium') : 'no'}`,
         });
       }
     }

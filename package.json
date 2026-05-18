@@ -143,9 +143,28 @@
                       "default": false,
                       "description": "Whether the model supports image/vision inputs"
                     },
+                    "supportsReasoning": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Whether the model exposes Thinking Effort configuration in the model picker"
+                    },
+                    "supportedReasoningLevels": {
+                      "type": "array",
+                      "description": "Reasoning effort levels supported by this model. Leave unset to use all supported levels.",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "none",
+                          "low",
+                          "medium",
+                          "high",
+                          "xhigh",
+                          "max"
+                        ]
+                      }
+                    },
                     "defaultReasoningLevel": {
                       "type": "string",
-                      "default": "medium",
                       "enum": [
                         "none",
                         "low",

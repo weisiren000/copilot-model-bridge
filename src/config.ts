@@ -6,16 +6,8 @@
  */
 
 import * as vscode from 'vscode';
-import { ProviderConfig, ModelConfig, ReasoningLevel } from './types';
-
-const VALID_REASONING_LEVELS: ReadonlySet<ReasoningLevel> = new Set(['none', 'low', 'medium', 'high', 'xhigh', 'max']);
-
-function normalizeReasoningLevel(level: unknown): ReasoningLevel {
-  if (typeof level === 'string' && VALID_REASONING_LEVELS.has(level as ReasoningLevel)) {
-    return level as ReasoningLevel;
-  }
-  return 'medium';
-}
+import { normalizeModelConfig } from './modelConfig';
+import { ProviderConfig, ModelConfig } from './types';
 
 /** The VS Code configuration section key */
 const CONFIG_SECTION = 'openai-compat-provider';
@@ -35,15 +27,7 @@ export function getProviders(): ProviderConfig[] {
     displayName: p.displayName,
     baseUrl: p.baseUrl.replace(/\/$/, ''), // trim trailing slash
     apiKey: p.apiKey ?? '',
-    models: (p.models ?? []).map(m => ({
-      id: m.id,
-      name: m.name,
-      maxInputTokens: m.maxInputTokens ?? 128000,
-      maxOutputTokens: m.maxOutputTokens ?? 4096,
-      supportsToolCalling: m.supportsToolCalling ?? true,
-      supportsVision: m.supportsVision ?? false,
-      defaultReasoningLevel: normalizeReasoningLevel(m.defaultReasoningLevel),
-    })),
+    models: (p.models ?? []).map(normalizeModelConfig),
   }));
 }
 

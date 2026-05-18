@@ -17,7 +17,7 @@ OAIProvider 是一个 VS Code 扩展，基于官方 `LanguageModelChatProvider` 
 - 每个 provider 独立 API Key
 - 支持工具调用能力开关
 - 支持视觉能力开关
-- 支持模型默认思考层级配置
+- reasoning 模型可选显示 Thinking Effort 配置
 - 通过命令面板向导完成配置，无需手改 JSON
 
 ## 运行要求
@@ -88,7 +88,9 @@ OAIProvider: Add Model
 3. 最大输入 token
 4. 是否支持工具调用
 5. 是否支持视觉输入
-6. 默认思考层级
+6. 是否支持可配置 reasoning effort
+
+对于 reasoning 模型，向导还会继续询问支持的思考层级和默认思考层级。
 
 支持的思考层级：
 
@@ -151,6 +153,8 @@ Kimi K2.5 (NVIDIA NIM)
         "maxOutputTokens": 8192,
         "supportsToolCalling": true,
         "supportsVision": true,
+        "supportsReasoning": true,
+        "supportedReasoningLevels": ["low", "medium", "high"],
         "defaultReasoningLevel": "high"
       }
     ]
@@ -168,12 +172,14 @@ Kimi K2.5 (NVIDIA NIM)
         "maxOutputTokens": 4096,
         "supportsToolCalling": false,
         "supportsVision": false,
-        "defaultReasoningLevel": "medium"
+        "supportsReasoning": false
       }
     ]
   }
 ]
 ```
+
+`supportsReasoning` 决定 VS Code 是否为该模型显示 Thinking Effort。为了兼容旧配置，已经写过 `defaultReasoningLevel` 且没有写 `supportsReasoning` 的模型会被视为支持 reasoning；如果显式写了 `supportsReasoning: false`，则不会显示 Thinking Effort。
 
 ## 兼容服务示例
 
