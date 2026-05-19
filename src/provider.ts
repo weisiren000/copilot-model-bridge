@@ -215,6 +215,7 @@ export class OpenAICompatChatProvider implements vscode.LanguageModelChatProvide
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'Accept': 'text/event-stream',
+      'User-Agent': 'Copilot Model Bridge',
     };
 
     // Only add Authorization header if an API key is configured
