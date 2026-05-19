@@ -1,0 +1,4 @@
+[submodule "CHANGELOG"]
+	path = CHANGELOG
+	url = https://github.com/weisiren000/CHANGELOG.git
+	branch = main
