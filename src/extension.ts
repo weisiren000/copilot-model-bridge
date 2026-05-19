@@ -39,7 +39,7 @@ export function activate(context: vscode.ExtensionContext): void {
   chatProvider.refreshModels();
 
   // ── 2. Register all management commands ──────────────────────────────────
-  registerCommands(context);
+  registerCommands(context, () => chatProvider.refreshModels());
 
   // ── 3. Watch for settings changes ────────────────────────────────────────
   //

@@ -131,7 +131,7 @@ export async function cmdValidateProviderConfig(): Promise<void> {
       description: [issue.providerId, issue.modelId].filter(Boolean).join(' / '),
       detail: issue.message,
     })),
-    { placeHolder: `${issues.length} provider configuration issue(s) found` }
+    { ignoreFocusOut: true, placeHolder: `${issues.length} provider configuration issue(s) found` }
   );
 }
 
@@ -143,6 +143,7 @@ export async function cmdImportModelsFromJson(): Promise<void> {
 
   const json = await vscode.window.showInputBox({
     title: 'Import Models from JSON',
+    ignoreFocusOut: true,
     prompt: 'Paste a JSON array of model objects',
     placeHolder: '[{"id":"model-id","name":"Model Name"}]',
   });
@@ -191,6 +192,7 @@ export async function cmdListProviders(): Promise<void> {
   }
 
   await vscode.window.showQuickPick(items, {
+    ignoreFocusOut: true,
     placeHolder: `${providers.length} provider(s) configured`,
     matchOnDescription: true,
     matchOnDetail: true,
@@ -210,7 +212,7 @@ async function pickProvider(placeHolder: string): Promise<ProviderConfig | undef
       description: provider.baseUrl,
       providerId: provider.id,
     })),
-    { placeHolder }
+    { ignoreFocusOut: true, placeHolder }
   );
   return item ? providers.find(provider => provider.id === item.providerId) : undefined;
 }
@@ -232,7 +234,7 @@ async function pickModel(
     return undefined;
   }
 
-  const item = await vscode.window.showQuickPick(items, { placeHolder });
+  const item = await vscode.window.showQuickPick(items, { ignoreFocusOut: true, placeHolder });
   const provider = item ? providers.find(candidate => candidate.id === item.providerId) : undefined;
   const model = provider?.models.find(candidate => candidate.id === item?.modelId);
   return provider && model ? { provider, model } : undefined;
@@ -241,6 +243,7 @@ async function pickModel(
 async function askText(title: string, value: string, password = false): Promise<string | undefined> {
   return vscode.window.showInputBox({
     title,
+    ignoreFocusOut: true,
     value,
     password,
     validateInput: input => input.trim() ? undefined : 'Value cannot be empty',
@@ -250,6 +253,7 @@ async function askText(title: string, value: string, password = false): Promise<
 async function askBaseUrl(value: string): Promise<string | undefined> {
   return vscode.window.showInputBox({
     title: 'Edit Provider - Base URL',
+    ignoreFocusOut: true,
     value,
     validateInput: input => {
       try {
@@ -265,6 +269,7 @@ async function askBaseUrl(value: string): Promise<string | undefined> {
 async function askNumber(title: string, value: number): Promise<number | undefined> {
   const input = await vscode.window.showInputBox({
     title,
+    ignoreFocusOut: true,
     value: String(value),
     validateInput: candidate => {
       const parsed = Number(candidate);
@@ -280,6 +285,7 @@ async function askDuplicateModelId(
 ): Promise<string | undefined> {
   return vscode.window.showInputBox({
     title: 'Duplicate Model - Model ID',
+    ignoreFocusOut: true,
     value: `${model.id}-copy`,
     validateInput: input => {
       if (!input.trim()) {

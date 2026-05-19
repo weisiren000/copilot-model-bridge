@@ -41,7 +41,7 @@
       {
         "vendor": "copilot-model-bridge",
         "displayName": "Copilot Model Bridge",
-        "managementCommand": "copilot-model-bridge.manage"
+        "managementCommand": "copilot-model-bridge.openConfigManager"
       }
     ],
     "commands": [
@@ -50,6 +50,18 @@
         "title": "Manage Providers",
         "category": "Copilot Model Bridge",
         "icon": "$(settings-gear)"
+      },
+      {
+        "command": "copilot-model-bridge.openConfigManager",
+        "title": "Open Config Manager",
+        "category": "Copilot Model Bridge",
+        "icon": "$(layout)"
+      },
+      {
+        "command": "copilot-model-bridge.quickManage",
+        "title": "Quick Manage Providers",
+        "category": "Copilot Model Bridge",
+        "icon": "$(list-selection)"
       },
       {
         "command": "copilot-model-bridge.addProvider",

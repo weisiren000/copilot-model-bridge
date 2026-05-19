@@ -20,6 +20,7 @@ It lets you expose models from NVIDIA NIM, Ollama, LM Studio, vLLM, Together AI,
 - Vision capability flags
 - Optional Thinking Effort controls for reasoning models
 - Polished model metadata in VS Code model surfaces
+- Persistent configuration manager inside a VS Code editor tab
 - Command-based setup without manually editing JSON
 - Editing, duplicating, importing, and validating provider/model configs
 
@@ -128,7 +129,9 @@ Kimi K2.5 (NVIDIA NIM)
 
 | Command | Description |
 | --- | --- |
-| `Copilot Model Bridge: Manage Providers` | Main management entry |
+| `Copilot Model Bridge: Manage Providers` | Open the persistent configuration manager |
+| `Copilot Model Bridge: Open Config Manager` | Open the provider/model configuration page |
+| `Copilot Model Bridge: Quick Manage Providers` | Open the legacy quick-pick management menu |
 | `Copilot Model Bridge: Add Provider` | Add a new provider |
 | `Copilot Model Bridge: Edit Provider` | Update provider display name, base URL, or API key |
 | `Copilot Model Bridge: Remove Provider` | Remove a provider and its models |
@@ -147,6 +150,14 @@ The extension stores data in:
 ```json
 "copilot-model-bridge.providers"
 ```
+
+The recommended configuration entry is:
+
+```text
+Copilot Model Bridge: Open Config Manager
+```
+
+It opens a VS Code editor tab with provider/model lists, editable fields, validation, JSON import, model duplication, and save controls. The older quick-pick commands still exist, and their inputs stay open when focus moves away.
 
 Example:
 

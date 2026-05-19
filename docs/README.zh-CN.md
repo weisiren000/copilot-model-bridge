@@ -20,6 +20,7 @@ Copilot Model Bridge 是一个 VS Code 扩展，基于官方 `LanguageModelChatP
 - 支持视觉能力开关
 - reasoning 模型可选显示 Thinking Effort 配置
 - 支持更完整的模型 metadata 展示
+- 支持 VS Code 编辑器页签内的持久配置管理器
 - 通过命令面板向导完成配置，无需手改 JSON
 - 支持编辑、复制、导入和校验 provider/model 配置
 
@@ -128,7 +129,9 @@ Kimi K2.5 (NVIDIA NIM)
 
 | 命令 | 说明 |
 | --- | --- |
-| `Copilot Model Bridge: Manage Providers` | 管理入口 |
+| `Copilot Model Bridge: Manage Providers` | 打开持久配置管理器 |
+| `Copilot Model Bridge: Open Config Manager` | 打开 provider/model 配置页 |
+| `Copilot Model Bridge: Quick Manage Providers` | 打开旧版 quick-pick 管理菜单 |
 | `Copilot Model Bridge: Add Provider` | 新增 provider |
 | `Copilot Model Bridge: Edit Provider` | 修改 provider 显示名称、Base URL 或 API Key |
 | `Copilot Model Bridge: Remove Provider` | 删除 provider 及其模型 |
@@ -147,6 +150,14 @@ Kimi K2.5 (NVIDIA NIM)
 ```json
 "copilot-model-bridge.providers"
 ```
+
+推荐配置入口：
+
+```text
+Copilot Model Bridge: Open Config Manager
+```
+
+它会在 VS Code 编辑器页签中打开配置管理器，支持 provider/model 列表、字段编辑、校验、JSON 导入、复制模型和保存。旧版 quick-pick 命令仍然保留，并且切换焦点时不会自动关闭输入框。
 
 示例：
 

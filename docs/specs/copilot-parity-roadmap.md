@@ -442,6 +442,8 @@ statusIcon?: string;
 
 ## Feature 9: Persistent Configuration Manager
 
+> 状态：已完成（2026-05-19）
+
 ### Problem
 
 当前 provider/model 配置主要依赖 `Ctrl+Shift+P` 打开的 `QuickPick` / `InputBox` 多步向导。
