@@ -33,6 +33,14 @@ import {
 import { postStreamingChatCompletion } from './chatHttpClient';
 import { buildModelMetadata } from './modelMetadata';
 import { buildChatRequestHeaders } from './requestHeaders';
+import {
+  applyReasoningContentReplay,
+  buildDeepSeekRequestPatch,
+  decodeReasoningDataPart,
+  DeepSeekRequestContext,
+  DEEPSEEK_REASONING_MIME,
+  isDeepSeekRequest,
+} from './deepseek';
 import { OpenAIStreamChunk, ProviderConfig } from './types';
 
 /** Separator between provider ID and model ID in the compound LM id */
@@ -214,6 +222,16 @@ export class OpenAICompatChatProvider implements vscode.LanguageModelChatProvide
       }
     }
 
+    // DeepSeek 专用补丁：thinking 字段、reasoning_effort 取值受限、
+    // 与 tools 共存时安全降级为非 thinking 模式。
+    if (isDeepSeekRequest(provider, modelId)) {
+      this.applyDeepSeekRequestPatch(requestBody, {
+        supportsReasoning: !!selectedModel.supportsReasoning,
+        hasTools: Boolean(options.tools && options.tools.length > 0),
+        reasoningLevel: requestBody.reasoning_effort,
+      });
+    }
+
     const headers = buildChatRequestHeaders(provider);
 
     // ── 4. AbortController for cancellation support ────────────────────────
@@ -264,6 +282,35 @@ export class OpenAICompatChatProvider implements vscode.LanguageModelChatProvide
     return candidate.modelConfiguration ?? candidate.configuration;
   }
 
+  /**
+   * 把 DeepSeek 专用补丁合并到 request body：
+   *   - 启用/禁用 thinking 字段
+   *   - 限制 reasoning_effort 取值范围
+   *   - thinking 启用时调用 replay 注入历史 reasoning_content
+   */
+  private applyDeepSeekRequestPatch(
+    requestBody: Record<string, unknown>,
+    context: DeepSeekRequestContext
+  ): void {
+    const patch = buildDeepSeekRequestPatch(context);
+    requestBody.thinking = patch.thinking;
+
+    const thinkingEnabled = patch.thinking?.type === 'enabled';
+    if (thinkingEnabled) {
+      requestBody.reasoning_effort = patch.reasoning_effort;
+    } else {
+      delete requestBody.reasoning_effort;
+    }
+
+    const messages = requestBody.messages;
+    if (Array.isArray(messages)) {
+      applyReasoningContentReplay(
+        messages as Array<Record<string, unknown>>,
+        thinkingEnabled
+      );
+    }
+  }
+
   private hasImageInput(messages: readonly vscode.LanguageModelChatRequestMessage[]): boolean {
     for (const msg of messages) {
       for (const part of msg.content) {
@@ -276,6 +323,47 @@ export class OpenAICompatChatProvider implements vscode.LanguageModelChatProvide
       }
     }
     return false;
+  }
+
+  /**
+   * 把一段 reasoning 文本以 LanguageModelThinkingPart 的形式回报给 VS Code，
+   * 让 Copilot Chat UI 把它显示成可折叠的 thinking 区域。
+   *
+   * 返回 true 表示成功使用了 ThinkingPart；返回 false 时调用方应该退回到
+   * DataPart 兜底，确保 history 中仍能携带 reasoning。
+   */
+  private reportThinkingPart(
+    progress: vscode.Progress<vscode.LanguageModelResponsePart>,
+    value: string
+  ): boolean {
+    const ctor = (vscode as unknown as {
+      LanguageModelThinkingPart?: new (value: string) => unknown;
+    }).LanguageModelThinkingPart;
+    if (!ctor) {
+      return false;
+    }
+    try {
+      progress.report(new ctor(value) as vscode.LanguageModelResponsePart);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /** 判断历史消息中的某个 part 是否是 ThinkingPart（兼容运行时缺失的情况） */
+  private isThinkingPart(part: unknown): part is { value: string | string[] } {
+    const ctor = (vscode as unknown as {
+      LanguageModelThinkingPart?: new (...args: unknown[]) => unknown;
+    }).LanguageModelThinkingPart;
+    return !!ctor && part instanceof (ctor as new (...args: unknown[]) => object);
+  }
+
+  /** 从 ThinkingPart 中读取文本内容，兼容 string 与 string[] 两种形态 */
+  private readThinkingValue(part: { value: string | string[] }): string {
+    if (Array.isArray(part.value)) {
+      return part.value.join('');
+    }
+    return typeof part.value === 'string' ? part.value : '';
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -371,11 +459,19 @@ export class OpenAICompatChatProvider implements vscode.LanguageModelChatProvide
       const dataContent: OpenAIContentPart[] = [];
       const toolCalls: any[] = [];
       const toolResults: any[] = [];
+      let reasoningContent = '';
 
       for (const part of msg.content) {
         if (part instanceof vscode.LanguageModelTextPart) {
           textContent += part.value;
+        } else if (this.isThinkingPart(part)) {
+          reasoningContent += this.readThinkingValue(part);
         } else if (part instanceof vscode.LanguageModelDataPart) {
+          const reasoning = decodeReasoningDataPart(part.data, part.mimeType);
+          if (reasoning !== undefined) {
+            reasoningContent += reasoning;
+            continue;
+          }
           dataContent.push(...createOpenAIDataPartContent(part.data, part.mimeType, attachmentPolicy));
         } else if (part instanceof vscode.LanguageModelToolCallPart) {
           toolCallIdToName[part.callId] = part.name;
@@ -421,6 +517,9 @@ export class OpenAICompatChatProvider implements vscode.LanguageModelChatProvide
         if (toolCalls.length > 0) {
           apiMsg.tool_calls = toolCalls;
         }
+        if (role === 'assistant' && reasoningContent) {
+          apiMsg.__reasoningContent = reasoningContent;
+        }
         // Avoid pushing empty assistant messages unless necessary or if no toolResults were mapped
         if (textContent || toolCalls.length > 0 || msg.role === vscode.LanguageModelChatMessageRole.User) {
           // Only skip empty assistant messages
@@ -456,6 +555,8 @@ export class OpenAICompatChatProvider implements vscode.LanguageModelChatProvide
     let buffer = '';
 
     const activeToolCalls: Record<number, { id: string; name: string; arguments: string }> = {};
+    let reasoningBuffer = '';
+    let reasoningStreamed = false;
 
     try {
       while (true) {
@@ -491,6 +592,12 @@ export class OpenAICompatChatProvider implements vscode.LanguageModelChatProvide
               // Report each text fragment back to VS Code / Copilot Chat
               progress.report(new vscode.LanguageModelTextPart(delta.content));
             }
+            if (delta?.reasoning_content) {
+              reasoningBuffer += delta.reasoning_content;
+              if (this.reportThinkingPart(progress, delta.reasoning_content)) {
+                reasoningStreamed = true;
+              }
+            }
             if (delta?.tool_calls) {
               for (const tc of delta.tool_calls) {
                 const idx = tc.index;
@@ -508,6 +615,20 @@ export class OpenAICompatChatProvider implements vscode.LanguageModelChatProvide
         }
       }
     } finally {
+      // 优先以 ThinkingPart 形式回报；如果当前 VS Code 不支持 ThinkingPart
+      // 或运行时已有片段流过则直接用 DataPart 兜底，让 history 仍能携带
+      // reasoning_content 用于多轮 replay。
+      if (reasoningBuffer && !reasoningStreamed) {
+        try {
+          progress.report(new vscode.LanguageModelDataPart(
+            new TextEncoder().encode(reasoningBuffer),
+            DEEPSEEK_REASONING_MIME
+          ));
+        } catch {
+          // 不让 reasoning DataPart 失败影响主流回报
+        }
+      }
+
       // Flush buffered tool calls
       for (const key of Object.keys(activeToolCalls)) {
         const tc = activeToolCalls[Number(key)];

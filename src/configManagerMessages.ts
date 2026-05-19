@@ -17,9 +17,11 @@ export type ConfigManagerMessage =
   | { type: 'selectProvider'; providerId: string }
   | { type: 'selectModel'; providerId: string; modelId: string }
   | { type: 'addProvider' }
+  | { type: 'createProvider'; provider: ProviderConfig; initialModels?: Array<Partial<ModelConfig> & Pick<ModelConfig, 'id' | 'name'>> }
   | { type: 'deleteProvider'; providerId: string }
   | { type: 'updateProvider'; providerId: string; patch: Partial<ProviderConfig> }
   | { type: 'addModel'; providerId: string }
+  | { type: 'createModel'; providerId: string; model: Partial<ModelConfig> & Pick<ModelConfig, 'id' | 'name'> }
   | { type: 'deleteModel'; providerId: string; modelId: string }
   | { type: 'updateModel'; providerId: string; modelId: string; patch: Partial<ModelConfig> }
   | { type: 'duplicateModel'; providerId: string; modelId: string }
@@ -37,12 +39,16 @@ export function reduceConfigManagerMessage(
       return { ...state, selectedProviderId: message.providerId, selectedModelId: message.modelId };
     case 'addProvider':
       return addProviderState(state);
+    case 'createProvider':
+      return createProviderState(state, message.provider, message.initialModels);
     case 'deleteProvider':
       return deleteProviderState(state, message.providerId);
     case 'updateProvider':
       return updateProviderState(state, message.providerId, message.patch);
     case 'addModel':
       return addModelState(state, message.providerId);
+    case 'createModel':
+      return createModelState(state, message.providerId, message.model);
     case 'deleteModel':
       return deleteModelState(state, message.providerId, message.modelId);
     case 'updateModel':
@@ -88,6 +94,46 @@ function addProviderState(state: ConfigManagerState): ConfigManagerState {
     providers: [...state.providers, provider],
     selectedProviderId: providerId,
     selectedModelId: undefined,
+    dirty: true,
+  };
+}
+
+function createProviderState(
+  state: ConfigManagerState,
+  provider: ProviderConfig,
+  initialModels?: Array<Partial<ModelConfig> & Pick<ModelConfig, 'id' | 'name'>>
+): ConfigManagerState {
+  if (state.providers.some(existing => existing.id === provider.id)) {
+    return state;
+  }
+  const models = initialModels ? normalizeImportedModels(initialModels) : [];
+  const newProvider: ProviderConfig = { ...provider, models };
+  return {
+    providers: [...state.providers, newProvider],
+    selectedProviderId: newProvider.id,
+    selectedModelId: models[0]?.id,
+    dirty: true,
+  };
+}
+
+function createModelState(
+  state: ConfigManagerState,
+  providerId: string,
+  model: Partial<ModelConfig> & Pick<ModelConfig, 'id' | 'name'>
+): ConfigManagerState {
+  const provider = state.providers.find(candidate => candidate.id === providerId);
+  if (!provider) return state;
+  if (provider.models.some(existing => existing.id === model.id)) return state;
+  const [normalized] = normalizeImportedModels([model]);
+  const providers = state.providers.map(candidate => (
+    candidate.id === providerId
+      ? { ...candidate, models: [...candidate.models, normalized] }
+      : candidate
+  ));
+  return {
+    providers,
+    selectedProviderId: providerId,
+    selectedModelId: normalized.id,
     dirty: true,
   };
 }

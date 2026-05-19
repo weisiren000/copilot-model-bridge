@@ -113,7 +113,7 @@ test('validates duplicate model ids, invalid urls, and reasoning mismatches', ()
   assert.match(issues[2].message, /default reasoning level/);
 });
 
-test('validates attachment policy flags that request conversion cannot honor yet', () => {
+test('does not warn on attachment policy flags since they are metadata declarations', () => {
   const issues = validateProviderConfig([{
     id: 'provider',
     displayName: 'Provider',
@@ -131,7 +131,5 @@ test('validates attachment policy flags that request conversion cannot honor yet
     }],
   }]);
 
-  assert.equal(issues.length, 2);
-  assert.match(issues[0].message, /video support/);
-  assert.match(issues[1].message, /generic file input/);
+  assert.equal(issues.length, 0);
 });

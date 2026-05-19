@@ -92,7 +92,6 @@ export function validateProviderConfig(providers: readonly ProviderConfig[]): Co
     addDuplicateModelIssues(issues, provider);
     for (const model of provider.models) {
       addReasoningIssues(issues, provider, model);
-      addAttachmentPolicyIssues(issues, provider, model);
     }
   }
 
@@ -158,27 +157,13 @@ function addReasoningIssues(
 }
 
 function addAttachmentPolicyIssues(
-  issues: ConfigValidationIssue[],
-  provider: ProviderConfig,
-  model: ModelConfig
+  _issues: ConfigValidationIssue[],
+  _provider: ProviderConfig,
+  _model: ModelConfig
 ): void {
-  if (model.supportsVideo) {
-    issues.push({
-      severity: 'warning',
-      providerId: provider.id,
-      modelId: model.id,
-      message: `Model "${model.name}" declares video support, but video request conversion is currently rejected.`,
-    });
-  }
-
-  if (model.supportsFileInput) {
-    issues.push({
-      severity: 'warning',
-      providerId: provider.id,
-      modelId: model.id,
-      message: `Model "${model.name}" declares generic file input, but non-text binary request conversion is currently rejected.`,
-    });
-  }
+  // 视频与通用文件附件目前在请求转换层会被拒绝，但这只是
+  // 元数据声明，不应在保存时给出警告。请求阶段命中时会抛出
+  // 明确错误，已经足够清晰。函数保留以便未来重新启用。
 }
 
 function removeUndefinedValues<T extends object>(value: T): Partial<T> {

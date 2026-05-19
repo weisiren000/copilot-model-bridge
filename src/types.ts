@@ -86,6 +86,8 @@ export interface OpenAIStreamChunk {
     delta: {
       role?: string;
       content?: string;
+      /** DeepSeek thinking mode 输出的思考链片段 */
+      reasoning_content?: string;
       tool_calls?: Array<{
         index: number;
         id?: string;
