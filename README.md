@@ -1,9 +1,22 @@
-# Copilot Model Bridge
+<p align="center">
+  <img src="images/logo.png" alt="Copilot Model Bridge" width="128" style="border-radius: 24px;">
+</p>
 
-[中文说明](docs/README.zh-CN.md)
+<h1 align="center">Copilot Model Bridge</h1>
 
-[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/weisiren.copilot-model-bridge?label=VS%20Code%20Marketplace&logo=visualstudiocode&color=blue)](https://marketplace.visualstudio.com/items?itemName=weisiren.copilot-model-bridge)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+<p align="center">
+  <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript">
+  <img src="https://img.shields.io/badge/VS_Code-007ACC?style=for-the-badge&logo=visualstudiocode&logoColor=white" alt="VS Code">
+  <img src="https://img.shields.io/badge/OpenAI_API-412991?style=for-the-badge&logo=openai&logoColor=white" alt="OpenAI API">
+  <a href="https://marketplace.visualstudio.com/items?itemName=weisiren.copilot-model-bridge">
+    <img src="https://img.shields.io/badge/VS_Code_Marketplace-blue?style=for-the-badge&logo=visualstudiocode&logoColor=white" alt="VS Code Marketplace">
+  </a>
+  <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge&logo=opensourceinitiative&logoColor=white" alt="MIT License">
+</p>
+
+<p align="center">
+  <a href="docs/README.en.md">English</a>
+</p>
 
 Copilot Model Bridge 是一个 VS Code 扩展，可将任意 OpenAI 兼容接口接入 GitHub Copilot Chat。
 

@@ -1,0 +1,1943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Copilot Model Bridge Config Concept</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --canvas: #faf9f5;
+      --canvas-soft: #f5f0e8;
+      --card: #efe9de;
+      --card-strong: #e8e0d2;
+      --ink: #141413;
+      --body: #3d3d3a;
+      --muted-warm: #6c6a64;
+      --muted-soft: #8e8b82;
+      --hairline: #e6dfd8;
+      --hairline-soft: #ebe6df;
+      --dark: #181715;
+      --dark-soft: #1f1e1b;
+      --dark-elevated: #252320;
+      --on-dark: #faf9f5;
+      --on-dark-soft: #a09d96;
+      --coral: #cc785c;
+      --coral-active: #a9583e;
+      --teal: #5db8a6;
+      --amber: #e8a55a;
+      --bg: var(--canvas);
+      --panel: var(--dark-elevated);
+      --panel-soft: var(--canvas-soft);
+      --surface: var(--card);
+      --surface-hover: #e5dccd;
+      --surface-active: #fff7f2;
+      --border: var(--hairline);
+      --border-soft: var(--hairline-soft);
+      --text: var(--body);
+      --text-strong: var(--ink);
+      --muted: var(--muted-warm);
+      --faint: var(--muted-soft);
+      --accent: var(--coral);
+      --accent-strong: var(--coral-active);
+      --success: #5db872;
+      --success-soft: #203126;
+      --warning: #d4a017;
+      --warning-soft: #fff4d7;
+      --danger: #c64545;
+      --danger-soft: #3a2020;
+      --chip-blue: #2b3837;
+      --status: var(--coral);
+      --font: "Segoe UI", system-ui, sans-serif;
+      --display: Georgia, "Times New Roman", serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      scrollbar-color: #d7b3a4 #f5f0e8;
+      scrollbar-width: thin;
+    }
+
+    *::-webkit-scrollbar {
+      width: 12px;
+      height: 12px;
+    }
+
+    *::-webkit-scrollbar-track {
+      background: #f5f0e8;
+      border-left: 1px solid #e6dfd8;
+    }
+
+    *::-webkit-scrollbar-thumb {
+      min-height: 48px;
+      border: 3px solid #f5f0e8;
+      border-radius: 999px;
+      background: #d7b3a4;
+    }
+
+    *::-webkit-scrollbar-thumb:hover {
+      background: var(--coral);
+    }
+
+    *::-webkit-scrollbar-corner {
+      background: #f5f0e8;
+    }
+
+    body {
+      margin: 0;
+      min-width: 1080px;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 70% 12%, rgba(204, 120, 92, .16), transparent 28%),
+        linear-gradient(135deg, #181715 0%, #252320 100%);
+      font: 13px/1.4 var(--font);
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--ink);
+      background: var(--surface);
+      min-height: 30px;
+      padding: 6px 12px;
+      cursor: pointer;
+      transition: background .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease;
+    }
+
+    button:hover {
+      background: var(--surface-hover);
+      box-shadow: 0 1px 0 rgba(20, 20, 19, .04);
+    }
+
+    button.primary {
+      border-color: var(--accent-strong);
+      color: #fff;
+      background: var(--accent);
+    }
+
+    button.primary:hover {
+      background: var(--accent-strong);
+      box-shadow: 0 1px 0 rgba(20, 20, 19, .08);
+    }
+
+    button.danger {
+      border-color: #efc3b8;
+      color: #8c372a;
+      background: #fff1ec;
+    }
+
+    button.danger:hover {
+      border-color: #dd9d8d;
+      color: #74291f;
+      background: #f7d9d0;
+      box-shadow: 0 1px 0 rgba(20, 20, 19, .04);
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      background: var(--bg);
+      outline: none;
+    }
+
+    input,
+    select {
+      height: 34px;
+      padding: 6px 10px;
+    }
+
+    textarea {
+      min-height: 42px;
+      max-height: 42px;
+      resize: none;
+      padding: 10px 12px;
+    }
+
+    input:hover,
+    select:hover,
+    textarea:hover {
+      border-color: var(--muted-soft);
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(204, 120, 92, .16);
+    }
+
+    .window {
+      display: grid;
+      grid-template-rows: 36px 34px minmax(0, 1fr) 24px;
+      height: 100vh;
+      min-height: 780px;
+      padding: 10px;
+    }
+
+    .titlebar {
+      display: grid;
+      grid-template-columns: 360px minmax(320px, 420px) 1fr;
+      align-items: center;
+      padding: 0 18px;
+      color: #e9e2d8;
+      background: var(--dark);
+      border-radius: 12px 12px 0 0;
+    }
+
+    .command-center {
+      height: 24px;
+      border: 1px solid #403b34;
+      border-radius: 999px;
+      color: #b9afa3;
+      background: #211f1b;
+      text-align: center;
+      line-height: 22px;
+    }
+
+    .tabs {
+      display: flex;
+      align-items: end;
+      gap: 2px;
+      padding-left: 14px;
+      background: var(--dark-soft);
+      border-bottom: 1px solid #302c27;
+    }
+
+    .tab {
+      display: flex;
+      align-items: center;
+      height: 28px;
+      min-width: 178px;
+      padding: 0 14px;
+      color: var(--on-dark-soft);
+      background: var(--dark-elevated);
+      border: 1px solid #302c27;
+      border-bottom: 0;
+      border-radius: 8px 8px 0 0;
+    }
+
+    .tab.active {
+      color: var(--on-dark);
+      background: #322f2a;
+    }
+
+    .stage {
+      display: grid;
+      grid-template-columns: 52px minmax(0, 1fr);
+      min-height: 0;
+    }
+
+    .activity {
+      display: grid;
+      align-content: start;
+      gap: 12px;
+      padding: 18px 8px;
+      background: var(--panel);
+      border-radius: 0 0 0 12px;
+    }
+
+    .activity button {
+      width: 36px;
+      height: 36px;
+      min-height: 36px;
+      padding: 0;
+      color: var(--faint);
+      background: transparent;
+      border-color: transparent;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .activity button:hover {
+      color: #fff;
+      background: transparent;
+      border-color: transparent;
+      box-shadow: none;
+    }
+
+    .activity button.active {
+      color: #fff;
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .app {
+      display: grid;
+      grid-template-rows: 58px minmax(0, 1fr) 84px;
+      min-width: 0;
+      min-height: 0;
+      background: var(--bg);
+      border-radius: 0 0 12px 0;
+      overflow: hidden;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 24px;
+      background: linear-gradient(90deg, rgba(250, 249, 245, .98), rgba(245, 240, 232, .98));
+      border-bottom: 1px solid var(--hairline);
+    }
+
+    .topbar-title {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      min-width: 0;
+      margin-right: auto;
+    }
+
+    .topbar-title .topbar-logo {
+      width: 52px;
+      height: 52px;
+      flex: 0 0 auto;
+      border-radius: 12px;
+      object-fit: contain;
+    }
+
+    .topbar-title .topbar-text {
+      min-width: 0;
+    }
+
+    .topbar-title strong {
+      display: block;
+      color: var(--text-strong);
+      font-family: var(--display);
+      font-size: 22px;
+      font-weight: 500;
+      line-height: 26px;
+    }
+
+    .topbar-title span {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(260px, 21%) minmax(330px, 26%) minmax(480px, 1fr);
+      min-height: 0;
+      gap: 1px;
+      padding: 14px;
+      background: var(--hairline);
+    }
+
+    .pane {
+      min-width: 0;
+      min-height: 0;
+      padding: 16px 18px;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scrollbar-gutter: stable;
+      border-right: 0;
+    }
+
+    .pane.providers {
+      background: var(--panel-soft);
+      border-radius: 12px 0 0 12px;
+    }
+
+    .pane.models {
+      background: var(--card);
+    }
+
+    .pane.inspector {
+      border-right: 0;
+      color: var(--text);
+      background:
+        linear-gradient(rgba(204, 120, 92, .045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(204, 120, 92, .035) 1px, transparent 1px),
+        radial-gradient(circle at 92% 4%, rgba(204, 120, 92, .12), transparent 24%),
+        #fffdf8;
+      background-size: 32px 32px, 32px 32px, auto, auto;
+      border-radius: 0 12px 12px 0;
+    }
+
+    .pane-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      height: 34px;
+      margin-bottom: 8px;
+    }
+
+    .section-title {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .inspector .section-title,
+    .inspector .block-title {
+      color: var(--ink);
+    }
+
+    .pane-head button {
+      margin-left: auto;
+      min-width: 64px;
+      background: var(--canvas);
+      border-color: var(--border);
+    }
+
+    .pane-head button:hover {
+      background: var(--surface-hover);
+      border-color: var(--accent);
+      color: var(--accent-strong);
+      box-shadow: 0 1px 0 rgba(20, 20, 19, .04);
+    }
+
+    .provider-card,
+    .model-card {
+      display: grid;
+      gap: 6px;
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 12px 14px;
+      border: 1px solid var(--border-soft);
+      border-radius: 12px;
+      color: var(--text);
+      background: var(--canvas);
+      text-align: left;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(20, 20, 19, .06);
+      transition: background .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease, transform .16s ease;
+    }
+
+    .provider-card:hover,
+    .model-card:hover {
+      border-color: #d7cabc;
+      background: #fffdf8;
+      box-shadow: 0 4px 14px rgba(20, 20, 19, .08);
+      transform: translateY(-1px);
+    }
+
+    .provider-card.active {
+      border-color: var(--accent);
+      background: linear-gradient(135deg, rgba(204, 120, 92, .98), rgba(169, 88, 62, .98));
+    }
+
+    .provider-card.active .card-name,
+    .provider-card.active .card-meta {
+      color: #fff;
+    }
+
+    .model-card.active {
+      border-color: var(--accent);
+      background: linear-gradient(135deg, rgba(204, 120, 92, .98), rgba(169, 88, 62, .98));
+    }
+
+    .model-card.active .card-name,
+    .model-card.active .card-meta,
+    .model-card.active .model-meta-row {
+      color: #fff;
+    }
+
+    .card-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .card-name {
+      min-width: 0;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--text-strong);
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .card-meta {
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 12px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .badge {
+      flex: 0 0 auto;
+      min-width: 34px;
+      height: 20px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      color: #fff;
+      background: #333a42;
+      font-size: 11px;
+      font-weight: 700;
+      text-align: center;
+      line-height: 16px;
+    }
+
+    .badge.success {
+      background: var(--teal);
+    }
+
+    .badge.reasoning {
+      background: var(--accent);
+    }
+
+    .badge.tool {
+      color: #1f1f1f;
+      background: var(--amber);
+    }
+
+    .badge.agent {
+      background: #3b4782;
+    }
+
+    /* 多标签容器 */
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      flex: 0 1 auto;
+      min-width: 0;
+    }
+
+    .badges .badge {
+      white-space: nowrap;
+      flex: 0 0 auto;
+    }
+
+    .provider-card.active .badge {
+      color: var(--accent-strong);
+      background: #fff;
+    }
+
+    .model-card.active .badge {
+      color: var(--accent-strong);
+      background: #fff;
+    }
+
+    .health {
+      margin-top: auto;
+      padding: 12px 14px;
+      border: 1px solid #e0c89a;
+      border-radius: 12px;
+      color: #745922;
+      background: var(--warning-soft);
+    }
+
+    .health strong {
+      display: block;
+      margin-bottom: 3px;
+      color: #8a6514;
+    }
+
+    .model-meta-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--faint);
+      font-size: 11px;
+    }
+
+    .inspector-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      gap: 10px;
+      align-items: start;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--hairline);
+    }
+
+    .inspector-head h1 {
+      margin: 14px 0 4px;
+      color: var(--ink);
+      font-family: var(--display);
+      font-size: 34px;
+      font-weight: 500;
+      line-height: 30px;
+    }
+
+    .inspector-head p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px 24px;
+      margin-top: 24px;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .field label {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .inspector .field label {
+      color: var(--muted);
+    }
+
+    .inspector input {
+      border-color: var(--hairline);
+      color: var(--ink);
+      background: var(--canvas);
+    }
+
+    .inspector select {
+      border-color: var(--hairline);
+      color: var(--ink);
+      background: var(--canvas);
+    }
+
+    .inspector input:focus,
+    .inspector select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(204, 120, 92, .16);
+    }
+
+    .field.wide {
+      grid-column: 1 / -1;
+    }
+
+    .field small {
+      color: var(--faint);
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
+    .block-title {
+      margin: 28px 0 12px;
+      color: var(--text-strong);
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .subsection {
+      margin-top: 18px;
+      padding: 16px;
+      border: 1px solid rgba(230, 223, 216, .86);
+      border-radius: 12px;
+      background: rgba(250, 249, 245, .68);
+    }
+
+    .subsection .block-title:first-child {
+      margin-top: 0;
+    }
+
+    .section-note {
+      margin: -6px 0 14px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .required-mark {
+      color: var(--coral-active);
+      font-weight: 700;
+    }
+
+    .capability-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(150px, 1fr));
+      gap: 14px 18px;
+    }
+
+    .dialog-section .capability-grid {
+      margin-top: 24px;
+    }
+
+    .toggle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .inspector .toggle {
+      color: var(--text);
+    }
+
+    .switch {
+      position: relative;
+      width: 34px;
+      height: 18px;
+      flex: 0 0 auto;
+      border-radius: 999px;
+      background: var(--border);
+      transition: background .2s ease;
+    }
+
+    .switch::after {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      background: var(--muted);
+      content: "";
+      transition: left .2s ease, background .2s ease;
+    }
+
+    .toggle.on .switch {
+      background: var(--accent);
+    }
+
+    .toggle.on .switch::after {
+      left: 19px;
+      background: #fff;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .chip {
+      border: 1px solid #e4c3b5;
+      border-radius: 999px;
+      color: var(--coral-active);
+      background: #fff1eb;
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      transition: background .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease, transform .16s ease;
+    }
+
+    .chip:hover {
+      background: #ffe4da;
+      border-color: #d9a290;
+      box-shadow: 0 2px 8px rgba(20, 20, 19, .08);
+      transform: translateY(-1px);
+    }
+
+    .chip.muted {
+      color: var(--muted);
+      background: var(--canvas);
+      border-color: var(--hairline);
+    }
+
+    .chip.muted:hover {
+      background: var(--surface-hover);
+      border-color: #d7cabc;
+      box-shadow: 0 2px 8px rgba(20, 20, 19, .06);
+      transform: translateY(-1px);
+    }
+
+    .validation {
+      margin-top: 22px;
+      padding: 14px 16px;
+      border: 1px solid #b9d9c0;
+      border-radius: 12px;
+      color: #34613b;
+      background: #eff9f0;
+    }
+
+    .validation strong {
+      display: block;
+      color: #2d7a3a;
+      font-size: 15px;
+    }
+
+    .inspector button {
+      color: var(--ink);
+      border-color: var(--hairline);
+      background: var(--canvas);
+    }
+
+    .inspector button.primary {
+      border-color: var(--accent);
+      color: #fff;
+      background: var(--accent);
+    }
+
+    .inspector button:hover {
+      background: var(--surface-hover);
+      box-shadow: 0 1px 0 rgba(20, 20, 19, .04);
+    }
+
+    .inspector button.primary:hover {
+      background: var(--accent-strong);
+      box-shadow: 0 1px 0 rgba(20, 20, 19, .08);
+    }
+
+    .inspector button.danger:hover {
+      border-color: #dd9d8d;
+      color: #74291f;
+      background: #f7d9d0;
+      box-shadow: 0 1px 0 rgba(20, 20, 19, .04);
+    }
+
+    .model-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .model-actions .danger {
+      min-width: 78px;
+      font-weight: 500;
+    }
+
+    .footer {
+      display: grid;
+      grid-template-columns: 78px minmax(360px, 560px) 112px minmax(320px, 1fr);
+      gap: 14px;
+      align-items: center;
+      padding: 12px 24px;
+      background: var(--canvas);
+      border-top: 1px solid var(--hairline);
+    }
+
+    .footer-title {
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .warning-box {
+      justify-self: end;
+      width: min(100%, 440px);
+      padding: 10px 14px;
+      border: 1px solid #f1cf82;
+      border-radius: 12px;
+      color: #6f5415;
+      background: var(--warning-soft);
+    }
+
+    .warning-box strong {
+      margin-right: 10px;
+      color: #8a6514;
+    }
+
+    .statusbar {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      padding: 0 14px;
+      color: #fdf7f2;
+      background: var(--status);
+      font-size: 12px;
+    }
+
+    .footer textarea {
+      font-family: Consolas, "Courier New", monospace;
+      line-height: 1.5;
+    }
+
+    .modal-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: none;
+      place-items: center;
+      padding: 32px;
+      background: rgba(24, 23, 21, .42);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .2s ease;
+    }
+
+    .modal-layer.visible {
+      display: grid;
+      pointer-events: auto;
+      opacity: 1;
+    }
+
+    .provider-dialog {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      width: min(720px, calc(100vw - 80px));
+      max-height: calc(100vh - 120px);
+      overflow: hidden;
+      border: 1px solid #d8cbbd;
+      border-radius: 16px;
+      background:
+        radial-gradient(circle at 96% 0%, rgba(204, 120, 92, .12), transparent 28%),
+        var(--canvas);
+      box-shadow: 0 24px 80px rgba(24, 23, 21, .28);
+      pointer-events: auto;
+    }
+
+    .dialog-head {
+      display: flex;
+      align-items: start;
+      gap: 16px;
+      padding: 22px 24px 18px;
+      border-bottom: 1px solid var(--hairline);
+    }
+
+    .dialog-mark {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      color: #fff;
+      background: var(--coral);
+      font-family: Georgia, serif;
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .dialog-title {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .dialog-title h2 {
+      margin: 0 0 4px;
+      color: var(--ink);
+      font-family: var(--display);
+      font-size: 30px;
+      font-weight: 500;
+      line-height: 1.1;
+    }
+
+    .dialog-title p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .dialog-body {
+      display: grid;
+      gap: 18px;
+      padding: 22px 24px;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+
+    .dialog-section {
+      padding: 16px;
+      border: 1px solid var(--hairline);
+      border-radius: 12px;
+      background: rgba(250, 249, 245, .68);
+    }
+
+    .dialog-section h3 {
+      margin: 0 0 4px;
+      color: var(--ink);
+      font-size: 15px;
+    }
+
+    .dialog-section p {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .dialog-actions {
+      display: flex;
+      justify-content: end;
+      gap: 10px;
+      padding: 16px 24px 22px;
+      border-top: 1px solid var(--hairline);
+      background: var(--canvas-soft);
+    }
+
+    /* Dialog 内输入 + 按钮组合 */
+    .input-combo {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+    }
+
+    .combo-input-wrap {
+      position: relative;
+      min-width: 0;
+    }
+
+    .combo-input-wrap input {
+      width: 100%;
+    }
+
+    .input-combo button {
+      min-width: 72px;
+      white-space: nowrap;
+    }
+
+    .input-combo button.loading {
+      pointer-events: none;
+      opacity: .64;
+    }
+
+    /* 自定义模型建议下拉 */
+    .model-suggestions {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      z-index: 20;
+      display: none;
+      max-height: 220px;
+      margin: 4px 0 0;
+      padding: 6px;
+      overflow-y: auto;
+      list-style: none;
+      border: 1px solid var(--hairline);
+      border-radius: 10px;
+      background: var(--canvas);
+      box-shadow: 0 8px 24px rgba(20, 20, 19, .14);
+    }
+
+    .model-suggestions.visible {
+      display: block;
+    }
+
+    .model-suggestions li {
+      padding: 8px 12px;
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 13px;
+      cursor: pointer;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      transition: background .12s ease;
+    }
+
+    .model-suggestions li:hover,
+    .model-suggestions li.active {
+      background: var(--surface-hover);
+      color: var(--text-strong);
+    }
+
+    .model-suggestions .suggestions-empty {
+      padding: 10px 12px;
+      color: var(--faint);
+      font-size: 12px;
+      text-align: center;
+      cursor: default;
+    }
+
+    /* Dialog 内表单控件样式修正 */
+    .dialog-section input,
+    .dialog-section select {
+      background: #fff;
+      border-color: #d6cfc5;
+    }
+
+    .dialog-section input:focus,
+    .dialog-section select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(204, 120, 92, .16);
+    }
+
+    .dialog-section textarea {
+      min-height: 64px;
+      max-height: 140px;
+      resize: none;
+      background: #fff;
+      border-color: #d6cfc5;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .dialog-section textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(204, 120, 92, .16);
+    }
+
+    .dialog-close {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      min-width: 34px;
+      height: 34px;
+      padding: 0;
+      border-radius: 50%;
+      color: var(--muted);
+      background: transparent;
+      border-color: transparent;
+      font-size: 18px;
+      line-height: 1;
+      transition: background .16s ease, color .16s ease;
+    }
+
+    .dialog-close:hover {
+      color: var(--ink);
+      background: rgba(0, 0, 0, .06);
+      box-shadow: none;
+    }
+
+    .statusbar span:last-child {
+      margin-left: auto;
+    }
+
+    @media (max-width: 1180px) {
+      body {
+        min-width: 920px;
+      }
+
+      .workspace {
+        grid-template-columns: 240px 300px minmax(360px, 1fr);
+      }
+
+      .capability-grid {
+        grid-template-columns: repeat(2, minmax(150px, 1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="window">
+    <header class="titlebar">
+      <div>Copilot Model Bridge - 配置管理器</div>
+      <div class="command-center">搜索设置、命令、Provider</div>
+      <div></div>
+    </header>
+
+    <nav class="tabs" aria-label="Open editor tabs">
+      <div class="tab active">Copilot Model Bridge 配置</div>
+      <div class="tab">README.md</div>
+    </nav>
+
+    <main class="stage">
+      <aside class="activity" aria-label="Activity bar">
+        <button>EX</button>
+        <button>SC</button>
+        <button class="active">AI</button>
+        <button>BR</button>
+        <button>GE</button>
+      </aside>
+
+      <section class="app">
+        <header class="topbar">
+          <div class="topbar-title">
+            <img class="topbar-logo" src="logo-nb.png" alt="Copilot Model Bridge">
+            <div class="topbar-text">
+              <strong>Copilot Model Bridge</strong>
+              <span>管理 OpenAI 兼容的 Provider，将模型暴露给 Copilot Chat</span>
+            </div>
+          </div>
+          <button>验证</button>
+          <button class="primary">保存</button>
+          <button>打开 settings.json</button>
+        </header>
+
+        <div class="workspace">
+          <section class="pane providers" aria-label="Providers">
+            <div class="pane-head">
+              <div class="section-title">Provider 列表</div>
+              <button id="btn-add-provider">+ 添加</button>
+            </div>
+
+            <button class="provider-card active">
+              <span class="card-top">
+                <span class="card-name">NVIDIA NIM</span>
+                <span class="badge success">12</span>
+              </span>
+              <span class="card-meta">integrate.api.nvidia.com/v1</span>
+            </button>
+
+            <button class="provider-card">
+              <span class="card-top">
+                <span class="card-name">OpenRouter</span>
+                <span class="badge">28</span>
+              </span>
+              <span class="card-meta">openrouter.ai/api/v1</span>
+            </button>
+
+            <button class="provider-card">
+              <span class="card-top">
+                <span class="card-name">Local Ollama</span>
+                <span class="badge">7</span>
+              </span>
+              <span class="card-meta">localhost:11434/v1</span>
+            </button>
+
+            <button class="provider-card">
+              <span class="card-top">
+                <span class="card-name">LM Studio</span>
+                <span class="badge">4</span>
+              </span>
+              <span class="card-meta">localhost:1234/v1</span>
+            </button>
+
+            <div class="health">
+              <strong>配置健康状态</strong>
+              2 个警告需要在保存前处理
+            </div>
+          </section>
+
+          <section class="pane models" aria-label="Models">
+            <div class="pane-head">
+              <div class="section-title">NVIDIA NIM 的模型</div>
+              <button id="btn-add-model">+ 添加模型</button>
+            </div>
+
+            <button class="model-card active">
+              <span class="card-top">
+                <span class="card-name">Kimi K2.5</span>
+                <span class="badges"></span>
+              </span>
+              <span class="card-meta">moonshotai/kimi-k2.5</span>
+              <span class="model-meta-row">131K 输入 / 8K 输出</span>
+            </button>
+
+            <button class="model-card">
+              <span class="card-top">
+                <span class="card-name">Nemotron Ultra 253B</span>
+                <span class="badges"></span>
+              </span>
+              <span class="card-meta">nvidia/llama-3.1-nemotron-ultra-253b-v1</span>
+              <span class="model-meta-row">128K 输入 / 4K 输出</span>
+            </button>
+
+            <button class="model-card">
+              <span class="card-top">
+                <span class="card-name">DeepSeek R1</span>
+                <span class="badges"></span>
+              </span>
+              <span class="card-meta">deepseek-ai/deepseek-r1</span>
+              <span class="model-meta-row">64K 输入 / 8K 输出</span>
+            </button>
+
+            <button class="model-card">
+              <span class="card-top">
+                <span class="card-name">Qwen3 Coder</span>
+                <span class="badges"></span>
+              </span>
+              <span class="card-meta">qwen/qwen3-coder</span>
+              <span class="model-meta-row">256K 输入 / 16K 输出</span>
+            </button>
+
+            <button class="model-card">
+              <span class="card-top">
+                <span class="card-name">Llama 4 Maverick</span>
+                <span class="badges"></span>
+              </span>
+              <span class="card-meta">meta/llama-4-maverick</span>
+              <span class="model-meta-row">128K 输入 / 8K 输出</span>
+            </button>
+
+          </section>
+
+          <section class="pane inspector" aria-label="Model inspector">
+            <div class="inspector-head">
+              <div>
+                <div class="section-title">已选模型</div>
+                <h1>Kimi K2.5</h1>
+                <p>NVIDIA NIM Provider。编辑这些字段将更新 VS Code 配置。</p>
+              </div>
+              <button>复制</button>
+              <button class="danger">删除</button>
+            </div>
+
+            <div class="subsection">
+              <div class="block-title">模型标识</div>
+              <div class="form-grid">
+                <div class="field wide">
+                  <label for="model-id">模型 ID</label>
+                  <input id="model-id" value="moonshotai/kimi-k2.5">
+                </div>
+                <div class="field">
+                  <label for="model-name">显示名称</label>
+                  <input id="model-name" value="Kimi K2.5">
+                </div>
+                <div class="field">
+                  <label for="status-icon">状态图标</label>
+                  <input id="status-icon" value="sparkle">
+                </div>
+                <div class="field">
+                  <label for="family">模型家族</label>
+                  <input id="family" value="kimi">
+                </div>
+                <div class="field">
+                  <label for="version">版本</label>
+                  <input id="version" value="2026-05-18">
+                </div>
+              </div>
+            </div>
+
+            <div class="subsection">
+              <div class="block-title">路由与成本</div>
+              <div class="form-grid">
+                <div class="field">
+                  <label for="input-tokens">最大输入 Tokens</label>
+                  <input id="input-tokens" value="131072">
+                </div>
+                <div class="field">
+                  <label for="output-tokens">最大输出 Tokens</label>
+                  <input id="output-tokens" value="8192">
+                </div>
+                <div class="field">
+                  <label for="tool-choice">工具选择模式</label>
+                  <select id="tool-choice">
+                    <option>required</option>
+                    <option>auto</option>
+                    <option>none</option>
+                    <option>omit</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="multiplier">倍率标签</label>
+                  <input id="multiplier" value="1x">
+                </div>
+                <div class="field">
+                  <label for="multiplier-numeric">数值倍率</label>
+                  <input id="multiplier-numeric" value="1">
+                </div>
+                <div class="field">
+                  <label for="category-order">分类排序</label>
+                  <input id="category-order" value="10">
+                </div>
+                <div class="field wide">
+                  <label for="category-label">分类标签</label>
+                  <select id="category-label">
+                    <option>Reasoning</option>
+                    <option>Chat</option>
+                    <option>Vision</option>
+                    <option>Agent</option>
+                    <option>Embedding</option>
+                    <option>Audio</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="subsection">
+              <div class="block-title">能力</div>
+              <div class="capability-grid">
+                <div class="toggle on"><span class="switch"></span><span>工具调用</span></div>
+                <div class="toggle on"><span class="switch"></span><span>Agent 编辑工具</span></div>
+                <div class="toggle on"><span class="switch"></span><span>视觉输入</span></div>
+                <div class="toggle"><span class="switch"></span><span>视频输入</span></div>
+                <div class="toggle"><span class="switch"></span><span>文件输入</span></div>
+                <div class="toggle on"><span class="switch"></span><span>推理力度</span></div>
+              </div>
+
+              <div class="block-title">首选编辑工具</div>
+              <div class="chips">
+                <span class="chip">find-replace</span>
+                <span class="chip">multi-find-replace</span>
+                <span class="chip">apply-patch</span>
+                <span class="chip muted">code-rewrite 关闭</span>
+              </div>
+            </div>
+
+            <div class="subsection">
+              <div class="block-title">推理配置</div>
+              <div class="form-grid">
+                <div class="field">
+                  <label for="reasoning-default">默认推理级别</label>
+                  <select id="reasoning-default">
+                    <option>high</option>
+                    <option>medium</option>
+                    <option>low</option>
+                    <option>xhigh</option>
+                    <option>max</option>
+                    <option>none</option>
+                  </select>
+                </div>
+                <div class="field wide">
+                  <label>支持的推理级别</label>
+                  <input type="hidden" id="reasoning-levels" value="low,medium,high">
+                  <div class="chips" id="reasoning-chips">
+                    <span class="chip" data-level="low">low</span>
+                    <span class="chip" data-level="medium">medium</span>
+                    <span class="chip" data-level="high">high</span>
+                    <span class="chip muted" data-level="xhigh">xhigh</span>
+                    <span class="chip muted" data-level="max">max</span>
+                    <span class="chip muted" data-level="none">none</span>
+                  </div>
+                  <small>启用推理时必须包含默认级别。</small>
+                </div>
+              </div>
+            </div>
+
+            <div class="subsection">
+              <div class="block-title">验证结果</div>
+              <div class="validation">
+                <strong>已就绪，可用于 Copilot Chat</strong>
+                Base URL 有效，模型 ID 唯一，推理默认值与支持的级别一致。
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <footer class="footer">
+          <div class="footer-title">批量导入</div>
+          <textarea>[{"id":"model-id","name":"Model Name","supportsToolCalling":true}]</textarea>
+          <button>导入 JSON</button>
+          <div class="warning-box">
+            <strong>2 个警告</strong>
+            一个模型未设置输出上限。一个 Provider 使用本地端点。
+          </div>
+        </footer>
+      </section>
+    </main>
+
+    <footer class="statusbar">
+      <span>Copilot Model Bridge: 4 个 Provider / 51 个模型</span>
+      <span>main</span>
+      <span>未保存的更改</span>
+    </footer>
+  </div>
+
+  <div class="modal-layer provider-modal" aria-hidden="true">
+    <section class="provider-dialog" role="dialog" aria-modal="true" aria-labelledby="add-provider-title">
+      <header class="dialog-head">
+        <div class="dialog-mark">*</div>
+        <div class="dialog-title">
+          <h2 id="add-provider-title">添加 Provider</h2>
+          <p>填写基本信息创建 Provider，认证和模型配置可后续补充。</p>
+        </div>
+        <button class="dialog-close" aria-label="Close dialog">×</button>
+      </header>
+
+      <div class="dialog-body">
+        <section class="dialog-section">
+          <h3>快速配置</h3>
+          <p>选择一个已适配的供应商模板快速填充表单。</p>
+          <div class="form-grid">
+            <div class="field wide">
+              <label for="preset-select">供应商模板</label>
+              <select id="preset-select">
+                <option value="">-- 跳过，手动填写 --</option>
+                <option value="openai-compatible" selected>OpenAI 兼容 — 标准 Chat Completions API，通用兼容</option>
+                <option value="openai-response">OpenAI Response — Response API（新接口）</option>
+                <option value="deepseek">DeepSeek — DeepSeek API，V3 / R1 模型</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+        <section class="dialog-section">
+          <h3>基本信息</h3>
+          <p>创建 Provider 所需的必要字段。</p>
+          <div class="form-grid">
+            <div class="field">
+              <label for="dialog-provider-name">显示名称 <span class="required-mark">*</span></label>
+              <input id="dialog-provider-name" value="NVIDIA NIM">
+            </div>
+            <div class="field">
+              <label for="dialog-provider-id">Provider ID <span class="required-mark">*</span></label>
+              <input id="dialog-provider-id" value="nvidia-nim">
+              <small>扩展内部使用的唯一标识符，不允许空格。</small>
+            </div>
+            <div class="field wide">
+              <label for="dialog-base-url">Base URL <span class="required-mark">*</span></label>
+              <input id="dialog-base-url" value="https://integrate.api.nvidia.com/v1">
+              <small>OpenAI 兼容的 API 端点地址。</small>
+            </div>
+          </div>
+        </section>
+
+        <section class="dialog-section">
+          <h3>认证</h3>
+          <p>远程 Provider 必须填写 API Key；本地 Provider（如 Ollama）可留空。</p>
+          <div class="form-grid">
+            <div class="field wide">
+              <label for="dialog-api-key">API Key</label>
+              <input id="dialog-api-key" type="password" value="nvapi-••••••••••••••••">
+              <small>留空表示无需认证（适用于本地部署的 Provider）。</small>
+            </div>
+          </div>
+        </section>
+
+        <section class="dialog-section">
+          <h3>高级选项</h3>
+          <p>可选的模型种子列表，创建后也可稍后添加模型。</p>
+          <div class="form-grid">
+            <div class="field wide">
+              <label for="dialog-import">初始模型 JSON</label>
+              <textarea id="dialog-import">[{"id":"moonshotai/kimi-k2.5","name":"Kimi K2.5"}]</textarea>
+              <small>每个模型仅需提供 id 和 name，其余字段使用默认值。</small>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <footer class="dialog-actions">
+        <button>取消</button>
+        <button class="primary">添加 Provider</button>
+      </footer>
+    </section>
+  </div>
+
+  <!-- 添加模型弹窗 -->
+  <div class="modal-layer model-modal" aria-hidden="true">
+    <section class="provider-dialog" role="dialog" aria-modal="true" aria-labelledby="add-model-title">
+      <header class="dialog-head">
+        <div class="dialog-mark">*</div>
+        <div class="dialog-title">
+          <h2 id="add-model-title">添加模型</h2>
+          <p>添加一个新模型到当前 Provider。仅需填写模型 ID 和显示名称，其余字段使用默认值。</p>
+        </div>
+        <button class="dialog-close model-dialog-close" aria-label="关闭">×</button>
+      </header>
+
+      <div class="dialog-body">
+        <section class="dialog-section">
+          <h3>基本信息</h3>
+          <p>模型 ID 和显示名称为必填项。</p>
+          <div class="form-grid">
+            <div class="field wide">
+              <label for="dialog-model-id">模型 ID <span class="required-mark">*</span></label>
+              <div class="input-combo">
+                <div class="combo-input-wrap">
+                  <input id="dialog-model-id" placeholder="输入模型 ID 或从列表中选择" autocomplete="off">
+                  <ul class="model-suggestions" id="model-suggestions"></ul>
+                </div>
+                <button type="button" id="btn-fetch-models" title="从 Provider API 获取模型列表">获取列表</button>
+              </div>
+              <small>可从 Provider API 拉取模型列表后选择，也可直接手动输入。</small>
+            </div>
+            <div class="field">
+              <label for="dialog-model-name">显示名称 <span class="required-mark">*</span></label>
+              <input id="dialog-model-name" placeholder="例如: Nemotron Ultra 253B">
+              <small>在 Copilot 模型选择器中展示的名称。</small>
+            </div>
+            <div class="field">
+              <label for="dialog-model-family">模型家族</label>
+              <input id="dialog-model-family" placeholder="留空则从模型 ID 自动推断">
+            </div>
+          </div>
+        </section>
+
+        <section class="dialog-section">
+          <h3>Token 限制</h3>
+          <p>设置模型的最大输入输出 Token 数。</p>
+          <div class="form-grid">
+            <div class="field">
+              <label for="dialog-max-input">最大输入 Tokens</label>
+              <input id="dialog-max-input" type="number" value="128000">
+            </div>
+            <div class="field">
+              <label for="dialog-max-output">最大输出 Tokens</label>
+              <input id="dialog-max-output" type="number" value="4096">
+            </div>
+          </div>
+        </section>
+
+        <section class="dialog-section">
+          <h3>能力</h3>
+          <p>勾选模型支持的功能，未勾选的能力将使用默认值。</p>
+          <div class="capability-grid">
+            <div class="toggle on"><span class="switch"></span><span>工具调用</span></div>
+            <div class="toggle on"><span class="switch"></span><span>Agent 编辑工具</span></div>
+            <div class="toggle"><span class="switch"></span><span>视觉输入</span></div>
+            <div class="toggle"><span class="switch"></span><span>视频输入</span></div>
+            <div class="toggle"><span class="switch"></span><span>文件输入</span></div>
+            <div class="toggle"><span class="switch"></span><span>推理力度</span></div>
+          </div>
+        </section>
+      </div>
+
+      <footer class="dialog-actions">
+        <button class="model-cancel">取消</button>
+        <button class="primary model-confirm">添加模型</button>
+      </footer>
+    </section>
+  </div>
+
+  <script>
+    // 弹窗通用控制
+    function openModal(modalEl) {
+      modalEl.classList.add('visible');
+      modalEl.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeModal(modalEl) {
+      modalEl.classList.remove('visible');
+      modalEl.setAttribute('aria-hidden', 'true');
+    }
+
+    // Provider 弹窗
+    const providerModal = document.querySelector('.provider-modal');
+    const btnAddProvider = document.getElementById('btn-add-provider');
+
+    if (!providerModal) { console.error('Provider modal not found'); }
+    if (!btnAddProvider) { console.error('Add provider button not found'); }
+
+    const btnProviderDialogClose = providerModal ? providerModal.querySelector('.dialog-close') : null;
+    const btnProviderCancel = providerModal ? providerModal.querySelector('.dialog-actions button:first-child') : null;
+
+    if (btnAddProvider) {
+      btnAddProvider.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openModal(providerModal);
+      });
+    }
+    if (btnProviderDialogClose) {
+      btnProviderDialogClose.addEventListener('click', () => closeModal(providerModal));
+    }
+    if (btnProviderCancel) {
+      btnProviderCancel.addEventListener('click', () => closeModal(providerModal));
+    }
+    if (providerModal) {
+      providerModal.addEventListener('click', (e) => {
+        if (e.target === providerModal) closeModal(providerModal);
+      });
+    }
+
+    // Provider 预设模板数据
+    const providerPresets = {
+      'openai-compatible': {
+        name: 'OpenAI 兼容',
+        id: 'openai-compatible',
+        baseUrl: 'https://api.openai.com/v1',
+        apiKeyHint: 'sk-...',
+      },
+      'openai-response': {
+        name: 'OpenAI Response',
+        id: 'openai-response',
+        baseUrl: 'https://api.openai.com/v1',
+        apiKeyHint: 'sk-...',
+      },
+      'deepseek': {
+        name: 'DeepSeek',
+        id: 'deepseek',
+        baseUrl: 'https://api.deepseek.com/v1',
+        apiKeyHint: 'sk-...',
+      },
+    };
+
+    // 表单 DOM 引用
+    const providerNameInput = document.getElementById('dialog-provider-name');
+    const providerIdInput = document.getElementById('dialog-provider-id');
+    const providerBaseUrlInput = document.getElementById('dialog-base-url');
+    const providerApiKeyInput = document.getElementById('dialog-api-key');
+    const presetSelect = document.getElementById('preset-select');
+
+    // 下拉框切换预设：选中后自动填充表单
+    if (presetSelect) {
+      presetSelect.addEventListener('change', () => {
+        const presetKey = presetSelect.value;
+        const preset = providerPresets[presetKey];
+
+        if (!preset) {
+          // 跳过模板，清空恢复默认
+          if (providerNameInput) providerNameInput.value = '';
+          if (providerIdInput) providerIdInput.value = '';
+          if (providerBaseUrlInput) providerBaseUrlInput.value = '';
+          if (providerApiKeyInput) providerApiKeyInput.value = '';
+          return;
+        }
+
+        if (providerNameInput) providerNameInput.value = preset.name;
+        if (providerIdInput) providerIdInput.value = preset.id;
+        if (providerBaseUrlInput) providerBaseUrlInput.value = preset.baseUrl;
+        if (providerApiKeyInput) providerApiKeyInput.value = '';
+        if (providerApiKeyInput) providerApiKeyInput.placeholder = preset.apiKeyHint;
+      });
+    }
+
+    // Model 弹窗
+    const modelModal = document.querySelector('.model-modal');
+    const btnAddModel = document.getElementById('btn-add-model');
+
+    if (!modelModal) { console.error('Model modal not found'); }
+    if (!btnAddModel) { console.error('Add model button not found'); }
+
+    const btnModelDialogClose = modelModal ? modelModal.querySelector('.model-dialog-close') : null;
+    const btnModelCancel = modelModal ? modelModal.querySelector('.model-cancel') : null;
+
+    if (btnAddModel) {
+      btnAddModel.addEventListener('click', (e) => {
+        e.stopPropagation();
+        console.log('Add model button clicked');
+        openModal(modelModal);
+      });
+    }
+    if (btnModelDialogClose) {
+      btnModelDialogClose.addEventListener('click', () => closeModal(modelModal));
+    }
+    if (btnModelCancel) {
+      btnModelCancel.addEventListener('click', () => closeModal(modelModal));
+    }
+    if (modelModal) {
+      modelModal.addEventListener('click', (e) => {
+        if (e.target === modelModal) closeModal(modelModal);
+      });
+    }
+
+    // 获取模型列表按钮（概念演示，后续接入真实 API）
+    const btnFetchModels = document.getElementById('btn-fetch-models');
+    const modelInput = document.getElementById('dialog-model-id');
+    const suggestionsList = document.getElementById('model-suggestions');
+
+    function showSuggestions(models) {
+      if (!suggestionsList) return;
+      suggestionsList.innerHTML = '';
+      if (!models || models.length === 0) {
+        suggestionsList.innerHTML = '<li class="suggestions-empty">未获取到模型列表，可手动输入</li>';
+      } else {
+        models.forEach(id => {
+          const li = document.createElement('li');
+          li.textContent = id;
+          li.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            if (modelInput) modelInput.value = id;
+            hideSuggestions();
+          });
+          suggestionsList.appendChild(li);
+        });
+      }
+      suggestionsList.classList.add('visible');
+    }
+
+    function hideSuggestions() {
+      if (suggestionsList) suggestionsList.classList.remove('visible');
+    }
+
+    // 点击外部关闭下拉
+    document.addEventListener('click', (e) => {
+      if (suggestionsList && !suggestionsList.parentElement.contains(e.target)) {
+        hideSuggestions();
+      }
+    });
+
+    if (btnFetchModels) {
+      btnFetchModels.addEventListener('click', (e) => {
+        e.stopPropagation();
+        btnFetchModels.classList.add('loading');
+        btnFetchModels.textContent = '获取中...';
+
+        setTimeout(() => {
+          const sampleModels = [
+            'moonshotai/kimi-k2.5',
+            'nvidia/llama-3.1-nemotron-ultra-253b-v1',
+            'deepseek-ai/deepseek-r1',
+            'qwen/qwen3-coder',
+            'meta/llama-4-maverick',
+            'anthropic/claude-sonnet-4',
+            'google/gemini-2.5-pro',
+          ];
+          showSuggestions(sampleModels);
+          btnFetchModels.classList.remove('loading');
+          btnFetchModels.textContent = '获取列表';
+        }, 600);
+      });
+    }
+
+    // 添加模型弹窗内的 Toggle 开关（只阻止冒泡，不重复 toggle）
+
+    // Provider 卡片切换
+    const providerCards = document.querySelectorAll('.provider-card');
+    const modelsSectionTitle = document.querySelector('.pane.models .section-title');
+
+    const providerModels = {
+      'NVIDIA NIM': 'NVIDIA NIM 的模型',
+      'OpenRouter': 'OpenRouter 的模型',
+      'Local Ollama': 'Local Ollama 的模型',
+      'LM Studio': 'LM Studio 的模型',
+    };
+
+    providerCards.forEach(card => {
+      card.addEventListener('click', () => {
+        providerCards.forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+        const name = card.querySelector('.card-name').textContent;
+        if (providerModels[name]) {
+          modelsSectionTitle.textContent = providerModels[name];
+        }
+      });
+    });
+
+    // Model 卡片切换
+    const modelCards = document.querySelectorAll('.model-card');
+    const inspectorTitle = document.querySelector('.inspector-head h1');
+    const inspectorSubtitle = document.querySelector('.inspector-head p');
+    const modelIdInput = document.getElementById('model-id');
+    const modelNameInput = document.getElementById('model-name');
+
+    const modelDetails = {
+      'Kimi K2.5': { id: 'moonshotai/kimi-k2.5', provider: 'NVIDIA NIM' },
+      'Nemotron Ultra 253B': { id: 'nvidia/llama-3.1-nemotron-ultra-253b-v1', provider: 'NVIDIA NIM' },
+      'DeepSeek R1': { id: 'deepseek-ai/deepseek-r1', provider: 'NVIDIA NIM' },
+      'Qwen3 Coder': { id: 'qwen/qwen3-coder', provider: 'NVIDIA NIM' },
+      'Llama 4 Maverick': { id: 'meta/llama-4-maverick', provider: 'NVIDIA NIM' },
+    };
+
+    modelCards.forEach(card => {
+      card.addEventListener('click', () => {
+        modelCards.forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+        const name = card.querySelector('.card-name').textContent;
+        if (modelDetails[name]) {
+          inspectorTitle.textContent = name;
+          inspectorSubtitle.textContent = `${modelDetails[name].provider} Provider。编辑这些字段将更新 VS Code 配置。`;
+          modelIdInput.value = modelDetails[name].id;
+          modelNameInput.value = name;
+        }
+      });
+    });
+
+    // Toggle 开关
+    document.querySelectorAll('.toggle').forEach(toggle => {
+      toggle.style.cursor = 'pointer';
+      toggle.addEventListener('click', () => {
+        toggle.classList.toggle('on');
+      });
+    });
+
+    // Activity bar 切换
+    const activityBtns = document.querySelectorAll('.activity button');
+    activityBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        activityBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
+
+    // Tab 切换
+    const tabs = document.querySelectorAll('.tab');
+    tabs.forEach(tab => {
+      tab.style.cursor = 'pointer';
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+      });
+    });
+
+    // Chip 点击切换（通用）
+    document.querySelectorAll('.chip').forEach(chip => {
+      chip.style.cursor = 'pointer';
+      chip.addEventListener('click', () => {
+        chip.classList.toggle('muted');
+      });
+    });
+
+    // 推理级别 Chips：同步隐藏 input
+    const reasoningChips = document.querySelectorAll('#reasoning-chips .chip');
+    const reasoningHidden = document.getElementById('reasoning-levels');
+
+    reasoningChips.forEach(chip => {
+      chip.addEventListener('click', () => {
+        const selected = [];
+        reasoningChips.forEach(c => {
+          if (!c.classList.contains('muted')) {
+            selected.push(c.dataset.level);
+          }
+        });
+        if (reasoningHidden) {
+          reasoningHidden.value = selected.join(',');
+        }
+      });
+    });
+
+    // ===== 模型标签动态渲染 =====
+    // 模型能力数据：每个模型的能力开关决定标签内容
+    const modelCapabilities = {
+      'Kimi K2.5': {
+        contextWindow: '131K',
+        supportsToolCalling: true,
+        supportsAgentEditTools: true,
+        supportsVision: true,
+        supportsReasoning: true,
+      },
+      'Nemotron Ultra 253B': {
+        contextWindow: '128K',
+        supportsToolCalling: true,
+        supportsAgentEditTools: false,
+        supportsVision: true,
+        supportsReasoning: false,
+      },
+      'DeepSeek R1': {
+        contextWindow: '64K',
+        supportsToolCalling: false,
+        supportsAgentEditTools: false,
+        supportsVision: false,
+        supportsReasoning: true,
+      },
+      'Qwen3 Coder': {
+        contextWindow: '256K',
+        supportsToolCalling: true,
+        supportsAgentEditTools: false,
+        supportsVision: false,
+        supportsReasoning: false,
+      },
+      'Llama 4 Maverick': {
+        contextWindow: '128K',
+        supportsToolCalling: false,
+        supportsAgentEditTools: false,
+        supportsVision: false,
+        supportsReasoning: false,
+      },
+    };
+
+    /**
+     * 根据模型能力数据生成标签列表
+     * 优先级规则：
+     *   1. 工具调用 + Agent 编辑 → "Agent 就绪"（不重复显示"工具"）
+     *   2. 仅工具调用 → "工具"
+     *   3. 视觉输入 → "视觉"
+     *   4. 推理力度 → "推理"
+     *   5. 以上全无 → 上下文窗口规格
+     */
+    function getBadges(cap) {
+      const badges = [];
+      if (cap.supportsToolCalling && cap.supportsAgentEditTools) {
+        badges.push({ text: 'Agent 就绪', cls: 'agent' });
+      } else if (cap.supportsToolCalling) {
+        badges.push({ text: '工具', cls: 'tool' });
+      }
+      if (cap.supportsVision) {
+        badges.push({ text: '视觉', cls: 'success' });
+      }
+      if (cap.supportsReasoning) {
+        badges.push({ text: '推理', cls: 'reasoning' });
+      }
+      if (badges.length === 0) {
+        badges.push({ text: cap.contextWindow, cls: '' });
+      }
+      return badges;
+    }
+
+    /** 渲染所有模型卡片的标签 */
+    function renderModelBadges() {
+      const cards = document.querySelectorAll('.model-card');
+      cards.forEach(card => {
+        const name = card.querySelector('.card-name').textContent;
+        const badgesContainer = card.querySelector('.badges');
+        if (!badgesContainer || !modelCapabilities[name]) return;
+
+        // 清空旧标签
+        badgesContainer.innerHTML = '';
+
+        const cap = modelCapabilities[name];
+        const badges = getBadges(cap);
+
+        badges.forEach(b => {
+          const span = document.createElement('span');
+          span.className = 'badge' + (b.cls ? ' ' + b.cls : '');
+          span.textContent = b.text;
+          badgesContainer.appendChild(span);
+        });
+      });
+    }
+
+    // 页面初始化时渲染
+    renderModelBadges();
+  </script>
+</body>
+</html>
