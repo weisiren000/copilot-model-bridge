@@ -30,7 +30,9 @@ import {
   resolveToolChoice,
   TokenEstimatePart,
 } from './openai';
+import { postStreamingChatCompletion } from './chatHttpClient';
 import { buildModelMetadata } from './modelMetadata';
+import { buildChatRequestHeaders } from './requestHeaders';
 import { OpenAIStreamChunk, ProviderConfig } from './types';
 
 /** Separator between provider ID and model ID in the compound LM id */
@@ -212,28 +214,19 @@ export class OpenAICompatChatProvider implements vscode.LanguageModelChatProvide
       }
     }
 
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      'Accept': 'text/event-stream',
-      'User-Agent': 'Copilot Model Bridge',
-    };
-
-    // Only add Authorization header if an API key is configured
-    if (provider.apiKey) {
-      headers['Authorization'] = `Bearer ${provider.apiKey}`;
-    }
+    const headers = buildChatRequestHeaders(provider);
 
     // ── 4. AbortController for cancellation support ────────────────────────
     const abortController = new AbortController();
     const cancelSub = token.onCancellationRequested(() => abortController.abort());
 
     try {
-      const response = await fetch(requestUrl, {
-        method: 'POST',
+      const response = await postStreamingChatCompletion(
+        requestUrl,
         headers,
-        body: JSON.stringify(requestBody),
-        signal: abortController.signal,
-      });
+        requestBody,
+        abortController.signal
+      );
 
       // ── 5. Handle non-OK HTTP responses ──────────────────────────────────
       if (!response.ok) {
