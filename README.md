@@ -5,47 +5,47 @@
 [![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/weisiren.copilot-model-bridge?label=VS%20Code%20Marketplace&logo=visualstudiocode&color=blue)](https://marketplace.visualstudio.com/items?itemName=weisiren.copilot-model-bridge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-Copilot Model Bridge is a VS Code extension that plugs any OpenAI-compatible endpoint into GitHub Copilot Chat through the official `LanguageModelChatProvider` API.
+Copilot Model Bridge 是一个 VS Code 扩展，可将任意 OpenAI 兼容接口接入 GitHub Copilot Chat。
 
-It lets you expose models from NVIDIA NIM, Ollama, LM Studio, vLLM, Together AI, Groq, OpenRouter, and similar OpenAI-format services directly in the Copilot model picker.
+它可以把 NVIDIA NIM、Ollama、LM Studio、vLLM、Together AI、Groq、OpenRouter 等 OpenAI 格式服务中的模型直接暴露到 Copilot 的模型选择器里。
 
-## What It Supports
+## 功能概览
 
-- Multiple providers in one VS Code profile
-- Multiple models per provider
-- Streaming chat responses over `/chat/completions`
-- Per-provider API keys
-- Tool-calling capability flags
-- Agent edit tool capability hints
-- Vision capability flags
-- Optional Thinking Effort controls for reasoning models
-- Polished model metadata in VS Code model surfaces
-- Persistent configuration manager inside a VS Code editor tab
-- Command-based setup without manually editing JSON
-- Editing, duplicating, importing, and validating provider/model configs
+- 一个 VS Code 配置中可接入多个 provider
+- 每个 provider 可配置多个模型
+- 基于 `/chat/completions` 的流式响应
+- 每个 provider 独立 API Key
+- 支持工具调用能力开关
+- 支持 Agent 编辑工具能力提示
+- 支持视觉能力开关
+- reasoning 模型可选显示 Thinking Effort 配置
+- 支持更完整的模型 metadata 展示
+- 支持 VS Code 编辑器页签内的持久配置管理器
+- 通过命令面板向导完成配置，无需手改 JSON
+- 支持编辑、复制、导入和校验 provider/model 配置
 
-## Requirements
+## 运行要求
 
-| Item | Requirement |
+| 项目 | 要求 |
 | --- | --- |
-| VS Code | `1.99.0` or newer |
-| GitHub Copilot | Individual plan |
-| Backend API | OpenAI-compatible `/chat/completions` endpoint |
+| VS Code | `1.99.0` 及以上 |
+| GitHub Copilot | Individual 个人版 |
+| 后端接口 | 兼容 OpenAI `/chat/completions` 的接口 |
 
 > [!NOTE]
-> VS Code's language model chat provider flow is currently oriented around Copilot individual usage. If your environment blocks this API, the extension will install but the model integration will not be available.
+> VS Code 当前这套语言模型 provider 能力主要面向 Copilot 个人版场景。如果你的环境策略禁用了对应 API，扩展虽然可以安装，但模型不会真正接入到聊天面板中。
 
-## Quick Start
+## 快速开始
 
-### 1. Install
+### 1. 安装
 
-From Marketplace:
+从 Marketplace 安装：
 
-- Open the [Copilot Model Bridge extension page](https://marketplace.visualstudio.com/items?itemName=weisiren.copilot-model-bridge)
-- Click `Install`
-- Reload VS Code
+- 打开 [Copilot Model Bridge 扩展页面](https://marketplace.visualstudio.com/items?itemName=weisiren.copilot-model-bridge)
+- 点击 `Install`
+- 重载 VS Code
 
-From source:
+从源码运行：
 
 ```bash
 git clone https://github.com/weisiren000/copilot-model-bridge.git
@@ -54,53 +54,53 @@ npm install
 npm run compile
 ```
 
-Then press `F5` in VS Code to launch an Extension Development Host.
+然后在 VS Code 中按 `F5` 启动 Extension Development Host。
 
-### 2. Add a provider
+### 2. 添加 provider
 
-Open the command palette and run:
+打开命令面板并执行：
 
 ```text
 Copilot Model Bridge: Add Provider
 ```
 
-The wizard asks for:
+向导会依次要求输入：
 
-1. Display name
+1. 显示名称
 2. Provider ID
 3. Base URL
-4. API key
+4. API Key
 
-Example:
+示例：
 
-- Display name: `NVIDIA NIM`
-- Provider ID: `nvidia-nim`
-- Base URL: `https://integrate.api.nvidia.com/v1`
+- 显示名称：`NVIDIA NIM`
+- Provider ID：`nvidia-nim`
+- Base URL：`https://integrate.api.nvidia.com/v1`
 
-### 3. Add a model
+### 3. 添加模型
 
-Run:
+执行：
 
 ```text
 Copilot Model Bridge: Add Model
 ```
 
-The wizard lets you configure:
+向导支持配置：
 
-1. Model ID
-2. Display name
-3. Max input tokens
-4. Tool calling support
-5. Edit tool hints for Agent mode
-6. Vision support
-7. Video attachment policy
-8. Generic file attachment policy
-9. Cost multiplier
-10. Whether the model supports configurable reasoning effort
+1. 模型 ID
+2. 模型显示名称
+3. 最大输入 token
+4. 是否支持工具调用
+5. 是否向 Agent 模式提供编辑工具提示
+6. 是否支持视觉输入
+7. 视频附件策略
+8. 通用文件附件策略
+9. 成本倍率
+10. 是否支持可配置 reasoning effort
 
-For reasoning models, the wizard also asks for supported reasoning levels and the default reasoning level.
+对于 reasoning 模型，向导还会继续询问支持的思考层级和默认思考层级。
 
-Supported reasoning levels:
+支持的思考层级：
 
 - `none`
 - `low`
@@ -109,57 +109,57 @@ Supported reasoning levels:
 - `xhigh`
 - `max`
 
-### 4. Use the model in Copilot Chat
+### 4. 在 Copilot Chat 中使用
 
-Open Copilot Chat, switch the model picker, and choose the model contributed by Copilot Model Bridge.
+打开 Copilot Chat，在模型选择器中选择由 Copilot Model Bridge 提供的模型。
 
-Model names are shown as:
+模型展示格式为：
 
 ```text
-<Model Name> (<Provider Name>)
+<模型名> (<Provider 名>)
 ```
 
-For example:
+例如：
 
 ```text
 Kimi K2.5 (NVIDIA NIM)
 ```
 
-## Commands
+## 命令列表
 
-| Command | Description |
+| 命令 | 说明 |
 | --- | --- |
-| `Copilot Model Bridge: Manage Providers` | Open the persistent configuration manager |
-| `Copilot Model Bridge: Open Config Manager` | Open the provider/model configuration page |
-| `Copilot Model Bridge: Quick Manage Providers` | Open the legacy quick-pick management menu |
-| `Copilot Model Bridge: Add Provider` | Add a new provider |
-| `Copilot Model Bridge: Edit Provider` | Update provider display name, base URL, or API key |
-| `Copilot Model Bridge: Remove Provider` | Remove a provider and its models |
-| `Copilot Model Bridge: Add Model` | Add a model to a provider |
-| `Copilot Model Bridge: Edit Model` | Update model display name and token limits |
-| `Copilot Model Bridge: Duplicate Model` | Copy an existing model configuration |
-| `Copilot Model Bridge: Import Models from JSON` | Append models from a pasted JSON array |
-| `Copilot Model Bridge: Validate Provider Config` | Find duplicate IDs and inconsistent settings |
-| `Copilot Model Bridge: Remove Model` | Remove a model from a provider |
-| `Copilot Model Bridge: List Providers` | Show all configured providers and models |
+| `Copilot Model Bridge: Manage Providers` | 打开持久配置管理器 |
+| `Copilot Model Bridge: Open Config Manager` | 打开 provider/model 配置页 |
+| `Copilot Model Bridge: Quick Manage Providers` | 打开旧版 quick-pick 管理菜单 |
+| `Copilot Model Bridge: Add Provider` | 新增 provider |
+| `Copilot Model Bridge: Edit Provider` | 修改 provider 显示名称、Base URL 或 API Key |
+| `Copilot Model Bridge: Remove Provider` | 删除 provider 及其模型 |
+| `Copilot Model Bridge: Add Model` | 给 provider 添加模型 |
+| `Copilot Model Bridge: Edit Model` | 修改模型显示名称和 token 限制 |
+| `Copilot Model Bridge: Duplicate Model` | 复制已有模型配置 |
+| `Copilot Model Bridge: Import Models from JSON` | 从 JSON 数组导入模型 |
+| `Copilot Model Bridge: Validate Provider Config` | 检查重复 ID 和配置不一致 |
+| `Copilot Model Bridge: Remove Model` | 删除模型 |
+| `Copilot Model Bridge: List Providers` | 查看当前所有 provider 和模型 |
 
-## Configuration
+## 配置说明
 
-The extension stores data in:
+扩展把数据保存到：
 
 ```json
 "copilot-model-bridge.providers"
 ```
 
-The recommended configuration entry is:
+推荐配置入口：
 
 ```text
 Copilot Model Bridge: Open Config Manager
 ```
 
-It opens a VS Code editor tab with provider/model lists, editable fields, validation, JSON import, model duplication, and save controls. The older quick-pick commands still exist, and their inputs stay open when focus moves away.
+它会在 VS Code 编辑器页签中打开配置管理器，支持 provider/model 列表、字段编辑、校验、JSON 导入、复制模型和保存。旧版 quick-pick 命令仍然保留，并且切换焦点时不会自动关闭输入框。
 
-Example:
+示例：
 
 ```json
 "copilot-model-bridge.providers": [
@@ -216,17 +216,17 @@ Example:
 ]
 ```
 
-`supportsReasoning` controls whether VS Code shows Thinking Effort for the model. Existing configs that already set `defaultReasoningLevel` and omit `supportsReasoning` are treated as reasoning-capable for compatibility. If `supportsReasoning` is explicitly `false`, Thinking Effort stays disabled.
-`supportsEditTools` controls whether Agent mode receives preferred edit tool hints. It defaults to `supportsToolCalling`; if enabled without `preferredEditTools`, the default hints are `find-replace`, `multi-find-replace`, and `apply-patch`. Unknown values in `preferredEditTools` are filtered; if all configured values are unknown, no edit tool hints are declared. Models with `supportsToolCalling: false` never declare edit tool hints.
-`supportsVideo` and `supportsFileInput` define the attachment boundary. Images are sent as OpenAI-compatible `image_url` parts, text and JSON data parts are converted to text, and video or unknown binary attachments are rejected with a clear error instead of being silently ignored.
-`multiplier` controls the cost label shown by VS Code. It defaults to `0x`; labels like `1x` and `0.5x` automatically provide `multiplierNumeric` unless you set `multiplierNumeric` explicitly.
-`family`, `version`, `categoryLabel`, `categoryOrder`, and `statusIcon` polish the metadata shown by VS Code model picker and Manage Models surfaces. `family` is inferred from the model id when omitted, category fields are optional, and `statusIcon` only accepts safe VS Code ThemeIcon ids such as `sparkle` or `warning`.
+`supportsReasoning` 决定 VS Code 是否为该模型显示 Thinking Effort。为了兼容旧配置，已经写过 `defaultReasoningLevel` 且没有写 `supportsReasoning` 的模型会被视为支持 reasoning；如果显式写了 `supportsReasoning: false`，则不会显示 Thinking Effort。
+`supportsEditTools` 决定 Agent 模式是否接收模型偏好的编辑工具提示。它默认跟随 `supportsToolCalling`；启用但未配置 `preferredEditTools` 时，默认提示为 `find-replace`、`multi-find-replace` 和 `apply-patch`。`preferredEditTools` 中的未知值会被过滤；如果配置的值全部未知，则不会声明编辑工具提示。`supportsToolCalling: false` 的模型永远不会声明编辑工具提示。
+`supportsVideo` 和 `supportsFileInput` 定义附件边界。图片会按 OpenAI 兼容的 `image_url` 发送，文本和 JSON data part 会转成文本；视频和未知二进制附件会明确报错，不再静默忽略。
+`multiplier` 决定 VS Code 中显示的成本倍率标签，默认是 `0x`；`1x`、`0.5x` 这类标签会自动推导 `multiplierNumeric`，除非你显式配置了 `multiplierNumeric`。
+`family`、`version`、`categoryLabel`、`categoryOrder` 和 `statusIcon` 用于改善 VS Code 模型选择器和 Manage Models 中的 metadata 展示。`family` 未配置时会从模型 ID 推导，分类字段默认不声明，`statusIcon` 只接受安全的 VS Code ThemeIcon ID，例如 `sparkle` 或 `warning`。
 
-Token counts are estimates. Text uses a simple 4 characters per token heuristic, images are counted as 1024 tokens each, and tool calls, tool results, JSON, and text data parts are estimated from their serialized text. The value is intended for VS Code context budgeting and may differ from the provider's tokenizer.
+Token count 是估算值。文本使用每 4 个字符约等于 1 token 的粗估规则，图片按每张 1024 tokens 估算，工具调用、工具结果、JSON 和文本 data part 会按序列化后的文本估算。该值用于 VS Code 上下文预算，可能与具体 provider 的 tokenizer 结果不同。
 
-## Compatible Provider Examples
+## 兼容服务示例
 
-| Provider | Base URL |
+| 服务 | Base URL |
 | --- | --- |
 | NVIDIA NIM | `https://integrate.api.nvidia.com/v1` |
 | Ollama | `http://localhost:11434/v1` |
@@ -236,34 +236,34 @@ Token counts are estimates. Text uses a simple 4 characters per token heuristic,
 | OpenRouter | `https://openrouter.ai/api/v1` |
 | Mistral AI | `https://api.mistral.ai/v1` |
 
-## How It Works
+## 工作方式
 
-At runtime the extension:
+运行时扩展会：
 
-1. Registers one `LanguageModelChatProvider`
-2. Flattens all configured provider/model pairs into selectable Copilot models
-3. Converts VS Code chat messages into OpenAI-compatible request payloads
-4. Sends streaming requests to `<baseUrl>/chat/completions`
-5. Streams text and tool-call parts back into VS Code
+1. 注册一个 `LanguageModelChatProvider`
+2. 把所有 provider/model 组合铺平成 Copilot 可选模型
+3. 把 VS Code 的聊天消息转换成 OpenAI 兼容请求体
+4. 向 `<baseUrl>/chat/completions` 发送流式请求
+5. 把文本片段和工具调用片段持续回传给 VS Code
 
-If a model is marked as non-vision, image input is rejected before the outbound request is sent. Unsupported video and unknown binary attachments are also rejected before the API call.
+如果模型被标记为不支持视觉输入，扩展会在发请求前直接拦截图片输入。不支持的视频和未知二进制附件也会在发请求前明确报错。
 
-## Development
+## 开发
 
 ```bash
 npm install
 npm run compile
 ```
 
-Useful commands:
+常用命令：
 
-| Command | Description |
+| 命令 | 说明 |
 | --- | --- |
-| `npm run compile` | Build once |
-| `npm run watch` | Watch mode |
-| `npx tsc -p ./ --noEmit` | Type-check only |
+| `npm run compile` | 编译一次 |
+| `npm run watch` | 监听编译 |
+| `npx tsc -p ./ --noEmit` | 仅做类型检查 |
 
-Core files:
+核心文件：
 
 ```text
 src/extension.ts
@@ -272,5 +272,3 @@ src/commands.ts
 src/config.ts
 src/types.ts
 ```
-
-

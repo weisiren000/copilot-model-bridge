@@ -1,6 +1,6 @@
 # Copilot Model Bridge
 
-[English](../README.md)
+[English](README.en.md)
 
 [![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/weisiren.copilot-model-bridge?label=VS%20Code%20Marketplace&logo=visualstudiocode&color=blue)](https://marketplace.visualstudio.com/items?itemName=weisiren.copilot-model-bridge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](../LICENSE)
