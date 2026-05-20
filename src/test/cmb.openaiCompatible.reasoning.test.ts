@@ -106,3 +106,33 @@ test('returns thinking effort schema for reasoning models', () => {
     },
   });
 });
+
+test('limits thinking effort schema to default when supported levels are missing', () => {
+  const schema = buildModelReasoningConfigurationSchema({
+    supportsReasoning: true,
+    defaultReasoningLevel: 'medium',
+  });
+
+  assert.deepEqual(schema, {
+    properties: {
+      reasoningEffort: {
+        type: 'string',
+        title: 'Thinking Effort',
+        enum: ['medium'],
+        enumItemLabels: ['Medium'],
+        enumDescriptions: ['Balanced reasoning and speed'],
+        default: 'medium',
+        group: 'navigation',
+      },
+    },
+  });
+});
+
+test('does not add max tokens to reasoning configuration schema', () => {
+  const schema = buildModelReasoningConfigurationSchema({
+    supportsReasoning: true,
+    defaultReasoningLevel: 'medium',
+  }) as { properties?: Record<string, unknown> };
+
+  assert.equal(schema.properties?.maxTokens, undefined);
+});

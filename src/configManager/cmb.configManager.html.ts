@@ -208,7 +208,7 @@ function renderModelModal(): string {
         </section>
         <section class="dialog-section">
           <h3>Token 限制</h3>
-          <p>设置模型的最大输入输出 Token 数。</p>
+          <p>设置模型可输入上限和输出上限。</p>
           <div class="form-grid">
             <div class="field">
               <label for="dialog-max-input">最大输入 Tokens</label>

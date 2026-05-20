@@ -1,4 +1,5 @@
 import { ModelConfig, ProviderConfig, ReasoningLevel } from '../../types';
+import { normalizeModelConfig } from '../model/cmb.provider.modelConfig';
 
 export interface ConfigValidationIssue {
   severity: 'error' | 'warning';
@@ -25,6 +26,7 @@ export function updateModel(
   modelId: string,
   patch: Partial<ModelConfig>
 ): ProviderConfig[] {
+  const cleanPatch = removeLegacyModelFields(patch);
   return providers.map(provider => {
     if (provider.id !== providerId) {
       return provider;
@@ -34,7 +36,7 @@ export function updateModel(
       ...provider,
       models: provider.models.map(model => (
         model.id === modelId
-          ? { ...model, ...removeUndefinedValues(patch) }
+          ? { ...model, ...removeUndefinedValues(cleanPatch) }
           : model
       )),
     };
@@ -79,7 +81,9 @@ export function importModels(
     }
 
     const existingIds = new Set(provider.models.map(model => model.id));
-    const imported = models.filter(model => !existingIds.has(model.id));
+    const imported = models
+      .filter(model => !existingIds.has(model.id))
+      .map(normalizeModelConfig);
     return { ...provider, models: [...provider.models, ...imported] };
   });
 }
@@ -91,6 +95,7 @@ export function validateProviderConfig(providers: readonly ProviderConfig[]): Co
     addBaseUrlIssue(issues, provider);
     addDuplicateModelIssues(issues, provider);
     for (const model of provider.models) {
+      addTokenLimitIssues(issues, provider, model);
       addReasoningIssues(issues, provider, model);
     }
   }
@@ -123,6 +128,22 @@ function addDuplicateModelIssues(issues: ConfigValidationIssue[], provider: Prov
     }
     seen.add(model.id);
   }
+}
+
+function addTokenLimitIssues(
+  issues: ConfigValidationIssue[],
+  provider: ProviderConfig,
+  model: ModelConfig
+): void {
+  if (model.maxOutputTokens <= model.maxInputTokens) {
+    return;
+  }
+  issues.push({
+    severity: 'warning',
+    providerId: provider.id,
+    modelId: model.id,
+    message: `Model "${model.name}" max output tokens (${model.maxOutputTokens}) exceed max input tokens (${model.maxInputTokens}); some APIs may reject max_tokens.`,
+  });
 }
 
 function addReasoningIssues(
@@ -170,4 +191,11 @@ function removeUndefinedValues<T extends object>(value: T): Partial<T> {
   return Object.fromEntries(
     Object.entries(value).filter(([, entry]) => entry !== undefined)
   ) as Partial<T>;
+}
+
+function removeLegacyModelFields(value: Partial<ModelConfig>): Partial<ModelConfig> {
+  const { contextWindowTokens: _legacyContextWindowTokens, ...rest } = value as Partial<ModelConfig> & {
+    contextWindowTokens?: unknown;
+  };
+  return rest;
 }

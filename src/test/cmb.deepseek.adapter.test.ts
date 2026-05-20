@@ -5,6 +5,7 @@ import {
   buildDeepSeekRequestPatch,
   decodeReasoningDataPart,
   DEEPSEEK_REASONING_MIME,
+  getDeepSeekMaxOutputTokens,
   isDeepSeekBaseUrl,
   isDeepSeekModelId,
   isDeepSeekRequest,
@@ -90,6 +91,13 @@ test('falls back to high effort when reasoning level is missing', () => {
   });
   assert.deepEqual(patch.thinking, { type: 'enabled' });
   assert.equal(patch.reasoning_effort, 'high');
+});
+
+test('caps DeepSeek max output tokens to the documented API range', () => {
+  assert.equal(getDeepSeekMaxOutputTokens(1000000), 393216);
+  assert.equal(getDeepSeekMaxOutputTokens(393216), 393216);
+  assert.equal(getDeepSeekMaxOutputTokens(4096), 4096);
+  assert.equal(getDeepSeekMaxOutputTokens(0), 1);
 });
 
 test('decodeReasoningDataPart returns text only for the reasoning MIME', () => {

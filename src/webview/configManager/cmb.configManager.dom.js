@@ -37,9 +37,14 @@
   };
   CMB.formatTokens = function formatTokens(value) {
     if (typeof value !== 'number' || Number.isNaN(value)) return '-';
-    if (value >= 1000) return `${Math.round(value / 1000)}K`;
+    if (value >= 1000000) return `${formatCompactNumber(value / 1000000)}M`;
+    if (value >= 1000) return `${formatCompactNumber(value / 1000)}K`;
     return String(value);
   };
+  function formatCompactNumber(value) {
+    const floored = Math.floor(value * 10) / 10;
+    return Number.isInteger(floored) ? String(floored) : floored.toFixed(1);
+  }
   CMB.stripProtocol = function stripProtocol(url) {
     return (url || '').replace(/^https?:\/\//, '');
   };

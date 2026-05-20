@@ -62,6 +62,29 @@ test('updates model fields while preserving unknown model fields', () => {
   assert.equal(state.dirty, true);
 });
 
+test('updates max input tokens directly', () => {
+  const state = reduceConfigManagerMessage(createState(), {
+    type: 'updateModel',
+    providerId: 'openrouter',
+    modelId: 'openai/gpt-4.1',
+    patch: { maxInputTokens: 1000000 },
+  });
+
+  assert.equal(state.providers[0].models[0].maxInputTokens, 1000000);
+});
+
+test('updates max output tokens without changing max input tokens', () => {
+  const state = reduceConfigManagerMessage(createState(), {
+    type: 'updateModel',
+    providerId: 'openrouter',
+    modelId: 'openai/gpt-4.1',
+    patch: { maxOutputTokens: 8192 },
+  });
+
+  assert.equal(state.providers[0].models[0].maxInputTokens, 128000);
+  assert.equal(state.providers[0].models[0].maxOutputTokens, 8192);
+});
+
 test('keeps model selection when model id is edited', () => {
   const state = reduceConfigManagerMessage(createState(), {
     type: 'updateModel',

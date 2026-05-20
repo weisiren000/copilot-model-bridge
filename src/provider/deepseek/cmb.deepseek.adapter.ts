@@ -22,6 +22,7 @@ import { ProviderConfig, ReasoningLevel } from '../../types';
 /** DeepSeek 在 thinking mode 下唯一接受的两个 reasoning_effort 取值 */
 const DEEPSEEK_VALID_EFFORTS = ['high', 'max'] as const;
 type DeepSeekEffort = typeof DEEPSEEK_VALID_EFFORTS[number];
+const DEEPSEEK_MAX_OUTPUT_TOKENS = 393216;
 
 /** 把通用 ReasoningLevel 映射到 DeepSeek 接受的取值 */
 const DEEPSEEK_EFFORT_MAP: Record<ReasoningLevel, DeepSeekEffort> = {
@@ -110,6 +111,17 @@ export function buildDeepSeekRequestPatch(
 export function mapToDeepSeekEffort(level: ReasoningLevel | undefined): DeepSeekEffort {
   if (!level) return 'high';
   return DEEPSEEK_EFFORT_MAP[level] ?? 'high';
+}
+
+export function getDeepSeekMaxOutputTokens(configuredMaxOutputTokens: number): number {
+  return clampPositiveInteger(configuredMaxOutputTokens, DEEPSEEK_MAX_OUTPUT_TOKENS);
+}
+
+function clampPositiveInteger(value: number, max: number): number {
+  if (!Number.isFinite(value) || value < 1) {
+    return 1;
+  }
+  return Math.min(Math.floor(value), max);
 }
 
 /**

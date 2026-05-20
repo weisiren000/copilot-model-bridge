@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { ModelConfig, ProviderConfig } from '../types';
+export { buildModelSummary } from './cmb.management.summary';
 
 export type ProviderItem = vscode.QuickPickItem & { providerId: string };
 export type ModelItem = vscode.QuickPickItem & { providerId: string; modelId: string };
@@ -113,10 +114,6 @@ export function parseModelArray(json: string): ModelConfig[] | undefined {
   } catch {
     return undefined;
   }
-}
-
-export function buildModelSummary(model: ModelConfig): string {
-  return `  Input: ${model.maxInputTokens.toLocaleString()} tokens · Tools: ${model.supportsToolCalling ? 'yes' : 'no'} · Edit: ${model.supportsEditTools ? 'yes' : 'no'} · Vision: ${model.supportsVision ? 'yes' : 'no'} · Video: ${model.supportsVideo ? 'yes' : 'no'} · Files: ${model.supportsFileInput ? 'yes' : 'no'} · Reasoning: ${model.supportsReasoning ? (model.defaultReasoningLevel ?? 'medium') : 'no'} · Cost: ${model.multiplier ?? '0x'}`;
 }
 
 function isImportableModel(value: unknown): value is ModelConfig {

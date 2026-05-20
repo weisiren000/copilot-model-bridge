@@ -55,4 +55,5 @@
     }
     return badges.map((badge) => `<span class="badge${badge.cls ? ` ${badge.cls}` : ''}">${CMB.escapeHtml(badge.text)}</span>`).join('');
   }
+
 })();

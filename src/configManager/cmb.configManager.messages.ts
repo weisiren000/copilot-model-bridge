@@ -232,14 +232,21 @@ function duplicateModelState(
 function normalizeImportedModels(
   models: Array<Partial<ModelConfig> & Pick<ModelConfig, 'id' | 'name'>>
 ): ModelConfig[] {
-  return models.map(model => ({
-    ...model,
-    id: model.id,
-    name: model.name,
-    maxInputTokens: model.maxInputTokens ?? 128000,
-    maxOutputTokens: model.maxOutputTokens ?? 4096,
-    supportsToolCalling: model.supportsToolCalling ?? true,
-  }));
+  return models.map(model => {
+    const { contextWindowTokens: _legacyContextWindowTokens, ...modelWithoutLegacyContext } = model as typeof model & {
+      contextWindowTokens?: unknown;
+    };
+    const maxOutputTokens = model.maxOutputTokens ?? 4096;
+    const maxInputTokens = model.maxInputTokens ?? 128000;
+    return {
+      ...modelWithoutLegacyContext,
+      id: model.id,
+      name: model.name,
+      maxInputTokens,
+      maxOutputTokens,
+      supportsToolCalling: model.supportsToolCalling ?? true,
+    };
+  });
 }
 
 function markDirty(state: ConfigManagerState, providers: ProviderConfig[]): ConfigManagerState {

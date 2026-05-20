@@ -6,6 +6,7 @@ import {
   applyReasoningContentReplay,
   buildDeepSeekRequestPatch,
   DeepSeekRequestContext,
+  getDeepSeekMaxOutputTokens,
   isDeepSeekRequest,
 } from '../deepseek/cmb.deepseek.adapter';
 import { postStreamingChatCompletion } from '../openaiCompatible/cmb.openaiCompatible.chatHttpClient';
@@ -43,17 +44,19 @@ export async function sendChatRequest(
   }
 
   const requestUrl = `${provider.baseUrl}/chat/completions`;
+  const modelConfiguration = readModelConfiguration(options);
+  const isDeepSeek = isDeepSeekRequest(provider, selectedModel.id);
   const requestBody: Record<string, unknown> = {
     model: selectedModel.id,
     messages: apiMessages,
     stream: true,
-    max_tokens: model.maxOutputTokens,
+    max_tokens: resolveRequestMaxTokens(model.maxOutputTokens, isDeepSeek),
   };
 
   if (selectedModel.supportsReasoning) {
     requestBody.reasoning_effort = resolveReasoningLevel(
       options.modelOptions,
-      readModelConfiguration(options),
+      modelConfiguration,
       selectedModel.defaultReasoningLevel ?? 'medium',
       selectedModel.supportedReasoningLevels
     );
@@ -78,7 +81,7 @@ export async function sendChatRequest(
     }
   }
 
-  if (isDeepSeekRequest(provider, selectedModel.id)) {
+  if (isDeepSeek) {
     applyDeepSeekRequestPatch(requestBody, {
       supportsReasoning: !!selectedModel.supportsReasoning,
       hasTools: Boolean(options.tools && options.tools.length > 0),
@@ -111,6 +114,16 @@ export async function sendChatRequest(
   } finally {
     cancelSub.dispose();
   }
+}
+
+function resolveRequestMaxTokens(maxOutputTokens: number, isDeepSeek: boolean): number {
+  if (isDeepSeek) {
+    return getDeepSeekMaxOutputTokens(maxOutputTokens);
+  }
+  if (!Number.isFinite(maxOutputTokens) || maxOutputTokens < 1) {
+    return 1;
+  }
+  return Math.floor(maxOutputTokens);
 }
 
 function applyDeepSeekRequestPatch(

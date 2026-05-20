@@ -31,7 +31,7 @@ export async function cmdAddModel(preselectedProviderId?: string): Promise<void>
   const providerLabel = getProviders().find(p => p.id === providerId)?.displayName ?? providerId;
 
   const modelId = await vscode.window.showInputBox({
-    title: `Add Model to "${providerLabel}" (1/10) – Model ID`,
+    title: `Add Model to "${providerLabel}" (1/11) – Model ID`,
     ignoreFocusOut: true,
     prompt: 'The model identifier as the API expects it',
     placeHolder: 'e.g. nvidia/llama-3.1-nemotron-ultra-253b-v1',
@@ -40,7 +40,7 @@ export async function cmdAddModel(preselectedProviderId?: string): Promise<void>
   if (!modelId) { return; }
 
   const modelName = await vscode.window.showInputBox({
-    title: `Add Model to "${providerLabel}" (2/10) – Display Name`,
+    title: `Add Model to "${providerLabel}" (2/11) – Display Name`,
     ignoreFocusOut: true,
     prompt: 'Human-readable name shown in the Copilot model picker',
     placeHolder: 'e.g. Llama 3.1 Nemotron Ultra 253B',
@@ -48,21 +48,31 @@ export async function cmdAddModel(preselectedProviderId?: string): Promise<void>
   });
   if (!modelName) { return; }
 
-  const ctxStr = await vscode.window.showInputBox({
-    title: `Add Model to "${providerLabel}" (3/10) – Max Input Tokens`,
+  const maxOutputStr = await vscode.window.showInputBox({
+    title: `Add Model to "${providerLabel}" (3/11) – Max Output Tokens`,
     ignoreFocusOut: true,
-    prompt: 'Maximum input context window in tokens',
-    value: '128000',
-    validateInput: v => isNaN(parseInt(v)) ? 'Must be a number' : undefined,
+    prompt: 'Maximum tokens the model can produce in one response',
+    value: '4096',
+    validateInput: validatePositiveIntegerInput,
   });
-  if (!ctxStr) { return; }
+  if (!maxOutputStr) { return; }
+
+  const maxOutputTokens = parseInt(maxOutputStr, 10);
+  const maxInputStr = await vscode.window.showInputBox({
+    title: `Add Model to "${providerLabel}" (4/11) – Max Input Tokens`,
+    ignoreFocusOut: true,
+    prompt: 'Maximum tokens the model can accept as input',
+    value: '128000',
+    validateInput: validatePositiveIntegerInput,
+  });
+  if (!maxInputStr) { return; }
 
   const toolChoice = await vscode.window.showQuickPick(
     [
       { label: '$(check) Yes – model supports tool/function calling', value: true },
       { label: '$(close) No – text only', value: false },
     ],
-    { ignoreFocusOut: true, placeHolder: 'Does this model support tool calling? (4/10)' }
+    { ignoreFocusOut: true, placeHolder: 'Does this model support tool calling? (5/11)' }
   );
   if (!toolChoice) { return; }
 
@@ -75,7 +85,7 @@ export async function cmdAddModel(preselectedProviderId?: string): Promise<void>
         { label: '$(checklist) Yes – choose edit tools', value: 'custom' },
         { label: '$(circle-slash) No – no edit tool hints', value: 'disabled' },
       ],
-      { ignoreFocusOut: true, placeHolder: 'Should Agent mode receive edit tool hints? (5/10)' }
+      { ignoreFocusOut: true, placeHolder: 'Should Agent mode receive edit tool hints? (6/11)' }
     );
     if (!editToolsChoice) { return; }
 
@@ -97,7 +107,7 @@ export async function cmdAddModel(preselectedProviderId?: string): Promise<void>
       [
         { label: '$(circle-slash) No – tool calling is disabled, so edit tool hints will not be declared', value: false },
       ],
-      { ignoreFocusOut: true, placeHolder: 'Should Agent mode receive edit tool hints? (5/10)' }
+      { ignoreFocusOut: true, placeHolder: 'Should Agent mode receive edit tool hints? (6/11)' }
     );
     if (!editToolsChoice) { return; }
     supportsEditTools = editToolsChoice.value;
@@ -108,7 +118,7 @@ export async function cmdAddModel(preselectedProviderId?: string): Promise<void>
       { label: '$(device-camera) Yes – model supports vision/image input', value: true },
       { label: '$(circle-slash) No – no image input support', value: false },
     ],
-    { ignoreFocusOut: true, placeHolder: 'Does this model support image/vision input? (6/10)' }
+    { ignoreFocusOut: true, placeHolder: 'Does this model support image/vision input? (7/11)' }
   );
   if (!visionChoice) { return; }
 
@@ -117,7 +127,7 @@ export async function cmdAddModel(preselectedProviderId?: string): Promise<void>
       { label: '$(device-camera-video) Yes – declare video attachment support', value: true },
       { label: '$(circle-slash) No – reject video attachments clearly', value: false },
     ],
-    { ignoreFocusOut: true, placeHolder: 'Does this model support video attachments? (7/10)' }
+    { ignoreFocusOut: true, placeHolder: 'Does this model support video attachments? (8/11)' }
   );
   if (!videoChoice) { return; }
 
@@ -126,12 +136,12 @@ export async function cmdAddModel(preselectedProviderId?: string): Promise<void>
       { label: '$(files) Yes – declare generic file attachment support', value: true },
       { label: '$(circle-slash) No – reject unknown file attachments clearly', value: false },
     ],
-    { ignoreFocusOut: true, placeHolder: 'Does this model support generic file attachments? (8/10)' }
+    { ignoreFocusOut: true, placeHolder: 'Does this model support generic file attachments? (9/11)' }
   );
   if (!fileInputChoice) { return; }
 
   const multiplier = await vscode.window.showInputBox({
-    title: `Add Model to "${providerLabel}" (9/10) – Cost Multiplier`,
+    title: `Add Model to "${providerLabel}" (10/11) – Cost Multiplier`,
     ignoreFocusOut: true,
     prompt: 'Request cost multiplier label shown in VS Code model UI',
     value: '0x',
@@ -145,7 +155,7 @@ export async function cmdAddModel(preselectedProviderId?: string): Promise<void>
       { label: '$(lightbulb) Yes – show Thinking Effort', value: true },
       { label: '$(circle-slash) No – hide Thinking Effort', value: false },
     ],
-    { ignoreFocusOut: true, placeHolder: 'Does this model support configurable reasoning effort? (10/10)' }
+    { ignoreFocusOut: true, placeHolder: 'Does this model support configurable reasoning effort? (11/11)' }
   );
   if (!reasoningSupportChoice) { return; }
 
@@ -175,8 +185,8 @@ export async function cmdAddModel(preselectedProviderId?: string): Promise<void>
   const model: ModelConfig = {
     id: modelId.trim(),
     name: modelName.trim(),
-    maxInputTokens: parseInt(ctxStr),
-    maxOutputTokens: 4096,
+    maxInputTokens: parseInt(maxInputStr, 10),
+    maxOutputTokens,
     supportsToolCalling: toolChoice.value,
     supportsVision: visionChoice.value,
     supportsVideo: videoChoice.value,
@@ -202,4 +212,9 @@ export async function cmdAddModel(preselectedProviderId?: string): Promise<void>
   } catch (err) {
     vscode.window.showErrorMessage(`Failed to add model: ${(err as Error).message}`);
   }
+}
+
+function validatePositiveIntegerInput(value: string): string | undefined {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? undefined : 'Must be a positive integer';
 }

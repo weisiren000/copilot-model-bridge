@@ -2,7 +2,7 @@
   "name": "copilot-model-bridge",
   "displayName": "Copilot Model Bridge",
   "description": "Bridge OpenAI-compatible chat models into GitHub Copilot Chat as first-class language model providers.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "weisiren",
   "license": "MIT",
   "icon": "images/icon.png",
@@ -134,7 +134,11 @@
           "description": "List of configured OpenAI-compatible providers.",
           "items": {
             "type": "object",
-            "required": ["id", "displayName", "baseUrl"],
+            "required": [
+              "id",
+              "displayName",
+              "baseUrl"
+            ],
             "properties": {
               "id": {
                 "type": "string",
@@ -159,7 +163,10 @@
                 "description": "List of models available from this provider",
                 "items": {
                   "type": "object",
-                  "required": ["id", "name"],
+                  "required": [
+                    "id",
+                    "name"
+                  ],
                   "properties": {
                     "id": {
                       "type": "string",
@@ -172,7 +179,7 @@
                     "maxInputTokens": {
                       "type": "number",
                       "default": 128000,
-                      "description": "Maximum input context tokens"
+                      "description": "Maximum input tokens accepted by the model"
                     },
                     "maxOutputTokens": {
                       "type": "number",

@@ -83,3 +83,15 @@ test('renders provider, model, validation, import, and save controls by element 
     assert.match(html, new RegExp(`id="${id}"`));
   }
 });
+
+test('renders model modal with max input and max output token fields', () => {
+  const html = renderConfigManagerHtml(FIXTURE);
+
+  assert.match(html, /最大输入 Tokens/);
+  assert.match(html, /最大输出 Tokens/);
+  assert.match(html, /设置模型可输入上限和输出上限/);
+  assert.doesNotMatch(html, /最大上下文 Tokens/);
+  assert.doesNotMatch(html, /id="dialog-context-window"/);
+  assert.match(html, /id="dialog-max-input"/);
+  assert.match(html, /id="dialog-max-output"/);
+});

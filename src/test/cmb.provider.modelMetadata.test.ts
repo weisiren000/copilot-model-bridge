@@ -78,6 +78,27 @@ test('adds configured metadata category and safe status icon', () => {
   assert.equal(metadata.statusIcon, 'sparkle');
 });
 
+test('exposes VS Code input and output metadata', () => {
+  const metadata = buildModelMetadata({
+    compoundId: 'provider::long-context',
+    provider: {
+      id: 'provider',
+      displayName: 'Provider',
+      baseUrl: 'https://example.com/v1',
+    },
+    model: {
+      id: 'long-context',
+      name: 'Long Context',
+      maxInputTokens: 393216,
+      maxOutputTokens: 606784,
+      supportsToolCalling: true,
+    },
+  });
+
+  assert.equal(metadata.maxInputTokens, 393216);
+  assert.equal(metadata.maxOutputTokens, 606784);
+});
+
 test('filters unsafe status icon ids', () => {
   assert.equal(normalizeStatusIcon('sparkle'), 'sparkle');
   assert.equal(normalizeStatusIcon('$(sparkle)'), undefined);

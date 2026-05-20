@@ -48,9 +48,10 @@ export function buildModelReasoningConfigurationSchema(
     return undefined;
   }
 
+  const defaultLevel = model.defaultReasoningLevel ?? DEFAULT_REASONING_LEVEL;
   return buildReasoningConfigurationSchema(
-    model.defaultReasoningLevel ?? DEFAULT_REASONING_LEVEL,
-    model.supportedReasoningLevels
+    defaultLevel,
+    model.supportedReasoningLevels ?? [defaultLevel]
   );
 }
 

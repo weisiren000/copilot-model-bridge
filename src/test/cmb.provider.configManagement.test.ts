@@ -80,6 +80,23 @@ test('imports only models that do not already exist', () => {
   assert.deepEqual(updated[0].models.map(model => model.id), ['model-a', 'model-c']);
 });
 
+test('normalizes imported model token limits while ignoring legacy context window', () => {
+  const updated = importModels(createProviders(), 'provider', [
+    {
+      id: 'model-d',
+      name: 'Model D',
+      contextWindowTokens: 2000000,
+      maxOutputTokens: 4096,
+      supportsToolCalling: true,
+    } as never,
+  ]);
+
+  const imported = updated[0].models[1];
+  assert.equal('contextWindowTokens' in imported, false);
+  assert.equal(imported.maxInputTokens, 128000);
+  assert.equal(imported.maxOutputTokens, 4096);
+});
+
 test('validates duplicate model ids, invalid urls, and reasoning mismatches', () => {
   const issues = validateProviderConfig([{
     id: 'bad-provider',
@@ -132,4 +149,24 @@ test('does not warn on attachment policy flags since they are metadata declarati
   }]);
 
   assert.equal(issues.length, 0);
+});
+
+test('warns when max output tokens exceed max input tokens', () => {
+  const issues = validateProviderConfig([{
+    id: 'provider',
+    displayName: 'Provider',
+    baseUrl: 'https://api.deepseek.com/v1',
+    apiKey: '',
+    models: [{
+      id: 'deepseek-v4-flash',
+      name: 'DeepSeek V4 Flash',
+      maxInputTokens: 393216,
+      maxOutputTokens: 1000000,
+      supportsToolCalling: true,
+    }],
+  }]);
+
+  assert.equal(issues.length, 1);
+  assert.equal(issues[0].severity, 'warning');
+  assert.match(issues[0].message, /max output tokens/i);
 });

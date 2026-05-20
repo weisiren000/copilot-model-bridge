@@ -15,36 +15,47 @@ const VALID_EDIT_TOOLS: readonly EditToolName[] = [
 ];
 
 type RawModelConfig = Partial<ModelConfig> & Pick<ModelConfig, 'id' | 'name'>;
+type LegacyModelConfig = RawModelConfig & { contextWindowTokens?: unknown };
 
-export function normalizeModelConfig(model: RawModelConfig): ModelConfig {
-  const supportsReasoning = shouldSupportReasoning(model);
-  const supportsToolCalling = model.supportsToolCalling ?? true;
-  const supportsEditTools = supportsToolCalling && (model.supportsEditTools ?? true);
-  const defaultReasoningLevel = normalizeDefaultReasoningLevel(model.defaultReasoningLevel, supportsReasoning);
+export function normalizeModelConfig(model: LegacyModelConfig): ModelConfig {
+  const { contextWindowTokens: _legacyContextWindowTokens, ...modelWithoutLegacyContext } = model;
+  const cleanModel = modelWithoutLegacyContext as RawModelConfig;
+  const supportsReasoning = shouldSupportReasoning(cleanModel);
+  const supportsToolCalling = cleanModel.supportsToolCalling ?? true;
+  const supportsEditTools = supportsToolCalling && (cleanModel.supportsEditTools ?? true);
+  const defaultReasoningLevel = normalizeDefaultReasoningLevel(cleanModel.defaultReasoningLevel, supportsReasoning);
+  const maxOutputTokens = normalizePositiveInteger(cleanModel.maxOutputTokens, DEFAULT_OUTPUT_TOKENS);
+  const maxInputTokens = normalizePositiveInteger(cleanModel.maxInputTokens, DEFAULT_INPUT_TOKENS);
 
   return {
-    ...model,
-    id: model.id,
-    name: model.name,
-    maxInputTokens: model.maxInputTokens ?? DEFAULT_INPUT_TOKENS,
-    maxOutputTokens: model.maxOutputTokens ?? DEFAULT_OUTPUT_TOKENS,
+    ...modelWithoutLegacyContext,
+    id: cleanModel.id,
+    name: cleanModel.name,
+    maxInputTokens,
+    maxOutputTokens,
     supportsToolCalling,
-    supportsVision: model.supportsVision ?? false,
-    supportsVideo: model.supportsVideo ?? false,
-    supportsFileInput: model.supportsFileInput ?? false,
+    supportsVision: cleanModel.supportsVision ?? false,
+    supportsVideo: cleanModel.supportsVideo ?? false,
+    supportsFileInput: cleanModel.supportsFileInput ?? false,
     supportsEditTools,
-    preferredEditTools: normalizeEditTools(model.preferredEditTools),
-    toolChoiceMode: normalizeToolChoiceMode(model.toolChoiceMode),
+    preferredEditTools: normalizeEditTools(cleanModel.preferredEditTools),
+    toolChoiceMode: normalizeToolChoiceMode(cleanModel.toolChoiceMode),
     supportsReasoning,
     supportedReasoningLevels: normalizeSupportedReasoningLevels(
-      model.supportedReasoningLevels,
+      cleanModel.supportedReasoningLevels,
       supportsReasoning,
       defaultReasoningLevel
     ),
     defaultReasoningLevel,
-    multiplier: normalizeMultiplierLabel(model.multiplier),
-    multiplierNumeric: normalizeMultiplierNumeric(model.multiplierNumeric),
+    multiplier: normalizeMultiplierLabel(cleanModel.multiplier),
+    multiplierNumeric: normalizeMultiplierNumeric(cleanModel.multiplierNumeric),
   };
+}
+
+function normalizePositiveInteger(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0
+    ? Math.floor(value)
+    : fallback;
 }
 
 function shouldSupportReasoning(model: Partial<ModelConfig>): boolean {
@@ -73,7 +84,7 @@ function normalizeSupportedReasoningLevels(
     return undefined;
   }
   if (!Array.isArray(levels)) {
-    return undefined;
+    return defaultReasoningLevel ? [defaultReasoningLevel] : undefined;
   }
 
   const normalized = levels

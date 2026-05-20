@@ -41,6 +41,42 @@ test('treats legacy defaultReasoningLevel as reasoning support', () => {
   );
 });
 
+test('ignores legacy context window tokens during config normalization', () => {
+  const model = normalizeModelConfig({
+    id: 'long-context-model',
+    name: 'Long Context Model',
+    contextWindowTokens: 2000000,
+    maxOutputTokens: 4096,
+  });
+
+  assert.equal('contextWindowTokens' in model, false);
+  assert.equal(model.maxInputTokens, 128000);
+  assert.equal(model.maxOutputTokens, 4096);
+});
+
+test('keeps explicit max input tokens', () => {
+  const model = normalizeModelConfig({
+    id: 'input-model',
+    name: 'Input Model',
+    maxInputTokens: 1000000,
+    maxOutputTokens: 4096,
+  });
+
+  assert.equal('contextWindowTokens' in model, false);
+  assert.equal(model.maxInputTokens, 1000000);
+});
+
+test('defaults missing supported reasoning levels to the model default only', () => {
+  const model = normalizeModelConfig({
+    id: 'reasoner',
+    name: 'Reasoner',
+    supportsReasoning: true,
+    defaultReasoningLevel: 'medium',
+  });
+
+  assert.deepEqual(model.supportedReasoningLevels, ['medium']);
+});
+
 test('honors explicit supportsReasoning false over legacy defaultReasoningLevel', () => {
   const model = normalizeModelConfig({
     id: 'plain-model',

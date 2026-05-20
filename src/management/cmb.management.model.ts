@@ -28,13 +28,13 @@ export async function cmdEditModel(): Promise<void> {
     return;
   }
 
-  const maxInputTokens = await askNumber('Edit Model - Max Input Tokens', picked.model.maxInputTokens);
-  if (maxInputTokens === undefined) {
+  const maxOutputTokens = await askNumber('Edit Model - Max Output Tokens', picked.model.maxOutputTokens);
+  if (maxOutputTokens === undefined) {
     return;
   }
 
-  const maxOutputTokens = await askNumber('Edit Model - Max Output Tokens', picked.model.maxOutputTokens);
-  if (maxOutputTokens === undefined) {
+  const maxInputTokens = await askNumber('Edit Model - Max Input Tokens', picked.model.maxInputTokens);
+  if (maxInputTokens === undefined) {
     return;
   }
 
