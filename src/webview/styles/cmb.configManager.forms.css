@@ -1,0 +1,142 @@
+input,
+select,
+textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  background: #fff;
+  outline: none;
+}
+
+input,
+select {
+  height: 34px;
+  padding: 6px 10px;
+}
+
+textarea {
+  min-height: 48px;
+  resize: vertical;
+  padding: 10px 12px;
+  font-family: var(--vscode-editor-font-family, Consolas, "Courier New", monospace);
+}
+
+input:hover,
+select:hover,
+textarea:hover {
+  border-color: var(--muted-soft);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(204, 120, 92, .16);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 22px;
+  margin-top: 18px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.field label {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.field.wide {
+  grid-column: 1 / -1;
+}
+
+.field small {
+  color: var(--faint);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.required-mark {
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+
+.capability-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(150px, 1fr));
+  gap: 14px 18px;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+}
+
+.switch {
+  position: relative;
+  width: 34px;
+  height: 18px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--border);
+  transition: background .2s ease;
+}
+
+.switch::after {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--muted);
+  content: "";
+  transition: left .2s ease, background .2s ease;
+}
+
+.toggle.on .switch {
+  background: var(--accent);
+}
+
+.toggle.on .switch::after {
+  left: 19px;
+  background: #fff;
+}
+
+.input-combo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.combo-input-wrap {
+  position: relative;
+  min-width: 0;
+}
+
+.input-combo button {
+  min-width: 84px;
+  white-space: nowrap;
+}
+
+.input-combo button.loading {
+  pointer-events: none;
+  opacity: .64;
+}
+
+@media (max-width: 1180px) {
+  .capability-grid {
+    grid-template-columns: repeat(2, minmax(150px, 1fr));
+  }
+}

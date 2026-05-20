@@ -1,0 +1,158 @@
+.provider-card,
+.model-card {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  color: var(--text);
+  background: var(--canvas);
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(20, 20, 19, .06);
+  transition: background .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+
+.provider-card:hover,
+.model-card:hover {
+  border-color: #d7cabc;
+  background: #fffdf8;
+  box-shadow: 0 4px 14px rgba(20, 20, 19, .08);
+  transform: translateY(-1px);
+}
+
+.provider-card.active,
+.model-card.active {
+  border-color: var(--accent);
+  background: linear-gradient(135deg, rgba(204, 120, 92, .98), rgba(169, 88, 62, .98));
+}
+
+.provider-card.active .card-name,
+.provider-card.active .card-meta,
+.model-card.active .card-name,
+.model-card.active .card-meta,
+.model-card.active .model-meta-row {
+  color: #fff;
+}
+
+.card-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.card-name {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-strong);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.card-meta {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.badge {
+  flex: 0 0 auto;
+  min-width: 28px;
+  height: 20px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  color: #fff;
+  background: #333a42;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.badge.success {
+  background: var(--teal);
+}
+
+.badge.reasoning {
+  background: var(--accent);
+}
+
+.badge.tool {
+  color: #1f1f1f;
+  background: var(--amber);
+}
+
+.badge.agent {
+  background: #3b4782;
+}
+
+.provider-card.active .badge,
+.model-card.active .badge {
+  color: var(--accent-strong);
+  background: #fff;
+}
+
+.model-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--faint);
+  font-size: 11px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  border: 1px solid #e4c3b5;
+  border-radius: 999px;
+  color: var(--accent-strong);
+  background: #fff1eb;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+  transition: background .16s ease, border-color .16s ease, color .16s ease, transform .16s ease;
+}
+
+.chip:hover {
+  background: #ffe4da;
+  transform: translateY(-1px);
+}
+
+.chip.muted {
+  color: var(--muted);
+  background: var(--canvas);
+  border-color: var(--hairline);
+}
+
+.chip.muted:hover {
+  background: var(--surface-hover);
+}
+
+.model-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}

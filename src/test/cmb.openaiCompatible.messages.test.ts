@@ -1,0 +1,180 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import Module from 'node:module';
+import { DEEPSEEK_REASONING_MIME } from '../provider/deepseek/cmb.deepseek.adapter';
+
+class LanguageModelTextPart {
+  constructor(readonly value: string) {}
+}
+
+class LanguageModelDataPart {
+  constructor(readonly data: Uint8Array, readonly mimeType?: string) {}
+}
+
+class LanguageModelToolCallPart {
+  constructor(
+    readonly callId: string,
+    readonly name: string,
+    readonly input: unknown
+  ) {}
+}
+
+class LanguageModelToolResultPart {
+  constructor(
+    readonly callId: string,
+    readonly content: readonly unknown[]
+  ) {}
+}
+
+class LanguageModelThinkingPart {
+  constructor(readonly value: string | string[]) {}
+}
+
+const vscodeMock = {
+  LanguageModelChatMessageRole: {
+    User: 1,
+    Assistant: 2,
+  },
+  LanguageModelDataPart,
+  LanguageModelTextPart,
+  LanguageModelThinkingPart,
+  LanguageModelToolCallPart,
+  LanguageModelToolResultPart,
+};
+
+const moduleLoader = Module as unknown as {
+  _load(
+    request: string,
+    parent: unknown,
+    isMain: boolean
+  ): unknown;
+};
+const originalLoad = moduleLoader._load;
+moduleLoader._load = function loadWithVscodeMock(
+  request: string,
+  parent: unknown,
+  isMain: boolean
+): unknown {
+  if (request === 'vscode') {
+    return vscodeMock;
+  }
+  return originalLoad.call(this, request, parent, isMain);
+};
+
+const {
+  convertMessages,
+  toTokenEstimateParts,
+} = require('../provider/openaiCompatible/cmb.openaiCompatible.messages') as typeof import('../provider/openaiCompatible/cmb.openaiCompatible.messages');
+
+test('normalizes token estimate parts including nested tool results', () => {
+  const parts = [
+    new LanguageModelTextPart('hello'),
+    new LanguageModelDataPart(new Uint8Array([1, 2]), 'image/png'),
+    new LanguageModelToolCallPart('call-1', 'read_file', { path: 'README.md' }),
+    new LanguageModelToolResultPart('call-1', [
+      new LanguageModelTextPart('result'),
+      { ok: true },
+    ]),
+  ];
+
+  assert.deepEqual(toTokenEstimateParts(parts), [
+    { type: 'text', text: 'hello' },
+    { type: 'data', data: new Uint8Array([1, 2]), mimeType: 'image/png' },
+    { type: 'toolCall', name: 'read_file', input: { path: 'README.md' } },
+    {
+      type: 'toolResult',
+      callId: 'call-1',
+      content: [
+        { type: 'text', text: 'result' },
+        { type: 'text', text: '{"ok":true}' },
+      ],
+    },
+  ]);
+});
+
+test('converts text and image user messages to OpenAI-compatible content', () => {
+  const messages = [{
+    role: vscodeMock.LanguageModelChatMessageRole.User,
+    name: undefined,
+    content: [
+      new LanguageModelTextPart('look'),
+      new LanguageModelDataPart(new Uint8Array([255]), 'image/png'),
+    ],
+  }];
+
+  assert.deepEqual(convertMessages(messages, {}), [{
+    role: 'user',
+    content: [
+      { type: 'text', text: 'look' },
+      {
+        type: 'image_url',
+        image_url: {
+          url: 'data:image/png;base64,/w==',
+        },
+      },
+    ],
+  }]);
+});
+
+test('converts assistant tool calls and following tool results', () => {
+  const messages = [
+    {
+      role: vscodeMock.LanguageModelChatMessageRole.Assistant,
+      name: undefined,
+      content: [
+        new LanguageModelToolCallPart('call-1', 'read_file', { path: 'README.md' }),
+      ],
+    },
+    {
+      role: vscodeMock.LanguageModelChatMessageRole.User,
+      name: undefined,
+      content: [
+        new LanguageModelToolResultPart('call-1', [
+          new LanguageModelTextPart('file contents'),
+        ]),
+      ],
+    },
+  ];
+
+  assert.deepEqual(convertMessages(messages, {}), [
+    {
+      role: 'assistant',
+      content: null,
+      tool_calls: [{
+        id: 'call-1',
+        type: 'function',
+        function: {
+          name: 'read_file',
+          arguments: '{"path":"README.md"}',
+        },
+      }],
+    },
+    {
+      role: 'tool',
+      tool_call_id: 'call-1',
+      name: 'read_file',
+      content: 'file contents',
+    },
+  ]);
+});
+
+test('preserves DeepSeek reasoning content from thinking and data parts', () => {
+  const messages = [{
+    role: vscodeMock.LanguageModelChatMessageRole.Assistant,
+    name: undefined,
+    content: [
+      new LanguageModelTextPart('answer'),
+      new LanguageModelThinkingPart(['think ', 'hard']),
+      new LanguageModelDataPart(
+        new TextEncoder().encode(' and replay'),
+        DEEPSEEK_REASONING_MIME
+      ),
+    ],
+  }];
+
+  assert.deepEqual(convertMessages(messages, {}), [{
+    role: 'assistant',
+    content: 'answer',
+    __reasoningContent: 'think hard and replay',
+  }]);
+});

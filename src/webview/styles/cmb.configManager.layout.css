@@ -1,0 +1,143 @@
+.shell {
+  display: grid;
+  grid-template-rows: 64px minmax(0, 1fr) auto;
+  height: 100vh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 24px;
+  background: linear-gradient(90deg, rgba(250, 249, 245, .98), rgba(245, 240, 232, .98));
+  border-bottom: 1px solid var(--hairline);
+}
+
+.topbar-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  margin-right: auto;
+}
+
+.topbar-logo {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  border-radius: 12px;
+  object-fit: contain;
+}
+
+.topbar-text strong {
+  display: block;
+  color: var(--text-strong);
+  font-family: var(--display);
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.topbar-text span {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(240px, 21%) minmax(300px, 26%) minmax(440px, 1fr);
+  min-height: 0;
+  height: 100%;
+  gap: 1px;
+  padding: 14px;
+  background: var(--hairline);
+  overflow: hidden;
+}
+
+.pane {
+  min-width: 0;
+  min-height: 0;
+  padding: 16px 18px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.pane.providers {
+  background: var(--panel-soft);
+  border-radius: 12px 0 0 12px;
+}
+
+.pane.models {
+  background: var(--card);
+}
+
+.pane-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 34px;
+  margin-bottom: 8px;
+}
+
+.section-title {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.pane-head button {
+  margin-left: auto;
+  min-width: 64px;
+  background: var(--canvas);
+  border-color: var(--border);
+}
+
+.pane-head button:hover {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+.footer {
+  display: grid;
+  grid-template-columns: minmax(80px, auto) minmax(280px, 1fr) minmax(96px, auto);
+  gap: 12px;
+  align-items: center;
+  padding: 8px 18px;
+  background: var(--canvas);
+  border-top: 1px solid var(--hairline);
+}
+
+.footer-title {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.footer textarea {
+  min-height: 36px;
+  max-height: 36px;
+  padding: 6px 10px;
+}
+
+.dirty-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--warning-soft);
+  color: #8a6514;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+@media (max-width: 1180px) {
+  .workspace {
+    grid-template-columns: 240px 280px minmax(360px, 1fr);
+  }
+}

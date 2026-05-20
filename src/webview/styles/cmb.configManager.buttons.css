@@ -1,0 +1,56 @@
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--ink);
+  background: var(--surface);
+  min-height: 30px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease;
+}
+
+button:hover {
+  background: var(--surface-hover);
+  box-shadow: 0 1px 0 rgba(20, 20, 19, .04);
+}
+
+button.primary {
+  border-color: var(--accent-strong);
+  color: #fff;
+  background: var(--accent);
+}
+
+button.primary:hover {
+  background: var(--accent-strong);
+  box-shadow: 0 1px 0 rgba(20, 20, 19, .08);
+}
+
+button.danger {
+  border-color: #efc3b8;
+  color: #8c372a;
+  background: #fff1ec;
+}
+
+button.danger:hover {
+  border-color: #dd9d8d;
+  color: #74291f;
+  background: #f7d9d0;
+}
+
+button.ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+}
+
+button.ghost:hover {
+  background: rgba(0, 0, 0, .05);
+  color: var(--ink);
+}

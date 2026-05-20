@@ -14,9 +14,9 @@
  */
 
 import * as vscode from 'vscode';
-import { OpenAICompatChatProvider } from './provider';
-import { registerCommands } from './commands';
-import { CONFIG_SECTION, LEGACY_CONFIG_SECTION } from './configKeys';
+import { OpenAICompatChatProvider } from './provider/core/cmb.provider.chatProvider';
+import { registerCommands } from './commands/index';
+import { CONFIG_SECTION, LEGACY_CONFIG_SECTION } from './provider/config/cmb.provider.configKeys';
 
 /** The vendor ID must exactly match the "vendor" field in package.json contributes */
 const VENDOR_ID = 'copilot-model-bridge';
