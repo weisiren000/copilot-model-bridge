@@ -1,5 +1,5 @@
 {
-  "name": "copilot-model-bridge",
+  "name": "cmb-copilot-model-bridge",
   "displayName": "Copilot Model Bridge",
   "description": "Bridge OpenAI-compatible chat models into GitHub Copilot Chat as first-class language model providers.",
   "version": "1.0.3",

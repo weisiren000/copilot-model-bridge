@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://marketplace.visualstudio.com/items?itemName=weisiren.copilot-model-bridge">
+  <a href="https://marketplace.visualstudio.com/items?itemName=weisiren.cmb-copilot-model-bridge">
     <img src="https://img.shields.io/badge/VS%20Code-Marketplace-007ACC?style=flat-square&logo=visualstudiocode&logoColor=white" alt="VS Code Marketplace">
   </a>
   <img src="https://img.shields.io/badge/VS%20Code-%5E1.99.0-007ACC?style=flat-square" alt="VS Code 1.99.0+">
@@ -46,7 +46,7 @@ Copilot Model Bridge 会把你配置的模型注册到 Copilot Chat 模型选择
 
 ## 快速开始
 
-1. 安装 [Copilot Model Bridge](https://marketplace.visualstudio.com/items?itemName=weisiren.copilot-model-bridge)。
+1. 安装 [Copilot Model Bridge](https://marketplace.visualstudio.com/items?itemName=weisiren.cmb-copilot-model-bridge)。
 2. 打开命令面板，运行 `Copilot Model Bridge: Open Config Manager`。
 3. 新增 provider，填写名称、Provider ID、Base URL 和 API Key。
 4. 在该 provider 下新增模型，填写模型 ID、显示名称、token 限制和能力开关。

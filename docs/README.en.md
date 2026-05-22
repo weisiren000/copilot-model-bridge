@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://marketplace.visualstudio.com/items?itemName=weisiren.copilot-model-bridge">
+  <a href="https://marketplace.visualstudio.com/items?itemName=weisiren.cmb-copilot-model-bridge">
     <img src="https://img.shields.io/badge/VS%20Code-Marketplace-007ACC?style=flat-square&logo=visualstudiocode&logoColor=white" alt="VS Code Marketplace">
   </a>
   <img src="https://img.shields.io/badge/VS%20Code-%5E1.99.0-007ACC?style=flat-square" alt="VS Code 1.99.0+">
@@ -46,7 +46,7 @@ Copilot Model Bridge registers your configured models in the Copilot Chat model 
 
 ## Quick Start
 
-1. Install [Copilot Model Bridge](https://marketplace.visualstudio.com/items?itemName=weisiren.copilot-model-bridge).
+1. Install [Copilot Model Bridge](https://marketplace.visualstudio.com/items?itemName=weisiren.cmb-copilot-model-bridge).
 2. Open the command palette and run `Copilot Model Bridge: Open Config Manager`.
 3. Add a provider with a name, Provider ID, Base URL, and API key.
 4. Add a model under that provider with its model ID, display name, token limits, and capability toggles.
