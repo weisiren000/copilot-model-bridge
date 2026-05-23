@@ -2,8 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ConfigManagerState,
+  createInitialConfigManagerState,
   reduceConfigManagerMessage,
 } from '../configManager';
+
+type SelectionState = ConfigManagerState & {
+  selectedModelProviderId?: string;
+};
 
 function createState(): ConfigManagerState {
   return {
@@ -47,6 +52,57 @@ test('keeps provider selection when provider id is edited', () => {
 
   assert.equal(state.providers[0].id, 'openrouter-updated');
   assert.equal(state.selectedProviderId, 'openrouter-updated');
+});
+
+test('selects provider details and clears model detail selection', () => {
+  const state = reduceConfigManagerMessage(createState(), {
+    type: 'selectProvider',
+    providerId: 'openrouter',
+  }) as SelectionState;
+
+  assert.equal(state.selectedProviderId, 'openrouter');
+  assert.equal(state.selectedModelProviderId, undefined);
+  assert.equal(state.selectedModelId, undefined);
+});
+
+test('selects model details without selecting provider details', () => {
+  const state = reduceConfigManagerMessage(createState(), {
+    type: 'selectModel',
+    providerId: 'openrouter',
+    modelId: 'openai/gpt-4.1',
+  }) as SelectionState;
+
+  assert.equal(state.selectedProviderId, undefined);
+  assert.equal(state.selectedModelProviderId, 'openrouter');
+  assert.equal(state.selectedModelId, 'openai/gpt-4.1');
+});
+
+test('initial state selects provider details instead of the first model', () => {
+  const state = createInitialConfigManagerState(createState().providers) as SelectionState;
+
+  assert.equal(state.selectedProviderId, 'openrouter');
+  assert.equal(state.selectedModelProviderId, undefined);
+  assert.equal(state.selectedModelId, undefined);
+});
+
+test('serialized provider selection clears stale model fields when replacing webview state', () => {
+  const previous = {
+    ...createState(),
+    issues: [{ severity: 'warning', message: 'keep issue' }],
+  };
+  const providerState = reduceConfigManagerMessage(createState(), {
+    type: 'selectProvider',
+    providerId: 'openrouter',
+  });
+  const serializedState = JSON.parse(JSON.stringify(providerState));
+  const next = { ...serializedState, issues: previous.issues } as SelectionState & {
+    issues: Array<{ severity: string; message: string }>;
+  };
+
+  assert.equal(next.selectedProviderId, 'openrouter');
+  assert.equal(next.selectedModelProviderId, undefined);
+  assert.equal(next.selectedModelId, undefined);
+  assert.deepEqual(next.issues, previous.issues);
 });
 
 test('updates model fields while preserving unknown model fields', () => {

@@ -28,7 +28,7 @@
 
   function handleIncomingMessage(msg) {
     if (msg.type === 'state') {
-      CMB.setState({ ...CMB.getState(), ...msg.state, issues: CMB.getState().issues || [] });
+      CMB.setState({ ...msg.state, issues: CMB.getState().issues || [] });
       render();
     } else if (msg.type === 'validation') {
       CMB.getState().issues = msg.issues || [];

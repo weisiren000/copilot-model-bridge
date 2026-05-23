@@ -9,6 +9,7 @@ import { ModelConfig, ProviderConfig } from '../types';
 export interface ConfigManagerState {
   providers: ProviderConfig[];
   selectedProviderId?: string;
+  selectedModelProviderId?: string;
   selectedModelId?: string;
   dirty: boolean;
 }
@@ -36,7 +37,7 @@ export function reduceConfigManagerMessage(
     case 'selectProvider':
       return selectProvider(state, message.providerId);
     case 'selectModel':
-      return { ...state, selectedProviderId: message.providerId, selectedModelId: message.modelId };
+      return selectModel(state, message.providerId, message.modelId);
     case 'addProvider':
       return addProviderState(state);
     case 'createProvider':
@@ -67,17 +68,31 @@ export function createInitialConfigManagerState(providers: ProviderConfig[]): Co
   return {
     providers,
     selectedProviderId: selectedProvider?.id,
-    selectedModelId: selectedProvider?.models[0]?.id,
+    selectedModelProviderId: undefined,
+    selectedModelId: undefined,
     dirty: false,
   };
 }
 
 function selectProvider(state: ConfigManagerState, providerId: string): ConfigManagerState {
-  const provider = state.providers.find(candidate => candidate.id === providerId);
   return {
     ...state,
     selectedProviderId: providerId,
-    selectedModelId: provider?.models[0]?.id,
+    selectedModelProviderId: undefined,
+    selectedModelId: undefined,
+  };
+}
+
+function selectModel(
+  state: ConfigManagerState,
+  providerId: string,
+  modelId: string
+): ConfigManagerState {
+  return {
+    ...state,
+    selectedProviderId: undefined,
+    selectedModelProviderId: providerId,
+    selectedModelId: modelId,
   };
 }
 
@@ -93,6 +108,7 @@ function addProviderState(state: ConfigManagerState): ConfigManagerState {
   return {
     providers: [...state.providers, provider],
     selectedProviderId: providerId,
+    selectedModelProviderId: undefined,
     selectedModelId: undefined,
     dirty: true,
   };
@@ -110,7 +126,8 @@ function createProviderState(
   const newProvider: ProviderConfig = { ...provider, models };
   return {
     providers: [...state.providers, newProvider],
-    selectedProviderId: newProvider.id,
+    selectedProviderId: models.length > 0 ? undefined : newProvider.id,
+    selectedModelProviderId: models.length > 0 ? newProvider.id : undefined,
     selectedModelId: models[0]?.id,
     dirty: true,
   };
@@ -132,7 +149,8 @@ function createModelState(
   ));
   return {
     providers,
-    selectedProviderId: providerId,
+    selectedProviderId: undefined,
+    selectedModelProviderId: providerId,
     selectedModelId: normalized.id,
     dirty: true,
   };
@@ -147,6 +165,9 @@ function updateProviderState(
   return {
     ...markDirty(state, providers),
     selectedProviderId: patch.id ?? state.selectedProviderId,
+    selectedModelProviderId: providerId === state.selectedModelProviderId
+      ? patch.id ?? state.selectedModelProviderId
+      : state.selectedModelProviderId,
   };
 }
 
@@ -156,7 +177,8 @@ function deleteProviderState(state: ConfigManagerState, providerId: string): Con
   return {
     providers,
     selectedProviderId: selectedProvider?.id,
-    selectedModelId: selectedProvider?.models[0]?.id,
+    selectedModelProviderId: undefined,
+    selectedModelId: undefined,
     dirty: true,
   };
 }
@@ -177,7 +199,13 @@ function addModelState(state: ConfigManagerState, providerId: string): ConfigMan
       ? { ...candidate, models: [...candidate.models, model] }
       : candidate
   ));
-  return { providers, selectedProviderId: providerId, selectedModelId: modelId, dirty: true };
+  return {
+    providers,
+    selectedProviderId: undefined,
+    selectedModelProviderId: providerId,
+    selectedModelId: modelId,
+    dirty: true,
+  };
 }
 
 function updateModelState(
@@ -189,6 +217,7 @@ function updateModelState(
   const providers = updateModel(state.providers, providerId, modelId, patch);
   return {
     ...markDirty(state, providers),
+    selectedModelProviderId: state.selectedModelProviderId,
     selectedModelId: patch.id ?? state.selectedModelId,
   };
 }
@@ -207,7 +236,8 @@ function deleteModelState(
   return {
     providers,
     selectedProviderId: providerId,
-    selectedModelId: provider?.models[0]?.id,
+    selectedModelProviderId: undefined,
+    selectedModelId: undefined,
     dirty: true,
   };
 }
@@ -223,7 +253,8 @@ function duplicateModelState(
   const duplicateName = source ? `${source.name} Copy` : 'Model Copy';
   return {
     providers: duplicateModel(state.providers, providerId, modelId, duplicateId, duplicateName),
-    selectedProviderId: providerId,
+    selectedProviderId: undefined,
+    selectedModelProviderId: providerId,
     selectedModelId: duplicateId,
     dirty: true,
   };

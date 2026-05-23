@@ -6,6 +6,7 @@
   const initialState = vscode.getState() || {
     providers: [],
     selectedProviderId: undefined,
+    selectedModelProviderId: undefined,
     selectedModelId: undefined,
     dirty: false,
     issues: [],
@@ -23,11 +24,14 @@
     return state;
   };
   CMB.currentProvider = function currentProvider() {
-    return state.providers.find((provider) => provider.id === state.selectedProviderId)
+    const providerId = state.selectedProviderId || state.selectedModelProviderId;
+    return state.providers.find((provider) => provider.id === providerId)
       || state.providers[0];
   };
   CMB.currentModel = function currentModel() {
-    const provider = CMB.currentProvider();
+    const provider = state.providers.find((candidate) => (
+      candidate.id === state.selectedModelProviderId
+    ));
     if (!provider) return undefined;
     return provider.models.find((model) => model.id === state.selectedModelId);
   };
