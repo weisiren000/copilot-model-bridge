@@ -107,6 +107,8 @@ export async function consumeSSEStream(
           }
           if (delta?.tool_calls) {
             for (const tc of delta.tool_calls) {
+              // 跳过 index 缺失的异常 tool_call 分片
+              if (tc.index === undefined || tc.index === null) { continue; }
               const idx = tc.index;
               if (!activeToolCalls[idx]) {
                 activeToolCalls[idx] = { id: tc.id || `call_${idx}`, name: tc.function?.name || '', arguments: '' };
@@ -138,6 +140,8 @@ export async function consumeSSEStream(
 
     for (const key of Object.keys(activeToolCalls)) {
       const tc = activeToolCalls[Number(key)];
+      // 保护：当 tc.index 为 undefined 时，Number(key) 得到 NaN，tc 可能为 undefined
+      if (!tc) { continue; }
       let inputObj = {};
       if (tc.arguments) {
         try { inputObj = JSON.parse(tc.arguments); } catch { }
