@@ -1,4 +1,7 @@
 import * as vscode from 'vscode';
+import * as fs from 'node:fs/promises';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import { resolveReasoningLevel, resolveToolChoice } from '../openaiCompatible';
 import { convertMessages } from '../openaiCompatible/cmb.openaiCompatible.messages';
 import { buildChatRequestHeaders } from '../openaiCompatible/cmb.openaiCompatible.requestHeaders';
@@ -9,6 +12,11 @@ import {
   getDeepSeekMaxOutputTokens,
   isDeepSeekRequest,
 } from '../deepseek/cmb.deepseek.adapter';
+import {
+  buildGeminiRequestPatch,
+  GeminiToolDefinition,
+  isGeminiRequest,
+} from '../gemini/cmb.gemini.adapter';
 import { postStreamingChatCompletion } from '../openaiCompatible/cmb.openaiCompatible.chatHttpClient';
 import { consumeSSEStream } from '../openaiCompatible/cmb.openaiCompatible.stream';
 import { ProviderConfig, ReasoningLevel, ToolChoiceMode } from '../../types';
@@ -46,6 +54,7 @@ export async function sendChatRequest(
   const requestUrl = `${provider.baseUrl}/chat/completions`;
   const modelConfiguration = readModelConfiguration(options);
   const isDeepSeek = isDeepSeekRequest(provider, selectedModel.id);
+  const isGemini = isGeminiRequest(provider, selectedModel.id);
   const requestBody: Record<string, unknown> = {
     model: selectedModel.id,
     messages: apiMessages,
@@ -81,6 +90,10 @@ export async function sendChatRequest(
     }
   }
 
+  if (isGemini) {
+    applyGeminiRequestPatch(requestBody);
+  }
+
   if (isDeepSeek) {
     applyDeepSeekRequestPatch(requestBody, {
       supportsReasoning: !!selectedModel.supportsReasoning,
@@ -100,6 +113,9 @@ export async function sendChatRequest(
     );
     if (!response.ok) {
       const errorText = await response.text();
+      if (isGemini) {
+        await writeGeminiFailureDiagnostics(requestUrl, response.status, errorText, requestBody);
+      }
       throw new Error(`API request to ${requestUrl} failed with status ${response.status}: ${errorText}`);
     }
     if (!response.body) {
@@ -113,6 +129,38 @@ export async function sendChatRequest(
     throw err;
   } finally {
     cancelSub.dispose();
+  }
+}
+
+async function writeGeminiFailureDiagnostics(
+  requestUrl: string,
+  status: number,
+  responseText: string,
+  requestBody: Record<string, unknown>
+): Promise<void> {
+  try {
+    const diagnosticsPath = path.join(os.tmpdir(), 'cmb-gemini-last-request.json');
+    const payload = {
+      timestamp: new Date().toISOString(),
+      requestUrl,
+      status,
+      responseText,
+      requestBody,
+    };
+    await fs.writeFile(diagnosticsPath, JSON.stringify(payload, null, 2), 'utf8');
+    console.log(`[copilot-model-bridge] Gemini request diagnostics written to ${diagnosticsPath}`);
+  } catch (err) {
+    console.log('[copilot-model-bridge] Failed to write Gemini diagnostics', err);
+  }
+}
+
+function applyGeminiRequestPatch(requestBody: Record<string, unknown>): void {
+  const tools = requestBody.tools;
+  const patch = buildGeminiRequestPatch({
+    tools: Array.isArray(tools) ? tools as GeminiToolDefinition[] : undefined,
+  });
+  if (patch.tools) {
+    requestBody.tools = patch.tools;
   }
 }
 

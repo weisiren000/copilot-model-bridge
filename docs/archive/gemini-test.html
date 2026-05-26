@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VS Code Replica</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 自定义字体和滚动条样式 */
+        :root {
+            --vscode-bg: #1e1e1e;
+            --vscode-sidebar: #181818;
+            --vscode-activity: #181818;
+            --vscode-status: #181818;
+            --vscode-border: #2b2d31;
+            --vscode-text: #cccccc;
+            --vscode-text-dark: #858585;
+            --vscode-active: #37373d;
+            --vscode-blue: #007acc;
+        }
+        body {
+            font-family: "Segoe WPC", "Segoe UI", sans-serif;
+            background-color: var(--vscode-bg);
+            color: var(--vscode-text);
+        }
+        .font-mono {
+            font-family: Consolas, "Courier New", monospace;
+        }
+
+        /* 模拟 VS Code 滚动条 */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #464646;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        /* 语法高亮颜色 */
+        .hl-tag { color: #569cd6; }
+        .hl-attr { color: #9cdcfe; }
+        .hl-string { color: #ce9178; }
+        .hl-comment { color: #6a9955; }
+        .hl-text { color: #d4d4d4; }
+        .hl-keyword { color: #c586c0; }
+
+        .minimap-bg {
+            background: repeating-linear-gradient(
+                to bottom,
+                #444 0px,
+                #444 2px,
+                transparent 2px,
+                transparent 4px
+            );
+            opacity: 0.3;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex flex-col text-[13px] select-none">
+
+    <!-- 顶部标题栏 -->
+    <div class="h-[35px] bg-[#181818] flex items-center justify-between px-2 flex-shrink-0 border-b border-[#2b2d31]">
+        <!-- 左侧菜单 -->
+        <div class="flex items-center gap-4 text-[#cccccc]">
+            <svg class="w-5 h-5 text-blue-500" viewBox="0 0 24 24" fill="currentColor"><path d="M2 11h20v2H2z"/><path d="M2 5h20v2H2z"/><path d="M2 17h20v2H2z"/></svg>
+            <div class="flex gap-3 text-[12px] hover:*:bg-[#333] *:px-1.5 *:py-0.5 *:rounded cursor-default">
+                <span>文件(F)</span>
+                <span>编辑(E)</span>
+                <span>选择(S)</span>
+                <span>查看(V)</span>
+                <span>转到(G)</span>
+                <span>运行(R)</span>
+                <span>...</span>
+            </div>
+        </div>
+
+        <!-- 中间搜索栏 -->
+        <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2 px-2 text-[#cccccc]">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+            </div>
+            <div class="bg-[#2d2d2d] border border-[#3c3c3c] rounded-md px-3 py-1 flex items-center justify-center min-w-[400px] text-[12px]">
+                <svg class="w-3.5 h-3.5 mr-2 text-[#858585]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                copilot-oai-provider
+            </div>
+        </div>
+
+        <!-- 右侧控制按钮 -->
+        <div class="flex items-center gap-3">
+            <div class="flex gap-2 text-[#858585]">
+                <div class="flex items-center bg-[#2d2d2d] rounded px-1.5 py-0.5">
+                    <svg class="w-4 h-4" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h12v12H2V2zm1 1v10h10V3H3z"/></svg>
+                    <span class="text-[10px] ml-1">57</span>
+                </div>
+                <svg class="w-4 h-4" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2h10v12H3V2zm1 1v10h8V3H4z"/></svg>
+                <svg class="w-4 h-4" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h12v12H2V2zm1 1v10h10V3H3z"/></svg>
+                <svg class="w-4 h-4" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h4v12H2V2zm5 0h7v12H7V2z"/></svg>
+            </div>
+            <div class="flex items-center hover:*:bg-[#333] *:p-2 cursor-pointer text-[#cccccc]">
+                <svg class="w-4 h-4" viewBox="0 0 16 16" fill="currentColor"><path d="M14 8v1h-4v-1h4z"/></svg>
+                <svg class="w-4 h-4" viewBox="0 0 16 16" fill="currentColor"><path d="M3 3h10v10H3V3zm1 1v8h8V4H4z"/></svg>
+                <svg class="w-4 h-4" viewBox="0 0 16 16" fill="currentColor"><path d="M8 8.707l3.646 3.647.708-.707L8.707 8l3.647-3.646-.707-.708L8 7.293 4.354 3.646l-.708.708L7.293 8l-3.647 3.646.708.707L8 8.707z"/></svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主工作区 -->
+    <div class="flex-1 flex overflow-hidden">
+
+        <!-- 活动栏 (最左侧) -->
+        <div class="w-[48px] bg-[#181818] border-r border-[#2b2d31] flex flex-col justify-between py-2 flex-shrink-0 text-[#858585]">
+            <div class="flex flex-col items-center gap-4 relative *:cursor-pointer hover:*:text-white">
+                <div class="relative text-white border-l-2 border-blue-500 pl-[1px]">
+                    <svg class="w-6 h-6 ml-[11px]" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="1.5" d="M19 4h-4L13 2H5C3.9 2 3 2.9 3 4v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM5 20V4h7l2 2h5v14H5z"/></svg>
+                </div>
+                <div class="relative">
+                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="6" stroke-width="1.5"/><path d="M20 20l-4-4" stroke-width="1.5"/></svg>
+                    <div class="absolute -top-1 -right-1 bg-blue-500 text-white text-[9px] w-3 h-3 rounded-full flex items-center justify-center">3</div>
+                </div>
+                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 6h16M4 12h16M4 18h16" stroke-width="1.5"/></svg>
+                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke-width="1.5"/></svg>
+                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2" stroke-width="1.5"/><path d="M9 3v18" stroke-width="1.5"/></svg>
+            </div>
+            <div class="flex flex-col items-center gap-4 *:cursor-pointer hover:*:text-white pb-2">
+                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10" stroke-width="1.5"/><path d="M12 8v4l3 3" stroke-width="1.5"/></svg>
+                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 20a8 8 0 100-16 8 8 0 000 16zM12 14a2 2 0 100-4 2 2 0 000 4z" stroke-width="1.5"/></svg>
+            </div>
+        </div>
+
+        <!-- 资源管理器面板 -->
+        <div class="w-[260px] bg-[#181818] border-r border-[#2b2d31] flex flex-col flex-shrink-0">
+            <div class="h-[35px] flex items-center justify-between px-4 text-[11px] font-semibold text-[#cccccc]">
+                <span>资源管理器</span>
+                <span>...</span>
+            </div>
+            <div class="flex-1 overflow-y-auto">
+                <!-- 目录结构 -->
+                <div class="px-2 py-1 text-[11px] font-bold text-[#cccccc] flex items-center cursor-pointer hover:bg-[#2a2d2e]">
+                    <svg class="w-4 h-4 mr-1 transform transition-transform" viewBox="0 0 16 16" fill="currentColor"><path d="M11 8L6 3v10l5-5z"/></svg>
+                    COPILOT-OAI-PROVIDER
+                </div>
+
+                <div class="flex flex-col text-[#cccccc] cursor-pointer *:py-0.5 *:flex *:items-center *:group">
+                    <div class="pl-6 hover:bg-[#2a2d2e]">
+                        <svg class="w-4 h-4 mr-1 text-[#858585]" viewBox="0 0 16 16" fill="currentColor"><path d="M11 8L6 3v10l5-5z"/></svg>
+                        <span class="mr-1 text-blue-400">❖</span> .agents
+                    </div>
+                    <div class="pl-6 hover:bg-[#2a2d2e]">
+                        <svg class="w-4 h-4 mr-1 text-[#858585]" viewBox="0 0 16 16" fill="currentColor"><path d="M11 8L6 3v10l5-5z"/></svg>
+                        <span class="mr-1 text-blue-400">❖</span> .vscode
+                    </div>
+                    <div class="pl-6 hover:bg-[#2a2d2e] justify-between">
+                        <div class="flex items-center">
+                            <svg class="w-4 h-4 mr-1 text-[#858585]" viewBox="0 0 16 16" fill="currentColor"><path d="M11 8L6 3v10l5-5z"/></svg>
+                            <span class="mr-1 text-blue-400">❖</span> CHANGELOG
+                        </div>
+                        <span class="text-[#73c991] text-[11px] pr-2">S</span>
+                    </div>
+
+                    <!-- 展开的 docs 目录 -->
+                    <div class="pl-6 hover:bg-[#2a2d2e]">
+                        <svg class="w-4 h-4 mr-1 text-[#858585] transform rotate-90" viewBox="0 0 16 16" fill="currentColor"><path d="M11 8L6 3v10l5-5z"/></svg>
+                        <span class="mr-1 text-blue-400">❖</span> docs
+                    </div>
+                    <div class="pl-10 hover:bg-[#2a2d2e]">
+                        <svg class="w-4 h-4 mr-1 text-[#858585] transform rotate-90" viewBox="0 0 16 16" fill="currentColor"><path d="M11 8L6 3v10l5-5z"/></svg>
+                        <span class="mr-1 text-blue-400">❖</span> archive
+                    </div>
+
+                    <!-- 选中的文件 -->
+                    <div class="pl-14 bg-[#37373d] justify-between text-white">
+                        <div class="flex items-center">
+                            <span class="text-[#e37933] mr-2 text-[14px]">&lt;&gt;</span> AI-Chat(worldtree).html
+                        </div>
+                        <span class="text-[#73c991] text-[11px] pr-2">U</span>
+                    </div>
+
+                    <!-- 其他文件/目录 -->
+                    <div class="pl-10 hover:bg-[#2a2d2e]">
+                        <svg class="w-4 h-4 mr-1 text-[#858585]" viewBox="0 0 16 16" fill="currentColor"><path d="M11 8L6 3v10l5-5z"/></svg>
+                        <span class="mr-1 text-blue-400">❖</span> plans
+                    </div>
+                    <div class="pl-10 hover:bg-[#2a2d2e]">
+                        <svg class="w-4 h-4 mr-1 text-[#858585]" viewBox="0 0 16 16" fill="currentColor"><path d="M11 8L6 3v10l5-5z"/></svg>
+                        <span class="mr-1 text-blue-400">❖</span> specs
+                    </div>
+                    <div class="pl-10 hover:bg-[#2a2d2e] justify-between">
+                        <div class="flex items-center">
+                            <span class="text-blue-500 mr-2">↓</span> DESIGN.md
+                        </div>
+                    </div>
+                    <div class="pl-10 hover:bg-[#2a2d2e]">
+                        <span class="text-[#a074c4] mr-2">🖼</span> project-logo.png
+                    </div>
+                    <div class="pl-10 hover:bg-[#2a2d2e]">
+                        <span class="text-blue-500 mr-2">↓</span> README.en.md
+                    </div>
+
+                    <div class="pl-6 hover:bg-[#2a2d2e]">
+                        <svg class="w-4 h-4 mr-1 text-[#858585]" viewBox="0 0 16 16" fill="currentColor"><path d="M11 8L6 3v10l5-5z"/></svg>
+                        <span class="mr-1 text-blue-400">❖</span> images
+                    </div>
+                    <div class="pl-6 hover:bg-[#2a2d2e]">
+                        <svg class="w-4 h-4 mr-1 text-[#858585]" viewBox="0 0 16 16" fill="currentColor"><path d="M11 8L6 3v10l5-5z"/></svg>
+                        <span class="mr-1 text-[#858585]">📁</span> node_modules
+                    </div>
+                    <div class="pl-6 hover:bg-[#2a2d2e]">
+                        <svg class="w-4 h-4 mr-1 text-[#858585]" viewBox="0 0 16 16" fill="currentColor"><path d="M11 8L6 3v10l5-5z"/></svg>
+                        <span class="mr-1 text-blue-400">❖</span> out
+                    </div>
+                    <div class="pl-6 hover:bg-[#2a2d2e]">
+                        <svg class="w-4 h-4 mr-1 text-[#858585]" viewBox="0 0 16 16" fill="currentColor"><path d="M11 8L6 3v10l5-5z"/></svg>
+                        <span class="mr-1 text-blue-400">❖</span> src
+                    </div>
+
+                    <!-- 根目录文件 -->
+                    <div class="pl-6 hover:bg-[#2a2d2e]"><span class="text-[#858585] mr-2">📄</span> .gitignore</div>
+                    <div class="pl-6 hover:bg-[#2a2d2e]"><span class="text-[#858585] mr-2">📄</span> .gitmodules</div>
+                    <div class="pl-6 hover:bg-[#2a2d2e]"><span class="text-[#858585] mr-2">📄</span> .vscodeignore</div>
+                    <div class="pl-6 hover:bg-[#2a2d2e]"><span class="text-blue-500 mr-2">↓</span> AGENTS.md</div>
+                    <div class="pl-6 hover:bg-[#2a2d2e]"><span class="text-gray-400 mr-2">≡</span> cmb-copilot-model-bridge-1.0.3.vsix</div>
+                    <div class="pl-6 hover:bg-[#2a2d2e]"><span class="text-gray-400 mr-2">≡</span> copilot-model-bridge-0.1.2.vsix</div>
+                    <div class="pl-6 hover:bg-[#2a2d2e]"><span class="text-gray-400 mr-2">≡</span> copilot-model-bridge-1.0.0.vsix</div>
+                    <div class="pl-6 hover:bg-[#2a2d2e]"><span class="text-gray-400 mr-2">≡</span> copilot-model-bridge-1.0.1.vsix</div>
+                    <div class="pl-6 hover:bg-[#2a2d2e]"><span class="text-gray-400 mr-2">≡</span> copilot-model-bridge-1.0.3.vsix</div>
+                    <div class="pl-6 hover:bg-[#2a2d2e]"><span class="text-gray-400 mr-2">≡</span> copilot-model-bridge-local.vsix</div>
+                    <div class="pl-6 hover:bg-[#2a2d2e]"><span class="text-yellow-400 font-bold mr-2">JS</span> eslint.config.mjs</div>
+                    <div class="pl-6 hover:bg-[#2a2d2e]"><span class="text-yellow-500 mr-2">⚖</span> LICENSE</div>
+                    <div class="pl-6 hover:bg-[#2a2d2e]"><span class="text-yellow-300 mr-2">{ }</span> package-lock.json</div>
+                    <div class="pl-6 hover:bg-[#2a2d2e]"><span class="text-yellow-300 mr-2">{ }</span> package.json</div>
+                    <div class="pl-6 hover:bg-[#2a2d2e]"><span class="text-blue-500 mr-2">ⓘ</span> README.md</div>
+                    <div class="pl-6 hover:bg-[#2a2d2e]"><span class="text-blue-500 mr-2">↓</span> ROADMAP.md</div>
+                    <div class="pl-6 hover:bg-[#2a2d2e]"><span class="text-blue-400 mr-2">TS</span> tsconfig.json</div>
+
+                    <!-- 底部折叠项 -->
+                    <div class="pl-2 mt-2 hover:bg-[#2a2d2e] text-[11px] font-bold">
+                        <svg class="w-4 h-4 mr-1 text-[#858585]" viewBox="0 0 16 16" fill="currentColor"><path d="M11 8L6 3v10l5-5z"/></svg>大纲
+                    </div>
+                    <div class="pl-2 hover:bg-[#2a2d2e] text-[11px] font-bold mb-4">
+                        <svg class="w-4 h-4 mr-1 text-[#858585]" viewBox="0 0 16 16" fill="currentColor"><path d="M11 8L6 3v10l5-5z"/></svg>时间线
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 中间编辑器区域 -->
+        <div class="flex-1 flex flex-col bg-[#1e1e1e] min-w-0 border-r border-[#2b2d31] relative">
+
+            <!-- 编辑器 Tabs -->
+            <div class="h-[35px] bg-[#181818] flex items-center overflow-hidden pr-2">
+                <div class="flex h-full">
+                    <!-- 非激活 Tab -->
+                    <div class="px-3 flex items-center gap-2 border-r border-[#2b2d31] bg-[#181818] text-[#858585] cursor-pointer hover:bg-[#2a2d2e]">
+                        <span class="text-blue-400 text-[11px] font-bold">TS</span>
+                        <span>cmb.openaiCompatible.content.ts</span>
+                    </div>
+                    <!-- 激活 Tab -->
+                    <div class="px-3 flex items-center gap-2 border-r border-[#2b2d31] bg-[#1e1e1e] text-white border-t border-t-blue-500 cursor-pointer">
+                        <span class="text-[#e37933]">&lt;&gt;</span>
+                        <span>AI-Chat(worldtree).html</span>
+                        <span class="text-[#73c991] text-[11px]">U</span>
+                        <span class="hover:bg-[#333] rounded px-1 ml-1">×</span>
+                    </div>
+                </div>
+                <!-- Tab 右侧控制 -->
+                <div class="ml-auto flex items-center gap-2 text-[#858585] *:cursor-pointer hover:*:text-white">
+                    <svg class="w-4 h-4" viewBox="0 0 16 16" fill="currentColor"><path d="M8 3a2 2 0 100-4 2 2 0 000 4zM8 9a2 2 0 100-4 2 2 0 000 4zM8 15a2 2 0 100-4 2 2 0 000 4z"/></svg>
+                    <svg class="w-4 h-4" viewBox="0 0 16 16" fill="currentColor"><path d="M1 3h14v10H1V3zm1 1v8h12V4H2z"/></svg>
+                    <svg class="w-4 h-4" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2h10v12H3V2zm1 1v10h8V3H4z"/></svg>
+                    <span>...</span>
+                </div>
+            </div>
+
+            <!-- 面包屑 -->
+            <div class="h-[22px] flex items-center px-4 text-[#969696] text-[12px] border-b border-[#2b2d31] bg-[#1e1e1e]">
+                <span>docs</span> <span class="mx-1">&gt;</span>
+                <span>archive</span> <span class="mx-1">&gt;</span>
+                <span class="text-[#e37933] mr-1">&lt;&gt;</span> <span>AI-Chat(worldtree).html</span> <span class="mx-1">&gt;</span>
+                <span>...</span>
+            </div>
+
+            <!-- 代码编辑区 -->
+            <div class="flex-1 flex overflow-hidden font-mono text-[14px] leading-[22px] relative">
+
+                <!-- Hover 提示框 (模拟) -->
+                <div class="absolute left-[300px] top-[15px] z-10 bg-[#000000] border border-[#3c3c3c] text-white px-3 py-1.5 rounded shadow-lg flex items-center gap-2 font-sans text-[12px]">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 13A6 6 0 118 2a6 6 0 010 12z"/><path d="M7 7h2v5H7V7zm0-3h2v2H7V4z"/></svg>
+                    当前无成员发言
+                </div>
+
+                <!-- 行号 -->
+                <div class="w-[50px] flex-shrink-0 text-right pr-4 text-[#858585] select-none pt-2 overflow-y-hidden">
+                    <script>
+                        for(let i=1; i<=39; i++) document.write(`<div>${i}</div>`);
+                    </script>
+                </div>
+
+                <!-- 代码内容 -->
+                <div class="flex-1 pt-2 overflow-y-auto whitespace-pre pb-20">
+<span class="hl-tag">&lt;!DOCTYPE html&gt;</span>
+<span class="hl-tag">&lt;html</span> <span class="hl-attr">lang</span>=<span class="hl-string">"zh-CN"</span><span class="hl-tag">&gt;</span>
+<span class="hl-tag">&lt;head&gt;</span>
+    <span class="hl-tag">&lt;meta</span> <span class="hl-attr">charset</span>=<span class="hl-string">"UTF-8"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;meta</span> <span class="hl-attr">name</span>=<span class="hl-string">"viewport"</span> <span class="hl-attr">content</span>=<span class="hl-string">"width=device-width, initial-scale=1.0, m"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;title&gt;</span>AI Chat<span class="hl-tag">&lt;/title&gt;</span>
+    <span class="hl-comment">&lt;!-- Vue 3 --&gt;</span>
+    <span class="hl-tag">&lt;script</span> <span class="hl-attr">src</span>=<span class="hl-string">"https://unpkg.com/vue@3/dist/vue.global.js"</span><span class="hl-tag">&gt;&lt;/script&gt;</span>
+    <span class="hl-comment">&lt;!-- Tailwind CSS --&gt;</span>
+    <span class="hl-tag">&lt;script</span> <span class="hl-attr">src</span>=<span class="hl-string">"https://cdn.tailwindcss.com"</span><span class="hl-tag">&gt;&lt;/script&gt;</span>
+    <span class="hl-comment">&lt;!-- Marked for Markdown parsing --&gt;</span>
+    <span class="hl-tag">&lt;script</span> <span class="hl-attr">src</span>=<span class="hl-string">"https://cdn.jsdelivr.net/npm/marked/marked.min.js"</span><span class="hl-tag">&gt;&lt;/script&gt;</span>
+    <span class="hl-comment">&lt;!-- FontAwesome for Icons --&gt;</span>
+    <span class="hl-tag">&lt;link</span> <span class="hl-attr">rel</span>=<span class="hl-string">"stylesheet"</span> <span class="hl-attr">href</span>=<span class="hl-string">"https://cdnjs.cloudflare.com/ajax/libs/fon"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;style&gt;</span>
+        <span class="hl-comment">/* 隐藏滚动条但保留功能 */</span>
+        <span class="hl-tag">::-webkit-scrollbar</span> { <span class="hl-attr">width</span>: <span class="hl-string">6px</span>; <span class="hl-attr">height</span>: <span class="hl-string">6px</span>; }
+        <span class="hl-tag">::-webkit-scrollbar-track</span> { <span class="hl-attr">background</span>: <span class="hl-keyword">transparent</span>; }
+        <span class="hl-tag">::-webkit-scrollbar-thumb</span> { <span class="hl-attr">background</span>: <span class="hl-string">#cbd5e1</span>; <span class="hl-attr">border-radius</span>: <span class="hl-string">4px</span>; }
+        <span class="hl-tag">::-webkit-scrollbar-thumb:hover</span> { <span class="hl-attr">background</span>: <span class="hl-string">#94a3b8</span>; }
+
+        <span class="hl-comment">/* Markdown 样式 */</span>
+        <span class="hl-tag">.prose pre</span> { <span class="hl-attr">background</span>: <span class="hl-string">#1e293b</span>; <span class="hl-attr">color</span>: <span class="hl-string">#f8fafc</span>; <span class="hl-attr">padding</span>: <span class="hl-string">1rem</span>; <span class="hl-attr">bor</span> }
+        <span class="hl-tag">.prose code</span> { <span class="hl-attr">background</span>: <span class="hl-string">#e2e8f0</span>; <span class="hl-attr">color</span>: <span class="hl-string">#0f172a</span>; <span class="hl-attr">padding</span>: <span class="hl-string">0.2re</span> }
+        <span class="hl-tag">.prose pre code</span> { <span class="hl-attr">background</span>: <span class="hl-keyword">transparent</span>; <span class="hl-attr">color</span>: <span class="hl-keyword">inherit</span>; <span class="hl-attr">padding</span> }
+        <span class="hl-tag">.prose p</span> { <span class="hl-attr">margin-bottom</span>: <span class="hl-string">0.5rem</span>; <span class="hl-attr">line-height</span>: <span class="hl-string">1.6</span>; }
+        <span class="hl-tag">.prose ul</span> { <span class="hl-attr">list-style-type</span>: <span class="hl-keyword">disc</span>; <span class="hl-attr">padding-left</span>: <span class="hl-string">1.5rem</span>; <span class="hl-attr">margin-bo</span> }
+        <span class="hl-tag">.prose ol</span> { <span class="hl-attr">list-style-type</span>: <span class="hl-keyword">decimal</span>; <span class="hl-attr">padding-left</span>: <span class="hl-string">1.5rem</span>; <span class="hl-attr">margin-</span> }
+    <span class="hl-tag">&lt;/style&gt;</span>
+<span class="hl-tag">&lt;/head&gt;</span>
+<span class="hl-tag">&lt;body</span> <span class="hl-attr">class</span>=<span class="hl-string">"bg-gray-100 text-gray-800 font-sans h-screen w-screen overflow-hidd"</span><span class="hl-tag">&gt;</span>
+
+<span class="hl-tag">&lt;div</span> <span class="hl-attr">id</span>=<span class="hl-string">"app"</span> <span class="hl-attr">class</span>=<span class="hl-string">"w-full h-full max-w-5xl bg-white shadow-xl flex flex-c"</span><span class="hl-tag">&gt;</span>
+
+    <span class="hl-comment">&lt;!-- 顶部 Header --&gt;</span>
+    <span class="hl-tag">&lt;header</span> <span class="hl-attr">class</span>=<span class="hl-string">"flex items-center justify-between px-4 py-3 border-b bg-gray-50/"</span><span class="hl-tag">&gt;</span>
+        <span class="hl-tag">&lt;h1</span> <span class="hl-attr">class</span>=<span class="hl-string">"text-xl font-bold bg-clip-text text-transparent bg-grad"</span><span class="hl-tag">&gt;</span>
+            智能助理
+        <span class="hl-tag">&lt;/h1&gt;</span>
+        <span class="hl-tag">&lt;div</span> <span class="hl-attr">class</span>=<span class="hl-string">"flex items-center gap-2"</span><span class="hl-tag">&gt;</span></div>
+
+                <!-- 迷你地图 (右侧) -->
+                <div class="absolute right-0 top-0 w-[50px] h-full minimap-bg border-l border-[#2b2d31]"></div>
+            </div>
+        </div>
+
+        <!-- 右侧 Copilot / 侧边栏面板 -->
+        <div class="w-[280px] bg-[#1e1e1e] flex flex-col flex-shrink-0 relative">
+
+            <!-- 面板 Tabs -->
+            <div class="h-[35px] flex items-center px-4 gap-4 text-[11px] text-[#858585] border-b border-[#2b2d31]">
+                <span class="text-white border-b border-white py-2 cursor-pointer">CODEX</span>
+                <span class="cursor-pointer hover:text-white">聊天</span>
+                <span class="cursor-pointer hover:text-white">CLAUDE CODE</span>
+            </div>
+
+            <!-- 面板头部 -->
+            <div class="px-4 py-3 flex items-center justify-between">
+                <span class="text-[12px] font-bold">任务</span>
+                <div class="flex gap-2 text-[#858585] *:cursor-pointer hover:*:text-white">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor"><path d="M8 2a6 6 0 100 12A6 6 0 008 2zm1 8.5H7v-4h2v4zm0-5H7v-2h2v2z"/></svg>
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor"><path d="M14 8a6 6 0 11-12 0 6 6 0 0112 0zm-6-5a5 5 0 100 10A5 5 0 008 3z"/></svg>
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor"><path d="M14.5 2h-13l-.5.5v11l.5.5h13l.5-.5v-11l-.5-.5zM14 13H2V3h12v10z"/></svg>
+                </div>
+            </div>
+
+            <!-- 列表项 -->
+            <div class="flex-1 overflow-y-auto">
+                <div class="px-4 py-2 hover:bg-[#2a2d2e] cursor-pointer flex justify-between group">
+                    <span class="truncate w-[200px]">我这个docker容器自启的时候经常会遇到这种没有映射端口...</span>
+                    <span class="text-[#858585] text-[10px]">12 小时</span>
+                </div>
+                <div class="px-4 py-2 hover:bg-[#2a2d2e] cursor-pointer flex justify-between group">
+                    <span class="truncate w-[200px]">Push changes</span>
+                    <span class="text-[#858585] text-[10px]">18 小时</span>
+                </div>
+                <div class="px-4 py-2 hover:bg-[#2a2d2e] cursor-pointer flex justify-between group">
+                    <span class="truncate w-[200px]">整理 Deliberation删代码方案</span>
+                    <span class="text-[#858585] text-[10px]">23 小时</span>
+                </div>
+                <div class="px-4 py-2 text-[#858585] hover:text-[#cccccc] cursor-pointer">
+                    查看全部 (50 个)
+                </div>
+
+                <!-- 背景暗纹图标 -->
+                <div class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.05]">
+                    <svg class="w-32 h-32" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
+                </div>
+            </div>
+
+            <!-- 底部输入框 -->
+            <div class="p-3 border-t border-[#2b2d31]">
+                <div class="bg-[#2d2d2d] rounded px-3 py-2 text-[#858585]">
+                    尽管问
+                </div>
+            </div>
+
+            <!-- Toast 通知弹窗 (右下角定位覆盖) -->
+            <div class="absolute right-4 bottom-[50px] w-[320px] bg-[#252526] shadow-xl border border-[#454545] rounded-md z-50 text-[12px]">
+                <div class="p-3 flex items-start gap-2">
+                    <svg class="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 13A6 6 0 118 2a6 6 0 010 12z"/><path d="M7 7h2v5H7V7zm0-3h2v2H7V4z"/></svg>
+                    <div class="flex-1">Server is Started at port : 5500</div>
+                    <div class="flex gap-2 text-[#858585] *:cursor-pointer hover:*:text-white">
+                        <svg class="w-4 h-4" viewBox="0 0 16 16" fill="currentColor"><path d="M14.5 2h-13l-.5.5v11l.5.5h13l.5-.5v-11l-.5-.5zM14 13H2V3h12v10z"/></svg>
+                        <svg class="w-4 h-4" viewBox="0 0 16 16" fill="currentColor"><path d="M8 8.707l3.646 3.647.708-.707L8.707 8l3.647-3.646-.707-.708L8 7.293 4.354 3.646l-.708.708L7.293 8l-3.647 3.646.708.707L8 8.707z"/></svg>
+                    </div>
+                </div>
+                <div class="px-3 pb-3 flex justify-between items-center text-[#cccccc]">
+                    <span class="text-[#858585]">来源: Live Server</span>
+                    <button class="bg-[#007acc] text-white px-2 py-1 rounded text-[11px] hover:bg-[#005a9e]">Don't show again</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 底部状态栏 -->
+    <div class="h-[22px] bg-[#181818] text-[#cccccc] text-[11px] flex items-center justify-between px-2 flex-shrink-0">
+        <!-- 左侧状态 -->
+        <div class="flex items-center gap-3 *:cursor-pointer hover:*:bg-[#333] *:px-1 *:rounded">
+            <div class="flex items-center gap-1">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor"><path d="M4 3a2 2 0 112.58 1.91l1.7 1.7A1.99 1.99 0 0110 6a2 2 0 11-2 2H6v2.1A2 2 0 114 13a2 2 0 010-4v-2.1A2 2 0 014 3z"/></svg>
+                main*
+            </div>
+            <div class="flex items-center gap-1">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor"><path d="M8 2.5a5.5 5.5 0 105.5 5.5H12a4 4 0 11-4-4V2.5zM8 1v3h3V1H8z"/></svg>
+            </div>
+            <div class="flex items-center gap-1">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1L1 14h14L8 1z"/></svg>0
+                <svg class="w-3.5 h-3.5 ml-1" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 13A6 6 0 118 2a6 6 0 010 12z"/></svg>0
+            </div>
+        </div>
+
+        <!-- 右侧状态 -->
+        <div class="flex items-center gap-3 *:cursor-pointer hover:*:bg-[#333] *:px-1 *:rounded">
+            <span>行 1, 列 1</span>
+            <span>空格: 4</span>
+            <span>UTF-8</span>
+            <span>LF</span>
+            <div class="flex items-center gap-1">
+                <span>{ } HTML</span>
+            </div>
+            <div class="flex items-center gap-1">
+                <svg class="w-3 h-3" viewBox="0 0 16 16" fill="currentColor"><path d="M14 2H2C.9 2 0 2.9 0 4v8c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM2 13V4h12v9H2z"/></svg>
+                Port : 5500
+            </div>
+            <div class="flex items-center gap-1">
+                <svg class="w-3 h-3" viewBox="0 0 16 16" fill="currentColor"><path d="M13.5 2h-11l-.5.5v11l.5.5h11l.5-.5v-11l-.5-.5zM13 13H3V3h10v10z"/></svg>
+                Prettier
+            </div>
+            <div>
+                <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5A3.5 3.5 0 004.5 5v3.15l-.85.85A1.5 1.5 0 004.71 11h6.58a1.5 1.5 0 001.06-2.56L11.5 8.15V5A3.5 3.5 0 008 1.5z"/></svg>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

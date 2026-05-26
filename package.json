@@ -2,7 +2,7 @@
   "name": "cmb-copilot-model-bridge",
   "displayName": "CMB: Copilot Model Bridge",
   "description": "Bridge OpenAI-compatible chat models into GitHub Copilot Chat as first-class language model providers.",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "publisher": "weisiren",
   "license": "MIT",
   "icon": "images/icon.png",
