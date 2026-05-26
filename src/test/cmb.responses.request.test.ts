@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-test('builds Responses request body with max_output_tokens and reasoning', () => {
+test('builds Responses request body with max_output_tokens and reasoning summary', () => {
   const {
     buildResponsesRequestBody,
   } = require('../provider/openaiCompatible/responses/cmb.responses.request') as typeof import('../provider/openaiCompatible/responses/cmb.responses.request');
@@ -22,6 +22,6 @@ test('builds Responses request body with max_output_tokens and reasoning', () =>
     stream: true,
     store: false,
     max_output_tokens: 123,
-    reasoning: { effort: 'medium' },
+    reasoning: { effort: 'medium', summary: 'auto' },
   });
 });

@@ -9,6 +9,7 @@ import {
   convertMessages,
 } from '../openaiCompatible/chatCompletions';
 import { buildChatRequestHeaders } from '../openaiCompatible/cmb.openaiCompatible.requestHeaders';
+import { createHttpError } from '../openaiCompatible/cmb.openaiCompatible.errors';
 import { postStreaming } from '../openaiCompatible/cmb.openaiCompatible.chatHttpClient';
 import {
   buildResponsesRequestBody,
@@ -229,7 +230,7 @@ async function postAndConsumeStream(options: PostStreamOptions): Promise<void> {
           options.requestBody
         );
       }
-      throw new Error(`API request to ${options.requestUrl} failed with status ${response.status}: ${errorText}`);
+      throw createHttpError(options.requestUrl, response.status, errorText);
     }
     if (!response.body) {
       throw new Error('Response body is null – the server did not return a streaming body.');

@@ -280,3 +280,50 @@ test('sends Responses request when provider apiStyle is responses', async () => 
     server.close();
   }
 });
+
+test('reports gateway timeouts as friendly upstream errors', async () => {
+  const server = http.createServer((req, res) => {
+    req.resume();
+    res.writeHead(504, { 'Content-Type': 'text/html' });
+    res.end('<html><body><h1>504 Gateway Time-out</h1></body></html>');
+  });
+
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address() as AddressInfo;
+  const provider: ProviderConfig = {
+    id: 'openai',
+    displayName: 'OpenAI',
+    baseUrl: `http://127.0.0.1:${address.port}/v1`,
+    apiKey: 'key',
+    apiStyle: 'responses',
+    models: [],
+  };
+
+  try {
+    await assert.rejects(
+      sendChatRequest(
+        provider,
+        { id: 'gpt-5.1', name: 'GPT 5.1' },
+        {
+          id: 'openai::gpt-5.1',
+          name: 'GPT 5.1',
+          family: 'gpt',
+          version: '',
+          maxInputTokens: 128000,
+          maxOutputTokens: 4096,
+          capabilities: {},
+        },
+        [{
+          role: vscodeMock.LanguageModelChatMessageRole.User,
+          content: [new LanguageModelTextPart('hello')],
+        }] as never,
+        { toolMode: 0 } as never,
+        { report() {} },
+        { isCancellationRequested: false, onCancellationRequested: () => ({ dispose() {} }) } as never
+      ),
+      /上游模型服务暂时不可用 \(HTTP 504\)，请稍后重试。/
+    );
+  } finally {
+    server.close();
+  }
+});

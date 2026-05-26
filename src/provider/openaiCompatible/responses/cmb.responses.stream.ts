@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { ResponsesStreamEvent } from '../../../types';
 import { DEEPSEEK_REASONING_MIME } from '../../deepseek/cmb.deepseek.adapter';
+import { createStreamFailureError } from '../cmb.openaiCompatible.errors';
 import { reportThinkingPart } from '../chatCompletions/cmb.chatCompletions.stream';
 
 interface PendingFunctionCall {
@@ -64,17 +65,35 @@ function handleBufferedFrame(
     return;
   }
   handleEvent(event, calls, progress);
+  const summary = readReasoningSummary(event);
+  if (summary) {
+    reportReasoning(summary);
+  }
   if (isReasoningDeltaEvent(event) && event.delta) {
     reportReasoning(event.delta);
   }
   if (event.type === 'response.failed' || event.type === 'response.incomplete') {
-    throw new Error(readResponseError(event));
+    throw createStreamFailureError(readResponseError(event));
   }
 }
 
 function isReasoningDeltaEvent(event: ResponsesStreamEvent): boolean {
   return event.type === 'response.reasoning_summary_text.delta'
     || event.type === 'response.reasoning_text.delta';
+}
+
+function readReasoningSummary(event: ResponsesStreamEvent): string {
+  if (
+    event.type !== 'response.output_item.done'
+    || event.item?.type !== 'reasoning'
+    || !Array.isArray(event.item.summary)
+  ) {
+    return '';
+  }
+
+  return event.item.summary
+    .map(part => typeof part.text === 'string' ? part.text : '')
+    .join('');
 }
 
 function parseFrame(frame: string): ResponsesStreamEvent | undefined {

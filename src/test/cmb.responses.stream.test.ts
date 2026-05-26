@@ -83,6 +83,22 @@ test('reports reasoning text deltas as thinking parts', async () => {
   assert.equal((reported[1] as LanguageModelTextPart).value, 'answer');
 });
 
+test('reports reasoning summary from final output item as thinking part', async () => {
+  const reported: unknown[] = [];
+  await consumeResponsesSSEStream(streamFrom([
+    'event: response.output_item.done',
+    'data: {"type":"response.output_item.done","item_id":"rs_1","output_index":0,"item":{"type":"reasoning","id":"rs_1","summary":[{"type":"summary_text","text":"checked factors"}]}}',
+    '',
+    'event: response.output_text.delta',
+    'data: {"type":"response.output_text.delta","delta":"answer"}',
+    '',
+  ]), { report: (part: unknown) => reported.push(part) } as never, neverCancelledToken as never);
+
+  assert.equal(reported[0] instanceof LanguageModelThinkingPart, true);
+  assert.equal((reported[0] as LanguageModelThinkingPart).value, 'checked factors');
+  assert.equal((reported[1] as LanguageModelTextPart).value, 'answer');
+});
+
 test('reports final frame when stream ends without trailing blank line', async () => {
   const reported: unknown[] = [];
   await consumeResponsesSSEStream(streamFrom([
@@ -110,6 +126,17 @@ test('reports function call from streamed arguments', async () => {
   assert.equal((reported[0] as { callId: string }).callId, 'call-1');
   assert.equal((reported[0] as { name: string }).name, 'read_file');
   assert.deepEqual((reported[0] as { input: unknown }).input, { path: 'README.md' });
+});
+
+test('reports overloaded stream failures as friendly upstream errors', async () => {
+  await assert.rejects(
+    consumeResponsesSSEStream(streamFrom([
+      'event: response.failed',
+      'data: {"type":"response.failed","error":{"message":"Our servers are currently overloaded. Please try again later."}}',
+      '',
+    ]), { report() {} } as never, neverCancelledToken as never),
+    /上游模型服务当前繁忙，请稍后重试。/
+  );
 });
 
 function streamFrom(lines: string[], appendNewline = true): ReadableStream<Uint8Array> {

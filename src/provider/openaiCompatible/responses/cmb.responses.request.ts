@@ -22,7 +22,7 @@ export function buildResponsesRequestBody(options: ResponsesRequestOptions): Rec
     requestBody.instructions = options.instructions;
   }
   if (options.reasoningEffort && options.reasoningEffort !== 'none') {
-    requestBody.reasoning = { effort: options.reasoningEffort };
+    requestBody.reasoning = { effort: options.reasoningEffort, summary: 'auto' };
   }
 
   Object.assign(requestBody, options.toolOptions);

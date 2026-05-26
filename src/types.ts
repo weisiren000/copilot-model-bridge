@@ -60,6 +60,10 @@ export interface ResponsesStreamEvent {
     name?: string;
     call_id?: string;
     arguments?: string;
+    summary?: Array<{
+      type?: string;
+      text?: string;
+    }>;
   };
 }
 
