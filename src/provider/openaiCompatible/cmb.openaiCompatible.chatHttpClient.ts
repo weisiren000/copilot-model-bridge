@@ -2,7 +2,7 @@ import http from 'node:http';
 import https from 'node:https';
 import { Readable } from 'node:stream';
 
-export function postStreamingChatCompletion(
+export function postStreaming(
   requestUrl: string,
   headers: Record<string, string>,
   body: unknown,
@@ -53,6 +53,8 @@ export function postStreamingChatCompletion(
     request.end(payload);
   });
 }
+
+export const postStreamingChatCompletion = postStreaming;
 
 function appendResponseHeader(
   headers: Headers,

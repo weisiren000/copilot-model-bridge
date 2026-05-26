@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { DEEPSEEK_REASONING_MIME } from '../deepseek/cmb.deepseek.adapter';
-import { OpenAIStreamChunk } from '../../types';
+import { DEEPSEEK_REASONING_MIME } from '../../deepseek/cmb.deepseek.adapter';
+import { OpenAIStreamChunk } from '../../../types';
 
 /**
  * 把一段 reasoning 文本以 LanguageModelThinkingPart 的形式回报给 VS Code，

@@ -59,7 +59,7 @@ moduleLoader._load = function loadWithVscodeMock(
 
 const {
   consumeSSEStream,
-} = require('../provider/openaiCompatible/cmb.openaiCompatible.stream') as typeof import('../provider/openaiCompatible/cmb.openaiCompatible.stream');
+} = require('../provider/openaiCompatible/chatCompletions/cmb.chatCompletions.stream') as typeof import('../provider/openaiCompatible/chatCompletions/cmb.chatCompletions.stream');
 
 function createSSEStream(lines: readonly string[]): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();

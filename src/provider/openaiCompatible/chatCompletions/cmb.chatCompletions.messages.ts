@@ -1,14 +1,14 @@
 import * as vscode from 'vscode';
-import { decodeReasoningDataPart } from '../deepseek/cmb.deepseek.adapter';
+import { decodeReasoningDataPart } from '../../deepseek/cmb.deepseek.adapter';
 import {
   buildOpenAIContent,
   createOpenAIDataPartContent,
   OpenAIContentPart,
-} from './cmb.openaiCompatible.content';
+} from '../cmb.openaiCompatible.content';
 import {
   TokenEstimatePart,
-} from './cmb.openaiCompatible.token';
-import { isThinkingPart, readThinkingValue } from './cmb.openaiCompatible.stream';
+} from '../cmb.openaiCompatible.token';
+import { isThinkingPart, readThinkingValue } from './cmb.chatCompletions.stream';
 
 export function toTokenEstimateParts(
   parts: readonly vscode.LanguageModelInputPart[] | readonly unknown[]

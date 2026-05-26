@@ -7,7 +7,7 @@
 import * as vscode from 'vscode';
 import { getProviders } from '../config/cmb.provider.settings';
 import { estimateChatMessageTokens, estimateStringTokens } from '../openaiCompatible';
-import { toTokenEstimateParts } from '../openaiCompatible/cmb.openaiCompatible.messages';
+import { toTokenEstimateParts } from '../openaiCompatible/chatCompletions';
 import { buildModelList } from './cmb.provider.models';
 import { resolveProvider } from './cmb.provider.routing';
 import { sendChatRequest } from './cmb.provider.request';

@@ -35,6 +35,15 @@ test('updates provider fields without removing provider models', () => {
   assert.equal(updated[0].models.length, 1);
 });
 
+test('accepts provider apiStyle values without validation issues', () => {
+  const issues = validateProviderConfig([{
+    ...createProviders()[0],
+    apiStyle: 'responses',
+  }]);
+
+  assert.deepEqual(issues, []);
+});
+
 test('updates model fields while preserving unknown user fields', () => {
   const updated = updateModel(createProviders(), 'provider', 'model-a', {
     name: 'Renamed Model',

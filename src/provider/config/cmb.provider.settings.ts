@@ -36,6 +36,7 @@ export function getProviders(): ProviderConfig[] {
     displayName: p.displayName,
     baseUrl: p.baseUrl.replace(/\/$/, ''), // trim trailing slash
     apiKey: p.apiKey ?? '',
+    apiStyle: p.apiStyle,
     models: (p.models ?? []).map(normalizeModelConfig),
   }));
 }

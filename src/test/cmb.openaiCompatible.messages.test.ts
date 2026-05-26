@@ -64,7 +64,7 @@ moduleLoader._load = function loadWithVscodeMock(
 const {
   convertMessages,
   toTokenEstimateParts,
-} = require('../provider/openaiCompatible/cmb.openaiCompatible.messages') as typeof import('../provider/openaiCompatible/cmb.openaiCompatible.messages');
+} = require('../provider/openaiCompatible/chatCompletions/cmb.chatCompletions.messages') as typeof import('../provider/openaiCompatible/chatCompletions/cmb.chatCompletions.messages');
 
 test('normalizes token estimate parts including nested tool results', () => {
   const parts = [

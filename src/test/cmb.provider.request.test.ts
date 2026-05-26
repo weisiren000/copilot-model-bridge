@@ -63,8 +63,10 @@ const {
 } = require('../provider/core/cmb.provider.request') as typeof import('../provider/core/cmb.provider.request');
 
 test('caps DeepSeek request max_tokens before sending the API request', async () => {
+  let receivedPath = '';
   let receivedBody: Record<string, unknown> | undefined;
   const server = http.createServer((req, res) => {
+    receivedPath = req.url ?? '';
     let body = '';
     req.on('data', chunk => {
       body += chunk;
@@ -117,6 +119,7 @@ test('caps DeepSeek request max_tokens before sending the API request', async ()
       } as never
     );
 
+    assert.equal(receivedPath, '/v1/chat/completions');
     assert.equal(receivedBody?.max_tokens, 393216);
     assert.deepEqual(receivedBody?.thinking, { type: 'disabled' });
   } finally {
@@ -210,6 +213,69 @@ test('applies Gemini adapter before sending the API request', async () => {
         },
       },
     }]);
+  } finally {
+    server.close();
+  }
+});
+
+test('sends Responses request when provider apiStyle is responses', async () => {
+  let receivedPath = '';
+  let receivedBody: Record<string, unknown> | undefined;
+  const server = http.createServer((req, res) => {
+    receivedPath = req.url ?? '';
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      receivedBody = JSON.parse(body);
+      res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+      res.end([
+        'event: response.output_text.delta',
+        'data: {"type":"response.output_text.delta","delta":"hello"}',
+        '',
+        'event: response.completed',
+        'data: {"type":"response.completed"}',
+        '',
+      ].join('\n'));
+    });
+  });
+
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address() as AddressInfo;
+  const provider: ProviderConfig = {
+    id: 'openai',
+    displayName: 'OpenAI',
+    baseUrl: `http://127.0.0.1:${address.port}/v1`,
+    apiKey: 'key',
+    apiStyle: 'responses',
+    models: [],
+  };
+
+  try {
+    await sendChatRequest(
+      provider,
+      { id: 'gpt-5.1', name: 'GPT 5.1' },
+      {
+        id: 'openai::gpt-5.1',
+        name: 'GPT 5.1',
+        family: 'gpt',
+        version: '',
+        maxInputTokens: 128000,
+        maxOutputTokens: 4096,
+        capabilities: {},
+      },
+      [{
+        role: vscodeMock.LanguageModelChatMessageRole.User,
+        content: [new LanguageModelTextPart('hello')],
+      }] as never,
+      { toolMode: 0 } as never,
+      { report() {} },
+      { isCancellationRequested: false, onCancellationRequested: () => ({ dispose() {} }) } as never
+    );
+
+    assert.equal(receivedPath, '/v1/responses');
+    assert.equal(receivedBody?.max_output_tokens, 4096);
+    assert.equal(receivedBody?.max_tokens, undefined);
+    assert.equal(receivedBody?.stream, true);
   } finally {
     server.close();
   }

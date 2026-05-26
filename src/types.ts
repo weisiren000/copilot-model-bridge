@@ -9,7 +9,59 @@
 /** Represents a single model entry within a provider */
 export type ReasoningLevel = 'none' | 'low' | 'medium' | 'high' | 'xhigh' | 'max';
 export type EditToolName = 'find-replace' | 'multi-find-replace' | 'apply-patch' | 'code-rewrite';
+export type ProviderApiStyle = 'chat' | 'responses';
 export type ToolChoiceMode = 'auto' | 'required' | 'none' | 'omit';
+
+export type ResponsesContentPart =
+  | { type: 'input_text'; text: string }
+  | { type: 'input_image'; image_url: string; detail?: 'low' | 'high' | 'auto' | 'original' }
+  | { type: 'output_text'; text: string };
+
+export type ResponsesInputItem =
+  | ResponsesInputMessage
+  | ResponsesFunctionCallItem
+  | ResponsesFunctionCallOutputItem;
+
+export interface ResponsesInputMessage {
+  type: 'message';
+  role: 'user' | 'assistant' | 'system' | 'developer';
+  content: string | ResponsesContentPart[];
+}
+
+export interface ResponsesFunctionCallItem {
+  type: 'function_call';
+  call_id: string;
+  name: string;
+  arguments: string;
+}
+
+export interface ResponsesFunctionCallOutputItem {
+  type: 'function_call_output';
+  call_id: string;
+  output: string;
+}
+
+export interface ResponsesStreamEvent {
+  type: string;
+  response_id?: string;
+  item_id?: string;
+  output_index?: number;
+  content_index?: number;
+  delta?: string;
+  text?: string;
+  arguments?: string;
+  name?: string;
+  call_id?: string;
+  error?: { message?: string; code?: string };
+  response?: { status?: string; error?: { message?: string; code?: string } };
+  item?: {
+    type: string;
+    id?: string;
+    name?: string;
+    call_id?: string;
+    arguments?: string;
+  };
+}
 
 export interface ModelCategoryConfig {
   label: string;
@@ -71,6 +123,8 @@ export interface ProviderConfig {
   baseUrl: string;
   /** API key for authentication; empty string if not needed */
   apiKey: string;
+  /** API style used by this provider. Defaults to Chat Completions. */
+  apiStyle?: ProviderApiStyle;
   /** List of models registered for this provider */
   models: ModelConfig[];
 }

@@ -2,9 +2,20 @@ import * as vscode from 'vscode';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { resolveReasoningLevel, resolveToolChoice } from '../openaiCompatible';
-import { convertMessages } from '../openaiCompatible/cmb.openaiCompatible.messages';
+import { resolveReasoningLevel } from '../openaiCompatible';
+import {
+  buildChatRequestBody,
+  consumeSSEStream,
+  convertMessages,
+} from '../openaiCompatible/chatCompletions';
 import { buildChatRequestHeaders } from '../openaiCompatible/cmb.openaiCompatible.requestHeaders';
+import { postStreaming } from '../openaiCompatible/cmb.openaiCompatible.chatHttpClient';
+import {
+  buildResponsesRequestBody,
+  buildResponsesToolOptions,
+  consumeResponsesSSEStream,
+  convertToResponsesInput,
+} from '../openaiCompatible/responses';
 import {
   applyReasoningContentReplay,
   buildDeepSeekRequestPatch,
@@ -17,8 +28,6 @@ import {
   GeminiToolDefinition,
   isGeminiRequest,
 } from '../gemini/cmb.gemini.adapter';
-import { postStreamingChatCompletion } from '../openaiCompatible/cmb.openaiCompatible.chatHttpClient';
-import { consumeSSEStream } from '../openaiCompatible/cmb.openaiCompatible.stream';
 import { ProviderConfig, ReasoningLevel, ToolChoiceMode } from '../../types';
 
 export async function sendChatRequest(
@@ -51,44 +60,76 @@ export async function sendChatRequest(
     );
   }
 
-  const requestUrl = `${provider.baseUrl}/chat/completions`;
   const modelConfiguration = readModelConfiguration(options);
+  if (resolveApiStyle(provider) === 'responses') {
+    await sendResponsesRequest({
+      provider,
+      selectedModel,
+      model,
+      apiMessages,
+      options,
+      progress,
+      token,
+      modelConfiguration,
+    });
+    return;
+  }
+
+  await sendChatCompletionsRequest({
+    provider,
+    selectedModel,
+    model,
+    apiMessages,
+    options,
+    progress,
+    token,
+    modelConfiguration,
+  });
+}
+
+interface RequestContext {
+  provider: ProviderConfig;
+  selectedModel: {
+    id: string;
+    name: string;
+    supportsReasoning?: boolean;
+    defaultReasoningLevel?: ReasoningLevel;
+    supportedReasoningLevels?: ReasoningLevel[];
+    toolChoiceMode?: ToolChoiceMode;
+  };
+  model: vscode.LanguageModelChatInformation;
+  apiMessages: Array<any>;
+  options: vscode.ProvideLanguageModelChatResponseOptions;
+  progress: vscode.Progress<vscode.LanguageModelResponsePart>;
+  token: vscode.CancellationToken;
+  modelConfiguration?: { readonly [name: string]: unknown };
+}
+
+async function sendChatCompletionsRequest(context: RequestContext): Promise<void> {
+  const {
+    provider,
+    selectedModel,
+    model,
+    apiMessages,
+    options,
+    progress,
+    token,
+    modelConfiguration,
+  } = context;
+  const requestUrl = `${provider.baseUrl}/chat/completions`;
   const isDeepSeek = isDeepSeekRequest(provider, selectedModel.id);
   const isGemini = isGeminiRequest(provider, selectedModel.id);
-  const requestBody: Record<string, unknown> = {
-    model: selectedModel.id,
+  const requestBody = buildChatRequestBody({
+    modelId: selectedModel.id,
     messages: apiMessages,
-    stream: true,
-    max_tokens: resolveRequestMaxTokens(model.maxOutputTokens, isDeepSeek),
-  };
-
-  if (selectedModel.supportsReasoning) {
-    requestBody.reasoning_effort = resolveReasoningLevel(
-      options.modelOptions,
-      modelConfiguration,
-      selectedModel.defaultReasoningLevel ?? 'medium',
-      selectedModel.supportedReasoningLevels
-    );
-  }
-
-  if (options.tools && options.tools.length > 0) {
-    requestBody.tools = options.tools.map(tool => ({
-      type: 'function',
-      function: {
-        name: tool.name,
-        description: tool.description,
-        parameters: tool.inputSchema,
-      },
-    }));
-    const toolChoice = resolveToolChoice({
-      hasTools: true,
-      requestedToolMode: options.toolMode === vscode.LanguageModelChatToolMode.Required ? 'required' : 'auto',
-      toolChoiceMode: selectedModel.toolChoiceMode,
-    });
-    if (toolChoice !== undefined) {
-      requestBody.tool_choice = toolChoice;
-    }
-  }
+    maxOutputTokens: resolveRequestMaxTokens(model.maxOutputTokens, isDeepSeek),
+    supportsReasoning: selectedModel.supportsReasoning,
+    defaultReasoningLevel: selectedModel.defaultReasoningLevel,
+    supportedReasoningLevels: selectedModel.supportedReasoningLevels,
+    toolChoiceMode: selectedModel.toolChoiceMode,
+    responseOptions: options,
+    modelConfiguration,
+  });
 
   if (isGemini) {
     applyGeminiRequestPatch(requestBody);
@@ -102,26 +143,98 @@ export async function sendChatRequest(
     });
   }
 
+  await postAndConsumeStream({
+    provider,
+    requestUrl,
+    requestBody,
+    progress,
+    token,
+    isGemini,
+    consume: consumeSSEStream,
+  });
+}
+
+async function sendResponsesRequest(context: RequestContext): Promise<void> {
+  const {
+    provider,
+    selectedModel,
+    model,
+    apiMessages,
+    options,
+    progress,
+    token,
+    modelConfiguration,
+  } = context;
+  const requestUrl = `${provider.baseUrl}/responses`;
+  const responsesInput = convertToResponsesInput(apiMessages);
+  const reasoningEffort = selectedModel.supportsReasoning
+    ? resolveReasoningLevel(
+      options.modelOptions,
+      modelConfiguration,
+      selectedModel.defaultReasoningLevel ?? 'medium',
+      selectedModel.supportedReasoningLevels
+    )
+    : undefined;
+  const requestBody = buildResponsesRequestBody({
+    modelId: selectedModel.id,
+    input: responsesInput.input,
+    instructions: responsesInput.instructions,
+    maxOutputTokens: resolveRequestMaxTokens(model.maxOutputTokens, false),
+    reasoningEffort,
+    toolOptions: buildResponsesToolOptions(options, selectedModel.toolChoiceMode),
+  });
+
+  await postAndConsumeStream({
+    provider,
+    requestUrl,
+    requestBody,
+    progress,
+    token,
+    isGemini: false,
+    consume: consumeResponsesSSEStream,
+  });
+}
+
+interface PostStreamOptions {
+  provider: ProviderConfig;
+  requestUrl: string;
+  requestBody: Record<string, unknown>;
+  progress: vscode.Progress<vscode.LanguageModelResponsePart>;
+  token: vscode.CancellationToken;
+  isGemini: boolean;
+  consume: (
+    body: ReadableStream<Uint8Array>,
+    progress: vscode.Progress<vscode.LanguageModelResponsePart>,
+    token: vscode.CancellationToken
+  ) => Promise<void>;
+}
+
+async function postAndConsumeStream(options: PostStreamOptions): Promise<void> {
   const abortController = new AbortController();
-  const cancelSub = token.onCancellationRequested(() => abortController.abort());
+  const cancelSub = options.token.onCancellationRequested(() => abortController.abort());
   try {
-    const response = await postStreamingChatCompletion(
-      requestUrl,
-      buildChatRequestHeaders(provider),
-      requestBody,
+    const response = await postStreaming(
+      options.requestUrl,
+      buildChatRequestHeaders(options.provider),
+      options.requestBody,
       abortController.signal
     );
     if (!response.ok) {
       const errorText = await response.text();
-      if (isGemini) {
-        await writeGeminiFailureDiagnostics(requestUrl, response.status, errorText, requestBody);
+      if (options.isGemini) {
+        await writeGeminiFailureDiagnostics(
+          options.requestUrl,
+          response.status,
+          errorText,
+          options.requestBody
+        );
       }
-      throw new Error(`API request to ${requestUrl} failed with status ${response.status}: ${errorText}`);
+      throw new Error(`API request to ${options.requestUrl} failed with status ${response.status}: ${errorText}`);
     }
     if (!response.body) {
       throw new Error('Response body is null – the server did not return a streaming body.');
     }
-    await consumeSSEStream(response.body, progress, token);
+    await options.consume(response.body, options.progress, options.token);
   } catch (err) {
     if ((err as Error).name === 'AbortError') {
       throw new vscode.CancellationError();
@@ -130,6 +243,10 @@ export async function sendChatRequest(
   } finally {
     cancelSub.dispose();
   }
+}
+
+function resolveApiStyle(provider: Pick<ProviderConfig, 'apiStyle'>): 'chat' | 'responses' {
+  return provider.apiStyle === 'responses' ? 'responses' : 'chat';
 }
 
 async function writeGeminiFailureDiagnostics(
