@@ -218,6 +218,136 @@ test('applies Gemini adapter before sending the API request', async () => {
   }
 });
 
+test('requests Gemini thought summaries for reasoning models', async () => {
+  let receivedBody: Record<string, any> | undefined;
+  const server = http.createServer((req, res) => {
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk;
+    });
+    req.on('end', () => {
+      receivedBody = JSON.parse(body);
+      res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+      res.end('data: [DONE]\n\n');
+    });
+  });
+
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address() as AddressInfo;
+  const provider: ProviderConfig = {
+    id: 'local-gemini',
+    displayName: 'Local Gemini',
+    baseUrl: `http://127.0.0.1:${address.port}/v1`,
+    apiKey: 'key',
+    models: [],
+  };
+
+  try {
+    await sendChatRequest(
+      provider,
+      {
+        id: 'gemini-3.1-pro-preview',
+        name: 'Gemini 3.1 Pro Preview',
+        supportsReasoning: true,
+        includeThoughts: true,
+        defaultReasoningLevel: 'medium',
+        supportedReasoningLevels: ['medium', 'high'],
+      },
+      {
+        id: 'local-gemini::gemini-3.1-pro-preview',
+        name: 'Gemini 3.1 Pro Preview',
+        family: 'gemini',
+        version: '',
+        maxInputTokens: 1000000,
+        maxOutputTokens: 65536,
+        capabilities: {},
+      },
+      [{
+        role: vscodeMock.LanguageModelChatMessageRole.User,
+        content: [new LanguageModelTextPart('hello')],
+      }] as never,
+      { toolMode: 0 } as never,
+      { report() {} },
+      {
+        isCancellationRequested: false,
+        onCancellationRequested: () => ({ dispose() {} }),
+      } as never
+    );
+
+    assert.deepEqual(receivedBody?.extra_body, {
+      google: {
+        thinking_config: {
+          include_thoughts: true,
+        },
+        thought_tag_marker: 'think',
+      },
+    });
+  } finally {
+    server.close();
+  }
+});
+
+test('does not request Gemini thought summaries unless explicitly enabled', async () => {
+  let receivedBody: Record<string, any> | undefined;
+  const server = http.createServer((req, res) => {
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk;
+    });
+    req.on('end', () => {
+      receivedBody = JSON.parse(body);
+      res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+      res.end('data: [DONE]\n\n');
+    });
+  });
+
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address() as AddressInfo;
+  const provider: ProviderConfig = {
+    id: 'local-gemini',
+    displayName: 'Local Gemini',
+    baseUrl: `http://127.0.0.1:${address.port}/v1`,
+    apiKey: 'key',
+    models: [],
+  };
+
+  try {
+    await sendChatRequest(
+      provider,
+      {
+        id: 'gemini-3.1-pro-preview',
+        name: 'Gemini 3.1 Pro Preview',
+        supportsReasoning: true,
+        defaultReasoningLevel: 'medium',
+        supportedReasoningLevels: ['medium', 'high'],
+      },
+      {
+        id: 'local-gemini::gemini-3.1-pro-preview',
+        name: 'Gemini 3.1 Pro Preview',
+        family: 'gemini',
+        version: '',
+        maxInputTokens: 1000000,
+        maxOutputTokens: 65536,
+        capabilities: {},
+      },
+      [{
+        role: vscodeMock.LanguageModelChatMessageRole.User,
+        content: [new LanguageModelTextPart('hello')],
+      }] as never,
+      { toolMode: 0 } as never,
+      { report() {} },
+      {
+        isCancellationRequested: false,
+        onCancellationRequested: () => ({ dispose() {} }),
+      } as never
+    );
+
+    assert.equal(receivedBody?.extra_body, undefined);
+  } finally {
+    server.close();
+  }
+});
+
 test('sends Responses request when provider apiStyle is responses', async () => {
   let receivedPath = '';
   let receivedBody: Record<string, unknown> | undefined;

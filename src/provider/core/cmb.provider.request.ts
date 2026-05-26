@@ -28,6 +28,7 @@ import {
   buildGeminiRequestPatch,
   GeminiToolDefinition,
   isGeminiRequest,
+  resolveGeminiOpenAICompatibleUrl,
 } from '../gemini/cmb.gemini.adapter';
 import { ProviderConfig, ReasoningLevel, ToolChoiceMode } from '../../types';
 
@@ -42,6 +43,7 @@ export async function sendChatRequest(
     supportsReasoning?: boolean;
     defaultReasoningLevel?: ReasoningLevel;
     supportedReasoningLevels?: ReasoningLevel[];
+    includeThoughts?: boolean;
     toolChoiceMode?: ToolChoiceMode;
   },
   model: vscode.LanguageModelChatInformation,
@@ -96,6 +98,7 @@ interface RequestContext {
     supportsReasoning?: boolean;
     defaultReasoningLevel?: ReasoningLevel;
     supportedReasoningLevels?: ReasoningLevel[];
+    includeThoughts?: boolean;
     toolChoiceMode?: ToolChoiceMode;
   };
   model: vscode.LanguageModelChatInformation;
@@ -117,9 +120,11 @@ async function sendChatCompletionsRequest(context: RequestContext): Promise<void
     token,
     modelConfiguration,
   } = context;
-  const requestUrl = `${provider.baseUrl}/chat/completions`;
   const isDeepSeek = isDeepSeekRequest(provider, selectedModel.id);
   const isGemini = isGeminiRequest(provider, selectedModel.id);
+  const requestUrl = isGemini
+    ? resolveGeminiOpenAICompatibleUrl(provider, 'chat/completions')
+    : `${provider.baseUrl}/chat/completions`;
   const requestBody = buildChatRequestBody({
     modelId: selectedModel.id,
     messages: apiMessages,
@@ -133,7 +138,7 @@ async function sendChatCompletionsRequest(context: RequestContext): Promise<void
   });
 
   if (isGemini) {
-    applyGeminiRequestPatch(requestBody);
+    applyGeminiRequestPatch(requestBody, selectedModel.includeThoughts);
   }
 
   if (isDeepSeek) {
@@ -272,13 +277,20 @@ async function writeGeminiFailureDiagnostics(
   }
 }
 
-function applyGeminiRequestPatch(requestBody: Record<string, unknown>): void {
+function applyGeminiRequestPatch(
+  requestBody: Record<string, unknown>,
+  includeThoughts: boolean | undefined
+): void {
   const tools = requestBody.tools;
   const patch = buildGeminiRequestPatch({
     tools: Array.isArray(tools) ? tools as GeminiToolDefinition[] : undefined,
+    includeThoughts: Boolean(includeThoughts),
   });
   if (patch.tools) {
     requestBody.tools = patch.tools;
+  }
+  if (patch.extra_body) {
+    requestBody.extra_body = patch.extra_body;
   }
 }
 

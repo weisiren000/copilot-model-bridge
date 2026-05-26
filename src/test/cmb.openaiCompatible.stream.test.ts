@@ -106,6 +106,24 @@ test('streams reasoning content as thinking parts when available', async () => {
   assert.equal((parts[0] as LanguageModelThinkingPart).value, 'because');
 });
 
+test('streams Gemini tagged thoughts as thinking parts', async () => {
+  const parts = await collectStreamParts([
+    'data: {"choices":[{"delta":{"content":"<think>plan"},"finish_reason":null}]}',
+    'data: {"choices":[{"delta":{"content":" first</think>answer"},"finish_reason":null}]}',
+    'data: [DONE]',
+  ]);
+
+  assert.equal(parts.length, 3);
+  assert.ok(parts[0] instanceof LanguageModelThinkingPart);
+  assert.ok(parts[1] instanceof LanguageModelThinkingPart);
+  assert.equal(
+    `${(parts[0] as LanguageModelThinkingPart).value}${(parts[1] as LanguageModelThinkingPart).value}`,
+    'plan first'
+  );
+  assert.ok(parts[2] instanceof LanguageModelTextPart);
+  assert.equal((parts[2] as LanguageModelTextPart).value, 'answer');
+});
+
 test('falls back to reasoning data part when ThinkingPart is unavailable', async () => {
   const previousThinkingPart = vscodeMock.LanguageModelThinkingPart;
   delete (vscodeMock as { LanguageModelThinkingPart?: typeof LanguageModelThinkingPart })

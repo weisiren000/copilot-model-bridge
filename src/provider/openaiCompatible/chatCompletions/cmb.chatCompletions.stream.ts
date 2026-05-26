@@ -64,6 +64,8 @@ export async function consumeSSEStream(
   const activeToolCalls: Record<number, { id: string; name: string; arguments: string }> = {};
   let reasoningBuffer = '';
   let reasoningStreamed = false;
+  let taggedThoughtBuffer = '';
+  let insideTaggedThought = false;
 
   try {
     while (true) {
@@ -96,8 +98,21 @@ export async function consumeSSEStream(
           const delta = chunk.choices?.[0]?.delta;
 
           if (delta?.content) {
-            // Report each text fragment back to VS Code / Copilot Chat
-            progress.report(new vscode.LanguageModelTextPart(delta.content));
+            const parts = splitTaggedThoughtContent(
+              delta.content,
+              insideTaggedThought
+            );
+            insideTaggedThought = parts.insideThought;
+            for (const part of parts.parts) {
+              if (part.kind === 'thinking') {
+                taggedThoughtBuffer += part.value;
+                if (reportThinkingPart(progress, part.value)) {
+                  reasoningStreamed = true;
+                }
+              } else if (part.value) {
+                progress.report(new vscode.LanguageModelTextPart(part.value));
+              }
+            }
           }
           if (delta?.reasoning_content) {
             reasoningBuffer += delta.reasoning_content;
@@ -127,10 +142,11 @@ export async function consumeSSEStream(
     // 优先以 ThinkingPart 形式回报；如果当前 VS Code 不支持 ThinkingPart
     // 或运行时已有片段流过则直接用 DataPart 兜底，让 history 仍能携带
     // reasoning_content 用于多轮 replay。
-    if (reasoningBuffer && !reasoningStreamed) {
+    const fallbackReasoning = reasoningBuffer || taggedThoughtBuffer;
+    if (fallbackReasoning && !reasoningStreamed) {
       try {
         progress.report(new vscode.LanguageModelDataPart(
-          new TextEncoder().encode(reasoningBuffer),
+          new TextEncoder().encode(fallbackReasoning),
           DEEPSEEK_REASONING_MIME
         ));
       } catch {
@@ -151,4 +167,34 @@ export async function consumeSSEStream(
     // Ensure the reader is always released
     reader.releaseLock();
   }
+}
+
+function splitTaggedThoughtContent(
+  value: string,
+  insideThought: boolean
+): {
+  insideThought: boolean;
+  parts: Array<{ kind: 'text' | 'thinking'; value: string }>;
+} {
+  const parts: Array<{ kind: 'text' | 'thinking'; value: string }> = [];
+  let cursor = 0;
+  let thinking = insideThought;
+
+  while (cursor < value.length) {
+    const tag = thinking ? '</think>' : '<think>';
+    const index = value.indexOf(tag, cursor);
+    const end = index === -1 ? value.length : index;
+    const segment = value.slice(cursor, end);
+    if (segment) {
+      parts.push({ kind: thinking ? 'thinking' : 'text', value: segment });
+    }
+    if (index === -1) {
+      cursor = value.length;
+    } else {
+      thinking = !thinking;
+      cursor = index + tag.length;
+    }
+  }
+
+  return { insideThought: thinking, parts };
 }

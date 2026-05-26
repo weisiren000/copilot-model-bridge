@@ -37,10 +37,19 @@ export interface GeminiToolDefinition {
 
 export interface GeminiRequestPatchContext {
   tools?: GeminiToolDefinition[];
+  includeThoughts?: boolean;
 }
 
 export interface GeminiRequestPatch {
   tools?: GeminiToolDefinition[];
+  extra_body?: {
+    google: {
+      thinking_config: {
+        include_thoughts: true;
+      };
+      thought_tag_marker: 'think';
+    };
+  };
 }
 
 export function isGeminiModelId(modelId: string): boolean {
@@ -57,22 +66,50 @@ export function isGeminiRequest(
   return isGeminiProvider(provider) || isGeminiModelId(modelId);
 }
 
+export function resolveGeminiOpenAICompatibleUrl(
+  provider: Pick<ProviderConfig, 'id' | 'baseUrl'>,
+  endpointPath: string
+): string {
+  const baseUrl = trimTrailingSlash(provider.baseUrl);
+  if (!isOfficialGoogleGeminiHost(provider.baseUrl)) {
+    return `${baseUrl}/${trimSlashes(endpointPath)}`;
+  }
+
+  const url = new URL(baseUrl);
+  const segments = url.pathname.split('/').filter(Boolean);
+  if (segments[segments.length - 1] !== 'openai') {
+    segments.push('openai');
+  }
+  url.pathname = `/${segments.join('/')}/${trimSlashes(endpointPath)}`;
+  return url.toString().replace(/\/$/, '');
+}
+
 export function buildGeminiRequestPatch(
   context: GeminiRequestPatchContext
 ): GeminiRequestPatch {
-  if (!context.tools || context.tools.length === 0) {
-    return {};
-  }
-
-  return {
-    tools: context.tools.map(tool => ({
+  const patch: GeminiRequestPatch = {};
+  if (context.tools && context.tools.length > 0) {
+    patch.tools = context.tools.map(tool => ({
       ...tool,
       function: {
         ...tool.function,
         parameters: sanitizeGeminiToolSchema(tool.function.parameters),
       },
-    })),
-  };
+    }));
+  }
+
+  if (context.includeThoughts) {
+    patch.extra_body = {
+      google: {
+        thinking_config: {
+          include_thoughts: true,
+        },
+        thought_tag_marker: 'think',
+      },
+    };
+  }
+
+  return patch;
 }
 
 export function sanitizeGeminiToolSchema(schema: unknown): unknown {
@@ -103,6 +140,24 @@ function isGeminiProvider(provider: Pick<ProviderConfig, 'id' | 'baseUrl'>): boo
   } catch {
     return false;
   }
+}
+
+function isOfficialGoogleGeminiHost(baseUrl: string): boolean {
+  try {
+    const hostname = new URL(baseUrl).hostname.toLowerCase();
+    return hostname === 'generativelanguage.googleapis.com'
+      || hostname.endsWith('.generativelanguage.googleapis.com');
+  } catch {
+    return false;
+  }
+}
+
+function trimTrailingSlash(value: string): string {
+  return value.replace(/\/+$/, '');
+}
+
+function trimSlashes(value: string): string {
+  return value.replace(/^\/+|\/+$/g, '');
 }
 
 function sanitizeSchemaValue(value: unknown): unknown {

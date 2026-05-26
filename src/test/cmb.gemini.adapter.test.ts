@@ -4,6 +4,7 @@ import {
   buildGeminiRequestPatch,
   isGeminiModelId,
   isGeminiRequest,
+  resolveGeminiOpenAICompatibleUrl,
   sanitizeGeminiToolSchema,
 } from '../provider/gemini/cmb.gemini.adapter';
 
@@ -23,6 +24,33 @@ test('detects Gemini requests by provider or model id', () => {
   assert.equal(
     isGeminiRequest({ id: 'openai', baseUrl: 'https://api.openai.com/v1' }, 'gpt-4o'),
     false
+  );
+});
+
+test('resolves official Gemini OpenAI-compatible chat completions URL', () => {
+  assert.equal(
+    resolveGeminiOpenAICompatibleUrl(
+      { id: 'google', baseUrl: 'https://generativelanguage.googleapis.com/v1beta' },
+      'chat/completions'
+    ),
+    'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+  );
+  assert.equal(
+    resolveGeminiOpenAICompatibleUrl(
+      { id: 'google', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/' },
+      'chat/completions'
+    ),
+    'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+  );
+});
+
+test('leaves non-Google Gemini-compatible proxy URLs unchanged', () => {
+  assert.equal(
+    resolveGeminiOpenAICompatibleUrl(
+      { id: 'local-gemini', baseUrl: 'http://localhost:41731/v1' },
+      'chat/completions'
+    ),
+    'http://localhost:41731/v1/chat/completions'
   );
 });
 
@@ -216,4 +244,23 @@ test('builds a Gemini request patch for tool declarations', () => {
       },
     },
   }]);
+});
+
+test('builds a Gemini request patch for thought summaries', () => {
+  const patch = buildGeminiRequestPatch({
+    includeThoughts: true,
+  });
+
+  assert.deepEqual(patch.extra_body, {
+    google: {
+      thinking_config: {
+        include_thoughts: true,
+      },
+      thought_tag_marker: 'think',
+    },
+  });
+});
+
+test('does not request Gemini thought summaries for non-reasoning models', () => {
+  assert.deepEqual(buildGeminiRequestPatch({ includeThoughts: false }), {});
 });

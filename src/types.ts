@@ -101,6 +101,8 @@ export interface ModelConfig {
   supportedReasoningLevels?: ReasoningLevel[];
   /** Default reasoning effort when request does not explicitly set one */
   defaultReasoningLevel?: ReasoningLevel;
+  /** Whether Gemini-compatible requests should ask the provider to include thought summaries */
+  includeThoughts?: boolean;
   /** Human-readable request cost multiplier shown in VS Code model UI */
   multiplier?: string;
   /** Numeric request cost multiplier used by VS Code for cost comparisons */
