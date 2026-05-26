@@ -67,6 +67,22 @@ test('reports output text deltas', async () => {
   assert.deepEqual(reported.map(part => (part as { value: string }).value), ['Hello']);
 });
 
+test('reports reasoning text deltas as thinking parts', async () => {
+  const reported: unknown[] = [];
+  await consumeResponsesSSEStream(streamFrom([
+    'event: response.reasoning_text.delta',
+    'data: {"type":"response.reasoning_text.delta","delta":"think"}',
+    '',
+    'event: response.output_text.delta',
+    'data: {"type":"response.output_text.delta","delta":"answer"}',
+    '',
+  ]), { report: (part: unknown) => reported.push(part) } as never, neverCancelledToken as never);
+
+  assert.equal(reported[0] instanceof LanguageModelThinkingPart, true);
+  assert.equal((reported[0] as LanguageModelThinkingPart).value, 'think');
+  assert.equal((reported[1] as LanguageModelTextPart).value, 'answer');
+});
+
 test('reports final frame when stream ends without trailing blank line', async () => {
   const reported: unknown[] = [];
   await consumeResponsesSSEStream(streamFrom([

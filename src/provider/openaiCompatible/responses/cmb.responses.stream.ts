@@ -64,12 +64,17 @@ function handleBufferedFrame(
     return;
   }
   handleEvent(event, calls, progress);
-  if (event.type === 'response.reasoning_summary_text.delta' && event.delta) {
+  if (isReasoningDeltaEvent(event) && event.delta) {
     reportReasoning(event.delta);
   }
   if (event.type === 'response.failed' || event.type === 'response.incomplete') {
     throw new Error(readResponseError(event));
   }
+}
+
+function isReasoningDeltaEvent(event: ResponsesStreamEvent): boolean {
+  return event.type === 'response.reasoning_summary_text.delta'
+    || event.type === 'response.reasoning_text.delta';
 }
 
 function parseFrame(frame: string): ResponsesStreamEvent | undefined {
