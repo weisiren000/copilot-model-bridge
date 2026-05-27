@@ -256,7 +256,6 @@ test('builds a Gemini request patch for thought summaries', () => {
       thinking_config: {
         include_thoughts: true,
       },
-      thought_tag_marker: 'think',
     },
   });
 });

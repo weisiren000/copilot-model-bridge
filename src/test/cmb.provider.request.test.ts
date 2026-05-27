@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
+import fs from 'node:fs/promises';
 import Module from 'node:module';
+import os from 'node:os';
+import path from 'node:path';
 import { AddressInfo } from 'node:net';
 import type { ProviderConfig } from '../types';
 
@@ -279,7 +282,6 @@ test('requests Gemini thought summaries for reasoning models', async () => {
         thinking_config: {
           include_thoughts: true,
         },
-        thought_tag_marker: 'think',
       },
     });
   } finally {
@@ -343,6 +345,125 @@ test('does not request Gemini thought summaries unless explicitly enabled', asyn
     );
 
     assert.equal(receivedBody?.extra_body, undefined);
+  } finally {
+    server.close();
+  }
+});
+
+test('passes through configured Gemini max_tokens without raising it', async () => {
+  let receivedBody: Record<string, any> | undefined;
+  const server = http.createServer((req, res) => {
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk;
+    });
+    req.on('end', () => {
+      receivedBody = JSON.parse(body);
+      res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+      res.end('data: [DONE]\n\n');
+    });
+  });
+
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address() as AddressInfo;
+  const provider: ProviderConfig = {
+    id: 'local-gemini',
+    displayName: 'Local Gemini',
+    baseUrl: `http://127.0.0.1:${address.port}/v1`,
+    apiKey: 'key',
+    models: [],
+  };
+
+  try {
+    await sendChatRequest(
+      provider,
+      {
+        id: 'gemini-3.5-flash',
+        name: 'Gemini 3.5 Flash',
+        supportsReasoning: true,
+      },
+      {
+        id: 'local-gemini::gemini-3.5-flash',
+        name: 'Gemini 3.5 Flash',
+        family: 'gemini',
+        version: '',
+        maxInputTokens: 1000000,
+        maxOutputTokens: 32,
+        capabilities: {},
+      },
+      [{
+        role: vscodeMock.LanguageModelChatMessageRole.User,
+        content: [new LanguageModelTextPart('hello')],
+      }] as never,
+      { toolMode: 0 } as never,
+      { report() {} },
+      {
+        isCancellationRequested: false,
+        onCancellationRequested: () => ({ dispose() {} }),
+      } as never
+    );
+
+    assert.equal(receivedBody?.max_tokens, 32);
+  } finally {
+    server.close();
+  }
+});
+
+test('uses configured model max_tokens instead of VS Code response metadata', async () => {
+  let receivedBody: Record<string, any> | undefined;
+  const server = http.createServer((req, res) => {
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk;
+    });
+    req.on('end', () => {
+      receivedBody = JSON.parse(body);
+      res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+      res.end('data: [DONE]\n\n');
+    });
+  });
+
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address() as AddressInfo;
+  const provider: ProviderConfig = {
+    id: 'local-gemini',
+    displayName: 'Local Gemini',
+    baseUrl: `http://127.0.0.1:${address.port}/v1`,
+    apiKey: 'key',
+    models: [],
+  };
+
+  try {
+    await sendChatRequest(
+      provider,
+      {
+        id: 'gemini-3.5-flash',
+        name: 'Gemini 3.5 Flash',
+        supportsReasoning: true,
+        maxOutputTokens: 65000,
+      },
+      {
+        id: 'local-gemini::gemini-3.5-flash',
+        name: 'Gemini 3.5 Flash',
+        family: 'gemini',
+        version: '',
+        maxInputTokens: 1000000,
+        maxOutputTokens: 32,
+        capabilities: {},
+      },
+      [{
+        role: vscodeMock.LanguageModelChatMessageRole.User,
+        content: [new LanguageModelTextPart('hello')],
+      }] as never,
+      { toolMode: 0 } as never,
+      { report() {} },
+      {
+        isCancellationRequested: false,
+        onCancellationRequested: () => ({ dispose() {} }),
+      } as never
+    );
+
+    assert.equal(receivedBody?.max_tokens, 65000);
   } finally {
     server.close();
   }
@@ -454,6 +575,122 @@ test('reports gateway timeouts as friendly upstream errors', async () => {
       /上游模型服务暂时不可用 \(HTTP 504\)，请稍后重试。/
     );
   } finally {
+    server.close();
+  }
+});
+
+test('does not expose upstream JSON message in temporary HTTP errors', async () => {
+  const server = http.createServer((req, res) => {
+    req.resume();
+    res.writeHead(503, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      error: {
+        message: 'No available accounts: no available accounts',
+        type: 'api_error',
+      },
+    }));
+  });
+
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address() as AddressInfo;
+  const provider: ProviderConfig = {
+    id: 'local-gemini',
+    displayName: 'Local Gemini',
+    baseUrl: `http://127.0.0.1:${address.port}/v1`,
+    apiKey: 'key',
+    models: [],
+  };
+
+  try {
+    await assert.rejects(
+      sendChatRequest(
+        provider,
+        {
+          id: 'gemini-3.1-pro-preview',
+          name: 'Gemini 3.1 Pro Preview',
+          supportsReasoning: true,
+          maxOutputTokens: 65536,
+        },
+        {
+          id: 'local-gemini::gemini-3.1-pro-preview',
+          name: 'Gemini 3.1 Pro Preview',
+          family: 'gemini',
+          version: '',
+          maxInputTokens: 1000000,
+          maxOutputTokens: 65536,
+          capabilities: {},
+        },
+        [{
+          role: vscodeMock.LanguageModelChatMessageRole.User,
+          content: [new LanguageModelTextPart('hello')],
+        }] as never,
+        { toolMode: 0 } as never,
+        { report() {} },
+        { isCancellationRequested: false, onCancellationRequested: () => ({ dispose() {} }) } as never
+      ),
+      (error: Error) => {
+        assert.match(error.message, /上游模型服务暂时不可用 \(HTTP 503\)，请稍后重试。/);
+        assert.doesNotMatch(error.message, /No available accounts/);
+        return true;
+      }
+    );
+  } finally {
+    server.close();
+  }
+});
+
+test('does not write Gemini failure diagnostics to disk', async () => {
+  const diagnosticsPath = path.join(os.tmpdir(), 'cmb-gemini-last-request.json');
+  await fs.rm(diagnosticsPath, { force: true });
+
+  const server = http.createServer((req, res) => {
+    req.resume();
+    res.writeHead(503, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: { message: 'temporary upstream failure' } }));
+  });
+
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address() as AddressInfo;
+  const provider: ProviderConfig = {
+    id: 'local-gemini',
+    displayName: 'Local Gemini',
+    baseUrl: `http://127.0.0.1:${address.port}/v1`,
+    apiKey: 'key',
+    models: [],
+  };
+
+  try {
+    await assert.rejects(
+      sendChatRequest(
+        provider,
+        {
+          id: 'gemini-3.1-pro-preview',
+          name: 'Gemini 3.1 Pro Preview',
+          supportsReasoning: true,
+          maxOutputTokens: 65536,
+        },
+        {
+          id: 'local-gemini::gemini-3.1-pro-preview',
+          name: 'Gemini 3.1 Pro Preview',
+          family: 'gemini',
+          version: '',
+          maxInputTokens: 1000000,
+          maxOutputTokens: 65536,
+          capabilities: {},
+        },
+        [{
+          role: vscodeMock.LanguageModelChatMessageRole.User,
+          content: [new LanguageModelTextPart('hello')],
+        }] as never,
+        { toolMode: 0 } as never,
+        { report() {} },
+        { isCancellationRequested: false, onCancellationRequested: () => ({ dispose() {} }) } as never
+      )
+    );
+
+    await assert.rejects(fs.stat(diagnosticsPath), { code: 'ENOENT' });
+  } finally {
+    await fs.rm(diagnosticsPath, { force: true });
     server.close();
   }
 });

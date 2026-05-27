@@ -1,5 +1,9 @@
 import * as vscode from 'vscode';
 import { DEEPSEEK_REASONING_MIME } from '../../deepseek/cmb.deepseek.adapter';
+import {
+  GEMINI_THOUGHT_SIGNATURE_MIME,
+  encodeGeminiThoughtSignatureData,
+} from '../../gemini/cmb.gemini.adapter';
 import { OpenAIStreamChunk } from '../../../types';
 
 /**
@@ -61,7 +65,13 @@ export async function consumeSSEStream(
   const decoder = new TextDecoder();
   let buffer = '';
 
-  const activeToolCalls: Record<number, { id: string; name: string; arguments: string }> = {};
+  const activeToolCalls: Record<number, {
+    id: string;
+    name: string;
+    arguments: string;
+    thoughtSignature?: string;
+  }> = {};
+  const textThoughtSignatures: string[] = [];
   let reasoningBuffer = '';
   let reasoningStreamed = false;
   let taggedThoughtBuffer = '';
@@ -120,7 +130,15 @@ export async function consumeSSEStream(
               reasoningStreamed = true;
             }
           }
+          if (delta?.reasoning) {
+            reasoningBuffer += delta.reasoning;
+            if (reportThinkingPart(progress, delta.reasoning)) {
+              reasoningStreamed = true;
+            }
+          }
+          const deltaThoughtSignature = readGoogleThoughtSignature(delta);
           if (delta?.tool_calls) {
+            const firstToolCallIndex = findFirstToolCallIndex(delta.tool_calls);
             for (const tc of delta.tool_calls) {
               // 跳过 index 缺失的异常 tool_call 分片
               if (tc.index === undefined || tc.index === null) { continue; }
@@ -128,10 +146,26 @@ export async function consumeSSEStream(
               if (!activeToolCalls[idx]) {
                 activeToolCalls[idx] = { id: tc.id || `call_${idx}`, name: tc.function?.name || '', arguments: '' };
               }
+              if (tc.id) {
+                activeToolCalls[idx].id = tc.id;
+              }
+              if (tc.function?.name) {
+                activeToolCalls[idx].name = tc.function.name;
+              }
               if (tc.function?.arguments) {
                 activeToolCalls[idx].arguments += tc.function.arguments;
               }
+              const thoughtSignature = readGoogleThoughtSignature(tc);
+              if (thoughtSignature) {
+                activeToolCalls[idx].thoughtSignature = thoughtSignature;
+              }
             }
+            if (deltaThoughtSignature !== undefined && firstToolCallIndex !== undefined) {
+              activeToolCalls[firstToolCallIndex].thoughtSignature = deltaThoughtSignature;
+            }
+          }
+          if (deltaThoughtSignature && !delta?.tool_calls) {
+            textThoughtSignatures.push(deltaThoughtSignature);
           }
         } catch {
           // Malformed JSON line – skip it silently; don't break the stream
@@ -162,11 +196,66 @@ export async function consumeSSEStream(
       if (tc.arguments) {
         try { inputObj = JSON.parse(tc.arguments); } catch { }
       }
+      if (tc.thoughtSignature) {
+        reportGeminiThoughtSignature(progress, {
+          toolCallId: tc.id,
+          thoughtSignature: tc.thoughtSignature,
+        });
+      }
       progress.report(new vscode.LanguageModelToolCallPart(tc.id, tc.name, inputObj));
+    }
+    for (const thoughtSignature of textThoughtSignatures) {
+      reportGeminiThoughtSignature(progress, { thoughtSignature });
     }
     // Ensure the reader is always released
     reader.releaseLock();
   }
+}
+
+function reportGeminiThoughtSignature(
+  progress: vscode.Progress<vscode.LanguageModelResponsePart>,
+  data: { thoughtSignature: string; toolCallId?: string }
+): void {
+  try {
+    progress.report(new vscode.LanguageModelDataPart(
+      encodeGeminiThoughtSignatureData(data),
+      GEMINI_THOUGHT_SIGNATURE_MIME
+    ));
+  } catch {
+    // 签名旁路不能影响正常文本或 tool call 回报。
+  }
+}
+
+function readGoogleThoughtSignature(value: unknown): string | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  const extraContent = value.extra_content;
+  if (!isRecord(extraContent)) {
+    return undefined;
+  }
+  const google = extraContent.google;
+  if (!isRecord(google)) {
+    return undefined;
+  }
+  return typeof google.thought_signature === 'string'
+    ? google.thought_signature
+    : undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function findFirstToolCallIndex(
+  toolCalls: Array<{ index?: number | null }>
+): number | undefined {
+  for (const toolCall of toolCalls) {
+    if (toolCall.index !== undefined && toolCall.index !== null) {
+      return toolCall.index;
+    }
+  }
+  return undefined;
 }
 
 function splitTaggedThoughtContent(

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import Module from 'node:module';
 import { DEEPSEEK_REASONING_MIME } from '../provider/deepseek/cmb.deepseek.adapter';
+import { GEMINI_THOUGHT_SIGNATURE_MIME } from '../provider/gemini/cmb.gemini.adapter';
 
 class CancellationTokenSource {
   readonly token = {
@@ -106,6 +107,20 @@ test('streams reasoning content as thinking parts when available', async () => {
   assert.equal((parts[0] as LanguageModelThinkingPart).value, 'because');
 });
 
+test('streams Gemini reasoning field as thinking parts', async () => {
+  const parts = await collectStreamParts([
+    'data: {"choices":[{"delta":{"reasoning":"thinking step"},"finish_reason":null}]}',
+    'data: {"choices":[{"delta":{"content":"final answer"},"finish_reason":null}]}',
+    'data: [DONE]',
+  ]);
+
+  assert.equal(parts.length, 2);
+  assert.ok(parts[0] instanceof LanguageModelThinkingPart);
+  assert.equal((parts[0] as LanguageModelThinkingPart).value, 'thinking step');
+  assert.ok(parts[1] instanceof LanguageModelTextPart);
+  assert.equal((parts[1] as LanguageModelTextPart).value, 'final answer');
+});
+
 test('streams Gemini tagged thoughts as thinking parts', async () => {
   const parts = await collectStreamParts([
     'data: {"choices":[{"delta":{"content":"<think>plan"},"finish_reason":null}]}',
@@ -155,4 +170,44 @@ test('flushes streamed tool call arguments at the end of the response', async ()
   assert.equal((parts[0] as LanguageModelToolCallPart).callId, 'call-1');
   assert.equal((parts[0] as LanguageModelToolCallPart).name, 'read_file');
   assert.deepEqual((parts[0] as LanguageModelToolCallPart).input, { path: 'README.md' });
+});
+
+test('preserves Gemini tool call thought signatures as data parts', async () => {
+  const parts = await collectStreamParts([
+    'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call-1","function":{"name":"read_file","arguments":"{}"},"extra_content":{"google":{"thought_signature":"sig-1"}}}]},"finish_reason":null}]}',
+    'data: [DONE]',
+  ]);
+
+  assert.equal(parts.length, 2);
+  assert.ok(parts[0] instanceof LanguageModelDataPart);
+  assert.equal(
+    (parts[0] as LanguageModelDataPart).mimeType,
+    GEMINI_THOUGHT_SIGNATURE_MIME
+  );
+  assert.deepEqual(
+    JSON.parse(new TextDecoder().decode((parts[0] as LanguageModelDataPart).data)),
+    {
+      toolCallId: 'call-1',
+      thoughtSignature: 'sig-1',
+    }
+  );
+  assert.ok(parts[1] instanceof LanguageModelToolCallPart);
+  assert.equal((parts[1] as LanguageModelToolCallPart).callId, 'call-1');
+});
+
+test('maps Gemini delta-level thought signatures to the first tool call in the chunk', async () => {
+  const parts = await collectStreamParts([
+    'data: {"choices":[{"delta":{"extra_content":{"google":{"thought_signature":"sig-1"}},"tool_calls":[{"index":0,"id":"call-1","function":{"name":"read_file","arguments":"{}"}}]},"finish_reason":null}]}',
+    'data: [DONE]',
+  ]);
+
+  assert.equal(parts.length, 2);
+  assert.ok(parts[0] instanceof LanguageModelDataPart);
+  assert.deepEqual(
+    JSON.parse(new TextDecoder().decode((parts[0] as LanguageModelDataPart).data)),
+    {
+      toolCallId: 'call-1',
+      thoughtSignature: 'sig-1',
+    }
+  );
 });

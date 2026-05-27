@@ -6,6 +6,7 @@
   function renderProviderInspector(provider) {
     const e = CMB.escapeAttr;
     const h = CMB.escapeHtml;
+    const apiStyle = provider.apiStyle === 'responses' ? 'responses' : 'chat';
     return `
     <div class="inspector-head">
       <div>
@@ -34,6 +35,14 @@
         <div class="field wide">
           <label>API Key</label>
           <input type="password" data-scope="provider" data-key="apiKey" value="${e(provider.apiKey)}" placeholder="留空表示无需认证">
+        </div>
+        <div class="field wide">
+          <label>API Style</label>
+          <select data-scope="provider" data-key="apiStyle">
+            <option value="chat" ${apiStyle === 'chat' ? 'selected' : ''}>Chat Completions（/chat/completions）</option>
+            <option value="responses" ${apiStyle === 'responses' ? 'selected' : ''}>Responses（/responses）</option>
+          </select>
+          <small>仅在 Provider 明确支持 Responses 协议时切换，否则保持 Chat。</small>
         </div>
       </div>
     </div>`;

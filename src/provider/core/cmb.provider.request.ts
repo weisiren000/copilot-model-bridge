@@ -1,7 +1,4 @@
 import * as vscode from 'vscode';
-import * as fs from 'node:fs/promises';
-import * as os from 'node:os';
-import * as path from 'node:path';
 import { resolveReasoningLevel } from '../openaiCompatible';
 import {
   buildChatRequestBody,
@@ -45,6 +42,7 @@ export async function sendChatRequest(
     supportedReasoningLevels?: ReasoningLevel[];
     includeThoughts?: boolean;
     toolChoiceMode?: ToolChoiceMode;
+    maxOutputTokens?: number;
   },
   model: vscode.LanguageModelChatInformation,
   messages: readonly vscode.LanguageModelChatRequestMessage[],
@@ -52,9 +50,11 @@ export async function sendChatRequest(
   progress: vscode.Progress<vscode.LanguageModelResponsePart>,
   token: vscode.CancellationToken
 ): Promise<void> {
+  const isGemini = isGeminiRequest(provider, selectedModel.id);
   const apiMessages = convertMessages(messages, {
     supportsVideo: selectedModel.supportsVideo,
     supportsFileInput: selectedModel.supportsFileInput,
+    isGemini,
   });
   if (hasImageInput(messages) && !selectedModel.supportsVision) {
     throw new Error(
@@ -100,6 +100,7 @@ interface RequestContext {
     supportedReasoningLevels?: ReasoningLevel[];
     includeThoughts?: boolean;
     toolChoiceMode?: ToolChoiceMode;
+    maxOutputTokens?: number;
   };
   model: vscode.LanguageModelChatInformation;
   apiMessages: Array<any>;
@@ -128,7 +129,10 @@ async function sendChatCompletionsRequest(context: RequestContext): Promise<void
   const requestBody = buildChatRequestBody({
     modelId: selectedModel.id,
     messages: apiMessages,
-    maxOutputTokens: resolveRequestMaxTokens(model.maxOutputTokens, isDeepSeek),
+    maxOutputTokens: resolveRequestMaxTokens(
+      resolveConfiguredMaxOutputTokens(selectedModel, model),
+      { isDeepSeek }
+    ),
     supportsReasoning: selectedModel.supportsReasoning,
     defaultReasoningLevel: selectedModel.defaultReasoningLevel,
     supportedReasoningLevels: selectedModel.supportedReasoningLevels,
@@ -185,7 +189,7 @@ async function sendResponsesRequest(context: RequestContext): Promise<void> {
     modelId: selectedModel.id,
     input: responsesInput.input,
     instructions: responsesInput.instructions,
-    maxOutputTokens: resolveRequestMaxTokens(model.maxOutputTokens, false),
+    maxOutputTokens: resolveRequestMaxTokens(resolveConfiguredMaxOutputTokens(selectedModel, model), {}),
     reasoningEffort,
     toolOptions: buildResponsesToolOptions(options, selectedModel.toolChoiceMode),
   });
@@ -227,14 +231,6 @@ async function postAndConsumeStream(options: PostStreamOptions): Promise<void> {
     );
     if (!response.ok) {
       const errorText = await response.text();
-      if (options.isGemini) {
-        await writeGeminiFailureDiagnostics(
-          options.requestUrl,
-          response.status,
-          errorText,
-          options.requestBody
-        );
-      }
       throw createHttpError(options.requestUrl, response.status, errorText);
     }
     if (!response.body) {
@@ -255,28 +251,6 @@ function resolveApiStyle(provider: Pick<ProviderConfig, 'apiStyle'>): 'chat' | '
   return provider.apiStyle === 'responses' ? 'responses' : 'chat';
 }
 
-async function writeGeminiFailureDiagnostics(
-  requestUrl: string,
-  status: number,
-  responseText: string,
-  requestBody: Record<string, unknown>
-): Promise<void> {
-  try {
-    const diagnosticsPath = path.join(os.tmpdir(), 'cmb-gemini-last-request.json');
-    const payload = {
-      timestamp: new Date().toISOString(),
-      requestUrl,
-      status,
-      responseText,
-      requestBody,
-    };
-    await fs.writeFile(diagnosticsPath, JSON.stringify(payload, null, 2), 'utf8');
-    console.log(`[copilot-model-bridge] Gemini request diagnostics written to ${diagnosticsPath}`);
-  } catch (err) {
-    console.log('[copilot-model-bridge] Failed to write Gemini diagnostics', err);
-  }
-}
-
 function applyGeminiRequestPatch(
   requestBody: Record<string, unknown>,
   includeThoughts: boolean | undefined
@@ -294,14 +268,28 @@ function applyGeminiRequestPatch(
   }
 }
 
-function resolveRequestMaxTokens(maxOutputTokens: number, isDeepSeek: boolean): number {
-  if (isDeepSeek) {
+function resolveRequestMaxTokens(
+  maxOutputTokens: number,
+  options: { isDeepSeek?: boolean }
+): number {
+  if (options.isDeepSeek) {
     return getDeepSeekMaxOutputTokens(maxOutputTokens);
   }
+  return normalizeRequestMaxTokens(maxOutputTokens);
+}
+
+function normalizeRequestMaxTokens(maxOutputTokens: number): number {
   if (!Number.isFinite(maxOutputTokens) || maxOutputTokens < 1) {
     return 1;
   }
   return Math.floor(maxOutputTokens);
+}
+
+function resolveConfiguredMaxOutputTokens(
+  selectedModel: { maxOutputTokens?: number },
+  model: vscode.LanguageModelChatInformation
+): number {
+  return selectedModel.maxOutputTokens ?? model.maxOutputTokens;
 }
 
 function applyDeepSeekRequestPatch(

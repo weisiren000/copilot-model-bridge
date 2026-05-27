@@ -27,6 +27,7 @@ const COPILOT_METADATA_MIME_TYPES = new Set([
   'phase_data',
   'response_output_message_id',
   'application/x-deepseek-reasoning',
+  'application/x-gemini-thought-signature',
 ]);
 
 export function createOpenAIImagePart(data: Uint8Array, mimeType: string): OpenAIImageContentPart {

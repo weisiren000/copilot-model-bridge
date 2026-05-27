@@ -9,6 +9,20 @@
 
 import { ProviderConfig } from '../../types';
 
+export const GEMINI_THOUGHT_SIGNATURE_MIME = 'application/x-gemini-thought-signature';
+
+/**
+ * Dummy thought signature used as a last resort when reusing tool calls that
+ * never received a real signature (legacy history, cross-model migrations, or
+ * streams where the upstream proxy stripped extra_content).
+ *
+ * Documented by Google as a way to bypass strict validation for Gemini 3
+ * function calling, with the trade-off of degraded reasoning quality.
+ *
+ * Source: https://ai.google.dev/gemini-api/docs/thought-signatures
+ */
+export const GEMINI_DUMMY_THOUGHT_SIGNATURE = 'skip_thought_signature_validator';
+
 const SUPPORTED_SCHEMA_KEYS = new Set([
   'description',
   'enum',
@@ -47,9 +61,41 @@ export interface GeminiRequestPatch {
       thinking_config: {
         include_thoughts: true;
       };
-      thought_tag_marker: 'think';
     };
   };
+}
+
+export interface GeminiThoughtSignatureData {
+  thoughtSignature: string;
+  toolCallId?: string;
+}
+
+export function encodeGeminiThoughtSignatureData(
+  data: GeminiThoughtSignatureData
+): Uint8Array {
+  return new TextEncoder().encode(JSON.stringify(data));
+}
+
+export function decodeGeminiThoughtSignatureDataPart(
+  data: Uint8Array,
+  mimeType: string | undefined
+): GeminiThoughtSignatureData | undefined {
+  if (!mimeType || mimeType.toLowerCase() !== GEMINI_THOUGHT_SIGNATURE_MIME) {
+    return undefined;
+  }
+
+  try {
+    const parsed = JSON.parse(new TextDecoder().decode(data)) as Partial<GeminiThoughtSignatureData>;
+    if (typeof parsed.thoughtSignature !== 'string' || !parsed.thoughtSignature) {
+      return undefined;
+    }
+    return {
+      thoughtSignature: parsed.thoughtSignature,
+      toolCallId: typeof parsed.toolCallId === 'string' ? parsed.toolCallId : undefined,
+    };
+  } catch {
+    return undefined;
+  }
 }
 
 export function isGeminiModelId(modelId: string): boolean {
@@ -104,7 +150,6 @@ export function buildGeminiRequestPatch(
         thinking_config: {
           include_thoughts: true,
         },
-        thought_tag_marker: 'think',
       },
     };
   }

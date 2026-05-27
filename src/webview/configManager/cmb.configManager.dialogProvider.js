@@ -28,6 +28,7 @@
     CMB.el('dialog-base-url').value = preset.baseUrl;
     CMB.el('dialog-api-key').value = '';
     CMB.el('dialog-api-key').placeholder = preset.apiKeyHint;
+    CMB.el('dialog-api-style').value = preset.apiStyle || 'chat';
   }
 
   function openProviderDialog() {
@@ -37,6 +38,7 @@
     CMB.el('dialog-api-key').value = '';
     CMB.el('dialog-import').value = '';
     CMB.el('preset-select').value = '';
+    CMB.el('dialog-api-style').value = 'chat';
     CMB.openModal(CMB.el('provider-modal'));
   }
 
@@ -59,6 +61,7 @@
         displayName: fields.displayName,
         baseUrl: fields.baseUrl,
         apiKey: fields.apiKey,
+        apiStyle: fields.apiStyle,
         models: [],
       },
       initialModels,
@@ -72,6 +75,7 @@
       id: CMB.el('dialog-provider-id').value.trim(),
       baseUrl: CMB.el('dialog-base-url').value.trim(),
       apiKey: CMB.el('dialog-api-key').value,
+      apiStyle: CMB.el('dialog-api-style').value || 'chat',
       importJsonStr: CMB.el('dialog-import').value.trim(),
     };
   }

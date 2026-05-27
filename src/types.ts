@@ -148,6 +148,11 @@ export interface OpenAIStreamChunk {
       content?: string;
       /** DeepSeek thinking mode 输出的思考链片段 */
       reasoning_content?: string;
+      /**
+       * Gemini OpenAI 兼容端点 / OpenRouter 等平台输出思考摘要时使用的字段，
+       * 与 reasoning_content 同义，分两套字段是为了兼容不同上游协议。
+       */
+      reasoning?: string;
       tool_calls?: Array<{
         index: number;
         id?: string;
@@ -156,7 +161,17 @@ export interface OpenAIStreamChunk {
            name?: string;
            arguments?: string;
         };
+        extra_content?: {
+          google?: {
+            thought_signature?: string;
+          };
+        };
       }>;
+      extra_content?: {
+        google?: {
+          thought_signature?: string;
+        };
+      };
     };
     finish_reason: string | null;
   }>;

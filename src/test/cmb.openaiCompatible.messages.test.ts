@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import Module from 'node:module';
 import { DEEPSEEK_REASONING_MIME } from '../provider/deepseek/cmb.deepseek.adapter';
+import { GEMINI_THOUGHT_SIGNATURE_MIME } from '../provider/gemini/cmb.gemini.adapter';
 
 class LanguageModelTextPart {
   constructor(readonly value: string) {}
@@ -154,6 +155,104 @@ test('converts assistant tool calls and following tool results', () => {
       tool_call_id: 'call-1',
       name: 'read_file',
       content: 'file contents',
+    },
+  ]);
+});
+
+test('injects Gemini thought signatures into matching tool calls', () => {
+  const messages = [
+    {
+      role: vscodeMock.LanguageModelChatMessageRole.Assistant,
+      name: undefined,
+      content: [
+        new LanguageModelDataPart(
+          new TextEncoder().encode(JSON.stringify({
+            toolCallId: 'call-1',
+            thoughtSignature: 'sig-1',
+          })),
+          GEMINI_THOUGHT_SIGNATURE_MIME
+        ),
+        new LanguageModelToolCallPart('call-1', 'read_file', { path: 'README.md' }),
+      ],
+    },
+  ];
+
+  assert.deepEqual(convertMessages(messages, {}), [
+    {
+      role: 'assistant',
+      content: null,
+      tool_calls: [{
+        id: 'call-1',
+        type: 'function',
+        function: {
+          name: 'read_file',
+          arguments: '{"path":"README.md"}',
+        },
+        extra_content: {
+          google: {
+            thought_signature: 'sig-1',
+          },
+        },
+      }],
+    },
+  ]);
+});
+
+test('injects dummy thought signature for Gemini tool calls without history signatures', () => {
+  const messages = [
+    {
+      role: vscodeMock.LanguageModelChatMessageRole.Assistant,
+      name: undefined,
+      content: [
+        new LanguageModelToolCallPart('call-1', 'read_file', { path: 'README.md' }),
+      ],
+    },
+  ];
+
+  assert.deepEqual(convertMessages(messages, { isGemini: true }), [
+    {
+      role: 'assistant',
+      content: null,
+      tool_calls: [{
+        id: 'call-1',
+        type: 'function',
+        function: {
+          name: 'read_file',
+          arguments: '{"path":"README.md"}',
+        },
+        extra_content: {
+          google: {
+            thought_signature: 'skip_thought_signature_validator',
+          },
+        },
+      }],
+    },
+  ]);
+});
+
+test('does not inject dummy thought signature for non-Gemini providers', () => {
+  const messages = [
+    {
+      role: vscodeMock.LanguageModelChatMessageRole.Assistant,
+      name: undefined,
+      content: [
+        new LanguageModelToolCallPart('call-1', 'read_file', { path: 'README.md' }),
+      ],
+    },
+  ];
+
+  assert.deepEqual(convertMessages(messages, {}), [
+    {
+      role: 'assistant',
+      content: null,
+      tool_calls: [{
+        id: 'call-1',
+        type: 'function',
+        function: {
+          name: 'read_file',
+          arguments: '{"path":"README.md"}',
+        },
+      }],
     },
   ]);
 });

@@ -79,6 +79,7 @@ test('renders provider, model, validation, import, and save controls by element 
     'health',
     'providers',
     'models',
+    'dialog-api-style',
   ]) {
     assert.match(html, new RegExp(`id="${id}"`));
   }

@@ -1,6 +1,10 @@
 import * as vscode from 'vscode';
 import { decodeReasoningDataPart } from '../../deepseek/cmb.deepseek.adapter';
 import {
+  decodeGeminiThoughtSignatureDataPart,
+  GEMINI_DUMMY_THOUGHT_SIGNATURE,
+} from '../../gemini/cmb.gemini.adapter';
+import {
   buildOpenAIContent,
   createOpenAIDataPartContent,
   OpenAIContentPart,
@@ -55,6 +59,11 @@ export function convertMessages(
   attachmentPolicy: {
     supportsVideo?: boolean;
     supportsFileInput?: boolean;
+    /**
+     * 当请求目标是 Gemini 时设为 true，重放 tool_calls 时如果历史里没有对应
+     * thought_signature DataPart，会注入官方文档允许的 dummy 签名以避免 400。
+     */
+    isGemini?: boolean;
   }
 ): Array<any> {
   const result: any[] = [];
@@ -68,6 +77,7 @@ export function convertMessages(
     const toolCalls: any[] = [];
     const toolResults: any[] = [];
     let reasoningContent = '';
+    const geminiToolCallSignatures = collectGeminiToolCallSignatures(msg.content);
 
     for (const part of msg.content) {
       if (part instanceof vscode.LanguageModelTextPart) {
@@ -78,6 +88,10 @@ export function convertMessages(
         const reasoning = decodeReasoningDataPart(part.data, part.mimeType);
         if (reasoning !== undefined) {
           reasoningContent += reasoning;
+          continue;
+        }
+        const geminiSignature = decodeGeminiThoughtSignatureDataPart(part.data, part.mimeType);
+        if (geminiSignature !== undefined) {
           continue;
         }
         dataContent.push(...createOpenAIDataPartContent(part.data, part.mimeType, attachmentPolicy));
@@ -91,6 +105,24 @@ export function convertMessages(
             arguments: typeof part.input === 'string' ? part.input : JSON.stringify(part.input)
           }
         });
+        const thoughtSignature = geminiToolCallSignatures[part.callId];
+        if (thoughtSignature) {
+          toolCalls[toolCalls.length - 1].extra_content = {
+            google: {
+              thought_signature: thoughtSignature,
+            },
+          };
+        } else if (attachmentPolicy.isGemini) {
+          // Gemini 3 strict validation 要求当前 turn 内每个 step 的第一个
+          // function call 必须带 thought_signature；缺签名直接报 400。
+          // 历史里没有真签名时（旧会话、跨模型迁移），用官方文档允许的
+          // dummy 值 skip_thought_signature_validator 兜底。
+          toolCalls[toolCalls.length - 1].extra_content = {
+            google: {
+              thought_signature: GEMINI_DUMMY_THOUGHT_SIGNATURE,
+            },
+          };
+        }
       } else if (part instanceof vscode.LanguageModelToolResultPart) {
         let resultStr = '';
         for (const resPart of part.content) {
@@ -139,6 +171,22 @@ export function convertMessages(
           }
         }
       }
+    }
+  }
+  return result;
+}
+
+function collectGeminiToolCallSignatures(
+  parts: readonly vscode.LanguageModelInputPart[] | readonly unknown[]
+): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const part of parts) {
+    if (!(part instanceof vscode.LanguageModelDataPart)) {
+      continue;
+    }
+    const data = decodeGeminiThoughtSignatureDataPart(part.data, part.mimeType);
+    if (data?.toolCallId) {
+      result[data.toolCallId] = data.thoughtSignature;
     }
   }
   return result;
