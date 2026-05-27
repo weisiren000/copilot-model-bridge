@@ -12,6 +12,7 @@
   <a href="https://marketplace.visualstudio.com/items?itemName=weisiren.cmb-copilot-model-bridge">
     <img src="https://img.shields.io/badge/VS%20Code-Marketplace-007ACC?style=flat-square&logo=visualstudiocode&logoColor=white" alt="VS Code Marketplace">
   </a>
+  <img src="https://img.shields.io/badge/Version-1.1.0-4C8BF5?style=flat-square" alt="Version 1.1.0">
   <img src="https://img.shields.io/badge/VS%20Code-%5E1.99.0-007ACC?style=flat-square" alt="VS Code 1.99.0+">
   <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
 </p>
@@ -22,35 +23,60 @@
 
 ![Copilot Model Bridge 配置界面](images/screenshot.png)
 
-Copilot Model Bridge 会把你配置的模型注册到 Copilot Chat 模型选择器中。只要服务兼容 OpenAI Chat Completions 流式接口，就可以接入，例如 Ollama、LM Studio、vLLM、NVIDIA NIM、Groq、OpenRouter、Together AI 等。
+Copilot Model Bridge 会把你自己的模型服务注册到 GitHub Copilot Chat 的模型选择器中，让 Ollama、LM Studio、vLLM、NVIDIA NIM、Groq、OpenRouter、Together AI、DeepSeek、Gemini 兼容网关等模型像内置模型一样使用。
 
-## 功能
+> [!IMPORTANT]
+> 这个扩展依赖 VS Code 的语言模型 Provider 能力。请使用 VS Code `1.99.0` 或更高版本，并确保当前 VS Code / GitHub Copilot 环境允许第三方语言模型 Provider。
 
-- 多 provider、多模型统一管理
-- 支持 `/chat/completions` 流式响应
-- 每个 provider 独立 Base URL 和 API Key
-- 支持工具调用、编辑工具提示、视觉输入能力开关
-- 支持 reasoning 模型的 Thinking Effort 配置
-- 提供可视化配置管理器，也保留命令面板向导
+## 适合谁
+
+- 想在 Copilot Chat 里使用本地模型、私有网关或自建 OpenAI 兼容服务的开发者
+- 想集中管理多个模型服务、多个模型和不同上下文长度配置的用户
+- 想测试支持工具调用、视觉输入、reasoning / thinking 输出的模型能力
+- 想在 Copilot Chat 体验中复用 BYOK 或内网模型资源的团队
+
+## 核心功能
+
+- **多 Provider 管理**：为每个服务配置独立的名称、Base URL、API Key 和模型列表
+- **Chat Completions 模式**：支持 OpenAI 兼容的流式对话服务
+- **Responses 模式**：可为支持 Responses 风格的服务切换请求模式
+- **Gemini 兼容增强**：优化 Gemini 兼容服务的地址识别、工具声明、思考内容和多轮工具调用体验
+- **Reasoning 展示**：支持 reasoning / thinking 内容的流式展示与最终摘要
+- **工具调用能力**：按模型声明工具调用、编辑工具偏好和 Agent 模式提示能力
+- **多模态开关**：按模型声明图片、视频、文件输入能力；不支持的输入会给出清晰错误
+- **可视化配置管理器**：通过 Webview 管理 Provider 和模型，也支持命令面板向导
+- **模型元数据**：配置上下文长度、输出上限、倍率标签、模型家族、分类和状态图标
+
+## v1.1.0 更新重点
+
+- 新增 `chat` / `responses` 请求模式选择
+- 优化 Gemini 兼容服务的工具调用、思考内容和签名续传体验
+- 优化 reasoning 内容在 Copilot Chat 中的展示
+- 模型请求输出上限优先使用用户配置值
+- 临时上游故障提示更友好，避免暴露底层服务内部信息
+- 失败请求不再默认写入本地诊断文件，降低敏感内容残留风险
 
 ## 要求
 
 | 项目 | 要求 |
 | --- | --- |
 | VS Code | `1.99.0` 或更高 |
-| GitHub Copilot | 个人版 Copilot Chat |
-| 模型服务 | 兼容 OpenAI `/chat/completions`，并支持流式返回 |
+| GitHub Copilot | 可使用 Copilot Chat 的账号 |
+| 模型服务 | OpenAI 兼容流式接口，或支持本扩展可选的 Responses 模式 |
 
 > [!NOTE]
-> 如果当前 VS Code 或组织策略禁用了语言模型 provider 能力，扩展可以安装，但模型可能不会出现在 Copilot Chat 中。
+> 不同模型服务对工具调用、reasoning、图片输入和 Responses 模式的支持程度不同。建议先用一个基础文本模型验证连通性，再逐步开启高级能力。
 
 ## 快速开始
 
-1. 安装 [Copilot Model Bridge](https://marketplace.visualstudio.com/items?itemName=weisiren.cmb-copilot-model-bridge)。
+1. 安装扩展，或通过 VSIX 手动安装。
 2. 打开命令面板，运行 `Copilot Model Bridge: Open Config Manager`。
-3. 新增 provider，填写名称、Provider ID、Base URL 和 API Key。
-4. 在该 provider 下新增模型，填写模型 ID、显示名称、token 限制和能力开关。
-5. 打开 Copilot Chat，在模型选择器中选择刚添加的模型。
+3. 新增 Provider，填写 Provider ID、显示名称、Base URL、API Key。
+4. 选择请求模式：
+   - `chat`：适用于常见 OpenAI 兼容 Chat Completions 服务
+   - `responses`：适用于支持 Responses 风格请求和流式事件的服务
+5. 在该 Provider 下新增模型，填写模型 ID、显示名称、输入/输出 token 上限和能力开关。
+6. 打开 Copilot Chat，在模型选择器中选择刚添加的模型。
 
 模型会以 `<模型名> (<Provider 名>)` 的形式显示，例如：
 
@@ -60,7 +86,9 @@ Kimi K2.5 (NVIDIA NIM)
 
 ## 配置示例
 
-推荐使用配置管理器编辑。需要手写配置时，可在 VS Code Settings JSON 中使用 `copilot-model-bridge.providers`：
+推荐使用配置管理器编辑。需要手写配置时，可在 VS Code Settings JSON 中配置 `copilot-model-bridge.providers`。
+
+### 本地 Ollama
 
 ```json
 {
@@ -70,6 +98,7 @@ Kimi K2.5 (NVIDIA NIM)
       "displayName": "Ollama",
       "baseUrl": "http://localhost:11434/v1",
       "apiKey": "",
+      "apiStyle": "chat",
       "models": [
         {
           "id": "llama3.2",
@@ -86,7 +115,31 @@ Kimi K2.5 (NVIDIA NIM)
 }
 ```
 
-常用 Base URL：
+### 支持 reasoning 的模型
+
+```json
+{
+  "id": "reasoning-provider",
+  "displayName": "Reasoning Gateway",
+  "baseUrl": "https://example.com/v1",
+  "apiKey": "YOUR_API_KEY",
+  "apiStyle": "chat",
+  "models": [
+    {
+      "id": "reasoning-model",
+      "name": "Reasoning Model",
+      "maxInputTokens": 128000,
+      "maxOutputTokens": 8192,
+      "supportsToolCalling": true,
+      "supportsReasoning": true,
+      "supportedReasoningLevels": ["low", "medium", "high"],
+      "defaultReasoningLevel": "medium"
+    }
+  ]
+}
+```
+
+## 常用 Base URL
 
 | 服务 | Base URL |
 | --- | --- |
@@ -97,16 +150,63 @@ Kimi K2.5 (NVIDIA NIM)
 | OpenRouter | `https://openrouter.ai/api/v1` |
 | Together AI | `https://api.together.xyz/v1` |
 
+## 模型能力字段
+
+| 字段 | 说明 |
+| --- | --- |
+| `maxInputTokens` | 模型最大输入 token 数 |
+| `maxOutputTokens` | 请求发送给上游的最大输出 token 数 |
+| `supportsToolCalling` | 是否声明支持工具调用 |
+| `supportsEditTools` | 是否为 Copilot Agent 模式暴露编辑工具提示 |
+| `preferredEditTools` | 偏好的编辑工具类型 |
+| `toolChoiceMode` | 工具选择策略：`auto`、`required`、`none`、`omit` |
+| `supportsVision` | 是否支持图片输入 |
+| `supportsVideo` | 是否声明支持视频附件 |
+| `supportsFileInput` | 是否声明支持非图片文件输入 |
+| `supportsReasoning` | 是否显示 Thinking Effort 配置 |
+| `supportedReasoningLevels` | 可选 reasoning 档位 |
+| `defaultReasoningLevel` | 默认 reasoning 档位 |
+| `multiplier` / `multiplierNumeric` | VS Code 模型 UI 中展示的倍率标签 |
+
 ## 常用命令
 
 | 命令 | 用途 |
 | --- | --- |
 | `Copilot Model Bridge: Open Config Manager` | 打开可视化配置管理器 |
-| `Copilot Model Bridge: Add Provider` | 新增 provider |
+| `Copilot Model Bridge: Quick Manage Providers` | 快速管理 Provider |
+| `Copilot Model Bridge: Add Provider` | 新增 Provider |
+| `Copilot Model Bridge: Remove Provider` | 删除 Provider |
 | `Copilot Model Bridge: Add Model` | 新增模型 |
+| `Copilot Model Bridge: Edit Model` | 编辑模型 |
+| `Copilot Model Bridge: Duplicate Model` | 复制模型配置 |
 | `Copilot Model Bridge: Import Models from JSON` | 从 JSON 导入模型 |
 | `Copilot Model Bridge: Validate Provider Config` | 检查配置问题 |
-| `Copilot Model Bridge: List Providers` | 查看已配置 provider 和模型 |
+| `Copilot Model Bridge: List Providers` | 查看已配置 Provider 和模型 |
+
+## 手动安装 VSIX
+
+如果你拿到的是 `.vsix` 文件：
+
+1. 打开 VS Code Extensions 视图。
+2. 点击右上角 `...`。
+3. 选择 `Install from VSIX...`。
+4. 选择 `cmb-copilot-model-bridge-1.1.0.vsix`。
+
+也可以使用命令行：
+
+```bash
+code --install-extension cmb-copilot-model-bridge-1.1.0.vsix
+```
+
+## 排查建议
+
+| 现象 | 建议 |
+| --- | --- |
+| 模型没有出现在 Copilot Chat | 确认 VS Code 版本、Copilot Chat 可用性，以及第三方语言模型 Provider 能力是否可用 |
+| 请求失败或无响应 | 先检查 Base URL、API Key、模型 ID 和服务是否支持流式响应 |
+| 工具调用失败 | 关闭 `supportsToolCalling` 验证基础对话，再逐步开启工具调用 |
+| 图片或文件输入失败 | 确认模型能力字段和上游服务实际支持范围一致 |
+| reasoning 不显示 | 确认模型启用了 `supportsReasoning`，并配置了合适的 reasoning 档位 |
 
 ## 本地开发
 
