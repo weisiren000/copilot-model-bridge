@@ -98,11 +98,12 @@ test('builds Anthropic headers with x-api-key and version header', () => {
   const {
     buildAnthropicRequestHeaders,
   } = require('../provider/anthropic/cmb.anthropic.headers') as typeof import('../provider/anthropic/cmb.anthropic.headers');
+  const { USER_AGENT } = require('../provider/cmb.branding') as typeof import('../provider/cmb.branding');
 
   assert.deepEqual(buildAnthropicRequestHeaders({ apiKey: 'secret' }), {
     'Content-Type': 'application/json',
     'Accept': 'text/event-stream',
-    'User-Agent': 'Copilot Model Bridge',
+    'User-Agent': USER_AGENT,
     'X-Api-Key': 'secret',
     'anthropic-version': '2023-06-01',
   });

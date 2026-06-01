@@ -1,8 +1,8 @@
 import { ProviderConfig } from '../../types';
+import { PRODUCT_NAME, USER_AGENT } from '../cmb.branding';
 
-const DEFAULT_USER_AGENT = 'Copilot Model Bridge';
 const OPENROUTER_APP_URL = 'https://github.com/weisiren000/copilot-model-bridge';
-const OPENROUTER_APP_TITLE = 'Copilot Model Bridge';
+const OPENROUTER_APP_TITLE = PRODUCT_NAME;
 
 export function buildChatRequestHeaders(
   provider: Pick<ProviderConfig, 'baseUrl' | 'apiKey'>
@@ -10,7 +10,7 @@ export function buildChatRequestHeaders(
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'Accept': 'text/event-stream',
-    'User-Agent': DEFAULT_USER_AGENT,
+    'User-Agent': USER_AGENT,
   };
 
   if (provider.apiKey) {

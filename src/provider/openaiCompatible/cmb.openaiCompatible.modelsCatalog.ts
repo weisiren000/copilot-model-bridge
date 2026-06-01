@@ -12,6 +12,7 @@
 
 import http from 'node:http';
 import https from 'node:https';
+import { USER_AGENT } from '../cmb.branding';
 
 const DEFAULT_TIMEOUT_MS = 12_000;
 
@@ -44,7 +45,7 @@ export async function fetchOpenAIModelList(
 
   const headers: Record<string, string> = {
     'Accept': 'application/json',
-    'User-Agent': 'Copilot Model Bridge',
+    'User-Agent': USER_AGENT,
   };
   if (options.apiKey && options.apiKey.trim()) {
     headers['Authorization'] = `Bearer ${options.apiKey.trim()}`;

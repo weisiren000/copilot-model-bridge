@@ -6,6 +6,7 @@ import {
   postStreaming,
   postStreamingChatCompletion,
 } from '../provider/openaiCompatible/cmb.openaiCompatible.chatHttpClient';
+import { USER_AGENT } from '../provider/cmb.branding';
 
 test('sends custom User-Agent header on real HTTP requests', async () => {
   let receivedUserAgent = '';
@@ -25,14 +26,14 @@ test('sends custom User-Agent header on real HTTP requests', async () => {
       {
         'Content-Type': 'application/json',
         'Accept': 'text/event-stream',
-        'User-Agent': 'Copilot Model Bridge',
+        'User-Agent': USER_AGENT,
       },
       { stream: true },
       new AbortController().signal
     );
 
     assert.equal(response.ok, true);
-    assert.equal(receivedUserAgent, 'Copilot Model Bridge');
+    assert.equal(receivedUserAgent, USER_AGENT);
   } finally {
     server.close();
   }

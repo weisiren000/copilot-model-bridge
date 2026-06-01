@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildChatRequestHeaders, isOpenRouterBaseUrl } from '../provider/openaiCompatible/cmb.openaiCompatible.requestHeaders';
+import { PRODUCT_NAME, USER_AGENT } from '../provider/cmb.branding';
 
 test('builds default chat request headers for generic providers', () => {
   assert.deepEqual(
@@ -11,7 +12,7 @@ test('builds default chat request headers for generic providers', () => {
     {
       'Content-Type': 'application/json',
       'Accept': 'text/event-stream',
-      'User-Agent': 'Copilot Model Bridge',
+      'User-Agent': USER_AGENT,
       'Authorization': 'Bearer secret',
     }
   );
@@ -26,10 +27,10 @@ test('adds OpenRouter attribution headers for openrouter endpoints', () => {
     {
       'Content-Type': 'application/json',
       'Accept': 'text/event-stream',
-      'User-Agent': 'Copilot Model Bridge',
+      'User-Agent': USER_AGENT,
       'Authorization': 'Bearer secret',
       'HTTP-Referer': 'https://github.com/weisiren000/copilot-model-bridge',
-      'X-OpenRouter-Title': 'Copilot Model Bridge',
+      'X-OpenRouter-Title': PRODUCT_NAME,
     }
   );
 });

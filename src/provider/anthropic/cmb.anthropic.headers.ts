@@ -1,6 +1,6 @@
 import { ProviderConfig } from '../../types';
+import { USER_AGENT } from '../cmb.branding';
 
-const DEFAULT_USER_AGENT = 'Copilot Model Bridge';
 export const ANTHROPIC_VERSION = '2023-06-01';
 
 export function buildAnthropicRequestHeaders(
@@ -9,7 +9,7 @@ export function buildAnthropicRequestHeaders(
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'Accept': 'text/event-stream',
-    'User-Agent': DEFAULT_USER_AGENT,
+    'User-Agent': USER_AGENT,
     'anthropic-version': ANTHROPIC_VERSION,
   };
 
