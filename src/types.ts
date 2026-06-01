@@ -8,8 +8,10 @@
 
 /** Represents a single model entry within a provider */
 export type ReasoningLevel = 'none' | 'low' | 'medium' | 'high' | 'xhigh' | 'max';
+export type AnthropicThinkingDisplay = 'summarized' | 'omitted';
+export type AnthropicThinkingMode = 'auto' | 'enabled' | 'disabled';
 export type EditToolName = 'find-replace' | 'multi-find-replace' | 'apply-patch' | 'code-rewrite';
-export type ProviderApiStyle = 'chat' | 'responses';
+export type ProviderApiStyle = 'chat' | 'responses' | 'anthropic';
 export type ToolChoiceMode = 'auto' | 'required' | 'none' | 'omit';
 
 export type ResponsesContentPart =
@@ -103,6 +105,14 @@ export interface ModelConfig {
   defaultReasoningLevel?: ReasoningLevel;
   /** Whether Gemini-compatible requests should ask the provider to include thought summaries */
   includeThoughts?: boolean;
+  /** Whether Anthropic document inputs should request citations */
+  enableDocumentCitations?: boolean;
+  /** How Anthropic extended thinking should be returned when enabled */
+  anthropicThinkingDisplay?: AnthropicThinkingDisplay;
+  /** Whether Anthropic extended thinking should be sent upstream */
+  anthropicThinkingMode?: AnthropicThinkingMode;
+  /** Whether Anthropic should emit at most one tool_use block per turn */
+  disableParallelToolUse?: boolean;
   /** Human-readable request cost multiplier shown in VS Code model UI */
   multiplier?: string;
   /** Numeric request cost multiplier used by VS Code for cost comparisons */

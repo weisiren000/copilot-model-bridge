@@ -12,6 +12,7 @@ src/vscode-dts/**
 node_modules/**
 .env
 AGENTS.md
+ANTHROPIC_REVIEW.md
 .agents/
 docs/project-logo.png
 images/ui-concept-config-manager-v1.html

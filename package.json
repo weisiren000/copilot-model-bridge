@@ -2,7 +2,7 @@
   "name": "cmb-copilot-model-bridge",
   "displayName": "CMB: Copilot Model Bridge",
   "description": "Bridge OpenAI-compatible chat models into GitHub Copilot Chat as first-class language model providers.",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "publisher": "weisiren",
   "license": "MIT",
   "icon": "images/icon.png",
@@ -162,9 +162,10 @@
                 "default": "chat",
                 "enum": [
                   "chat",
-                  "responses"
+                  "responses",
+                  "anthropic"
                 ],
-                "description": "API style for this provider. Use chat for /chat/completions or responses for /responses."
+                "description": "API style for this provider. Use chat for /chat/completions, responses for /responses, or anthropic for /messages."
               },
               "models": {
                 "type": "array",
@@ -274,6 +275,34 @@
                         "max"
                       ],
                       "description": "Default reasoning effort when a request does not explicitly provide one"
+                    },
+                    "enableDocumentCitations": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Whether Anthropic document inputs should request citations"
+                    },
+                    "anthropicThinkingDisplay": {
+                      "type": "string",
+                      "enum": [
+                        "summarized",
+                        "omitted"
+                      ],
+                      "description": "How Anthropic extended thinking should be returned when enabled"
+                    },
+                    "anthropicThinkingMode": {
+                      "type": "string",
+                      "default": "auto",
+                      "enum": [
+                        "auto",
+                        "enabled",
+                        "disabled"
+                      ],
+                      "description": "Whether Anthropic extended thinking is sent upstream. auto enables it for Claude model IDs only."
+                    },
+                    "disableParallelToolUse": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Whether Anthropic should emit at most one tool_use block per turn"
                     },
                     "multiplier": {
                       "type": "string",

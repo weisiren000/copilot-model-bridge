@@ -532,6 +532,278 @@ test('sends Responses request when provider apiStyle is responses', async () => 
   }
 });
 
+test('sends Anthropic Messages request when provider apiStyle is anthropic', async () => {
+  let receivedPath = '';
+  let receivedHeaders: http.IncomingHttpHeaders = {};
+  let receivedBody: Record<string, any> | undefined;
+  const server = http.createServer((req, res) => {
+    receivedPath = req.url ?? '';
+    receivedHeaders = req.headers;
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      receivedBody = JSON.parse(body);
+      res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+      res.end([
+        'event: content_block_delta',
+        'data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"hello"}}',
+        '',
+        'event: message_stop',
+        'data: {"type":"message_stop"}',
+        '',
+      ].join('\n'));
+    });
+  });
+
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address() as AddressInfo;
+  const provider: ProviderConfig = {
+    id: 'anthropic',
+    displayName: 'Anthropic',
+    baseUrl: `http://127.0.0.1:${address.port}/v1`,
+    apiKey: 'anthropic-key',
+    apiStyle: 'anthropic',
+    models: [],
+  };
+  const reported: unknown[] = [];
+
+  try {
+    await sendChatRequest(
+      provider,
+      {
+        id: 'claude-sonnet-4-5',
+        name: 'Claude Sonnet 4.5',
+        supportsReasoning: true,
+        defaultReasoningLevel: 'medium',
+      },
+      {
+        id: 'anthropic::claude-sonnet-4-5',
+        name: 'Claude Sonnet 4.5',
+        family: 'claude',
+        version: '',
+        maxInputTokens: 200000,
+        maxOutputTokens: 4096,
+        capabilities: {},
+      },
+      [{
+        role: vscodeMock.LanguageModelChatMessageRole.User,
+        content: [new LanguageModelTextPart('hello')],
+      }] as never,
+      { toolMode: 0 } as never,
+      { report(part: unknown) { reported.push(part); } },
+      { isCancellationRequested: false, onCancellationRequested: () => ({ dispose() {} }) } as never
+    );
+
+    assert.equal(receivedPath, '/v1/messages');
+    assert.equal(receivedHeaders['x-api-key'], 'anthropic-key');
+    assert.equal(receivedHeaders['anthropic-version'], '2023-06-01');
+    assert.equal(receivedBody?.model, 'claude-sonnet-4-5');
+    assert.equal(receivedBody?.stream, true);
+    assert.deepEqual(receivedBody?.messages, [{
+      role: 'user',
+      content: [{ type: 'text', text: 'hello' }],
+    }]);
+    assert.equal((reported[0] as LanguageModelTextPart).value, 'hello');
+  } finally {
+    server.close();
+  }
+});
+
+test('passes Anthropic thinking display and parallel tool settings from model config', async () => {
+  let receivedBody: Record<string, any> | undefined;
+  const server = http.createServer((req, res) => {
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      receivedBody = JSON.parse(body);
+      res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+      res.end('event: message_stop\ndata: {"type":"message_stop"}\n\n');
+    });
+  });
+
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address() as AddressInfo;
+  const provider: ProviderConfig = {
+    id: 'anthropic',
+    displayName: 'Anthropic',
+    baseUrl: `http://127.0.0.1:${address.port}/v1`,
+    apiKey: 'anthropic-key',
+    apiStyle: 'anthropic',
+    models: [],
+  };
+
+  try {
+    await sendChatRequest(
+      provider,
+      {
+        id: 'claude-sonnet-4-5',
+        name: 'Claude Sonnet 4.5',
+        supportsReasoning: true,
+        defaultReasoningLevel: 'medium',
+        anthropicThinkingDisplay: 'omitted',
+        disableParallelToolUse: true,
+      },
+      {
+        id: 'anthropic::claude-sonnet-4-5',
+        name: 'Claude Sonnet 4.5',
+        family: 'claude',
+        version: '',
+        maxInputTokens: 200000,
+        maxOutputTokens: 4096,
+        capabilities: {},
+      },
+      [{
+        role: vscodeMock.LanguageModelChatMessageRole.User,
+        content: [new LanguageModelTextPart('hello')],
+      }] as never,
+      {
+        toolMode: vscodeMock.LanguageModelChatToolMode.Required,
+        tools: [{ name: 'search', inputSchema: { type: 'object', properties: {} } }],
+      } as never,
+      { report() {} },
+      { isCancellationRequested: false, onCancellationRequested: () => ({ dispose() {} }) } as never
+    );
+
+    assert.deepEqual(receivedBody?.thinking, {
+      type: 'enabled',
+      budget_tokens: 1638,
+      display: 'omitted',
+    });
+    assert.deepEqual(receivedBody?.tool_choice, {
+      type: 'any',
+      disable_parallel_tool_use: true,
+    });
+  } finally {
+    server.close();
+  }
+});
+
+test('retries temporary Anthropic upstream failures before surfacing an error', async () => {
+  let requestCount = 0;
+  const server = http.createServer((req, res) => {
+    requestCount += 1;
+    req.resume();
+    if (requestCount === 1) {
+      res.writeHead(503, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        error: {
+          type: 'overloaded_error',
+          message: 'Overloaded',
+        },
+      }));
+      return;
+    }
+    res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+    res.end([
+      'event: content_block_delta',
+      'data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"ok"}}',
+      '',
+      'event: message_stop',
+      'data: {"type":"message_stop"}',
+      '',
+    ].join('\n'));
+  });
+
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address() as AddressInfo;
+  const provider: ProviderConfig = {
+    id: 'anthropic',
+    displayName: 'Anthropic',
+    baseUrl: `http://127.0.0.1:${address.port}/v1`,
+    apiKey: 'anthropic-key',
+    apiStyle: 'anthropic',
+    models: [],
+  };
+  const reported: unknown[] = [];
+
+  try {
+    await sendChatRequest(
+      provider,
+      { id: 'claude-sonnet-4-5', name: 'Claude Sonnet 4.5' },
+      {
+        id: 'anthropic::claude-sonnet-4-5',
+        name: 'Claude Sonnet 4.5',
+        family: 'claude',
+        version: '',
+        maxInputTokens: 200000,
+        maxOutputTokens: 4096,
+        capabilities: {},
+      },
+      [{
+        role: vscodeMock.LanguageModelChatMessageRole.User,
+        content: [new LanguageModelTextPart('hello')],
+      }] as never,
+      { toolMode: 0 } as never,
+      { report(part: unknown) { reported.push(part); } },
+      { isCancellationRequested: false, onCancellationRequested: () => ({ dispose() {} }) } as never
+    );
+
+    assert.equal(requestCount, 2);
+    assert.equal((reported[0] as LanguageModelTextPart).value, 'ok');
+  } finally {
+    server.close();
+  }
+});
+
+test('preserves Anthropic upstream error details after retries are exhausted', async () => {
+  const server = http.createServer((req, res) => {
+    req.resume();
+    res.writeHead(503, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      error: {
+        type: 'overloaded_error',
+        message: 'model overloaded',
+        request_id: 'req_123',
+      },
+    }));
+  });
+
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address() as AddressInfo;
+  const provider: ProviderConfig = {
+    id: 'anthropic',
+    displayName: 'Anthropic',
+    baseUrl: `http://127.0.0.1:${address.port}/v1`,
+    apiKey: 'anthropic-key',
+    apiStyle: 'anthropic',
+    models: [],
+  };
+
+  try {
+    await assert.rejects(
+      sendChatRequest(
+        provider,
+        { id: 'claude-sonnet-4-5', name: 'Claude Sonnet 4.5' },
+        {
+          id: 'anthropic::claude-sonnet-4-5',
+          name: 'Claude Sonnet 4.5',
+          family: 'claude',
+          version: '',
+          maxInputTokens: 200000,
+          maxOutputTokens: 4096,
+          capabilities: {},
+        },
+        [{
+          role: vscodeMock.LanguageModelChatMessageRole.User,
+          content: [new LanguageModelTextPart('hello')],
+        }] as never,
+        { toolMode: 0 } as never,
+        { report() {} },
+        { isCancellationRequested: false, onCancellationRequested: () => ({ dispose() {} }) } as never
+      ),
+      (error: Error) => {
+        assert.match(error.message, /Anthropic API request failed \(HTTP 503/);
+        assert.match(error.message, /overloaded_error/);
+        assert.match(error.message, /req_123/);
+        assert.match(error.message, /model overloaded/);
+        return true;
+      }
+    );
+  } finally {
+    server.close();
+  }
+});
+
 test('reports gateway timeouts as friendly upstream errors', async () => {
   const server = http.createServer((req, res) => {
     req.resume();

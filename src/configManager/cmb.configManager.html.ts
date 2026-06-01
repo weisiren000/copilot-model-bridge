@@ -153,15 +153,16 @@ function renderProviderModal(): string {
         </section>
         <section class="dialog-section">
           <h3>API 协议</h3>
-          <p>选择 Provider 兼容的 OpenAI API 风格，多数情况使用 Chat Completions。</p>
+          <p>选择 Provider 兼容的 API 协议，多数情况使用 Chat Completions。</p>
           <div class="form-grid">
             <div class="field wide">
               <label for="dialog-api-style">API Style</label>
               <select id="dialog-api-style">
                 <option value="chat">Chat Completions（/chat/completions）</option>
                 <option value="responses">Responses（/responses，仅 OpenAI 官方等支持）</option>
+                <option value="anthropic">Anthropic Messages（/messages）</option>
               </select>
-              <small>选错会导致请求 404 或 400。如非确认 Provider 支持 Responses 协议，保持默认 Chat。</small>
+              <small>选错会导致请求 404 或 400。Anthropic 官方服务请选择 Anthropic Messages。</small>
             </div>
           </div>
         </section>

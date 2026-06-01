@@ -12,7 +12,7 @@
   <a href="https://marketplace.visualstudio.com/items?itemName=weisiren.cmb-copilot-model-bridge">
     <img src="https://img.shields.io/badge/VS%20Code-Marketplace-007ACC?style=flat-square&logo=visualstudiocode&logoColor=white" alt="VS Code Marketplace">
   </a>
-  <img src="https://img.shields.io/badge/Version-1.1.0-4C8BF5?style=flat-square" alt="Version 1.1.0">
+  <img src="https://img.shields.io/badge/Version-1.1.1-4C8BF5?style=flat-square" alt="Version 1.1.1">
   <img src="https://img.shields.io/badge/VS%20Code-%5E1.99.0-007ACC?style=flat-square" alt="VS Code 1.99.0+">
   <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
 </p>
@@ -23,7 +23,7 @@
 
 ![Copilot Model Bridge 配置界面](images/screenshot.png)
 
-Copilot Model Bridge 会把你自己的模型服务注册到 GitHub Copilot Chat 的模型选择器中，让 Ollama、LM Studio、vLLM、NVIDIA NIM、Groq、OpenRouter、Together AI、DeepSeek、Gemini 兼容网关等模型像内置模型一样使用。
+Copilot Model Bridge 会把你自己的模型服务注册到 GitHub Copilot Chat 的模型选择器中，让 Ollama、LM Studio、vLLM、NVIDIA NIM、Groq、OpenRouter、Together AI、DeepSeek、Gemini 兼容网关、Anthropic Messages 兼容服务等模型像内置模型一样使用。
 
 > [!IMPORTANT]
 > 这个扩展依赖 VS Code 的语言模型 Provider 能力。请使用 VS Code `1.99.0` 或更高版本，并确保当前 VS Code / GitHub Copilot 环境允许第三方语言模型 Provider。
@@ -40,6 +40,7 @@ Copilot Model Bridge 会把你自己的模型服务注册到 GitHub Copilot Chat
 - **多 Provider 管理**：为每个服务配置独立的名称、Base URL、API Key 和模型列表
 - **Chat Completions 模式**：支持 OpenAI 兼容的流式对话服务
 - **Responses 模式**：可为支持 Responses 风格的服务切换请求模式
+- **Anthropic Messages 模式**：支持 Claude / Anthropic 兼容 `/messages` 协议、工具调用、图片和文档输入
 - **Gemini 兼容增强**：优化 Gemini 兼容服务的地址识别、工具声明、思考内容和多轮工具调用体验
 - **Reasoning 展示**：支持 reasoning / thinking 内容的流式展示与最终摘要
 - **工具调用能力**：按模型声明工具调用、编辑工具偏好和 Agent 模式提示能力
@@ -47,13 +48,18 @@ Copilot Model Bridge 会把你自己的模型服务注册到 GitHub Copilot Chat
 - **可视化配置管理器**：通过 Webview 管理 Provider 和模型，也支持命令面板向导
 - **模型元数据**：配置上下文长度、输出上限、倍率标签、模型家族、分类和状态图标
 
-## v1.1.0 更新重点
+## v1.1.1 更新重点
 
-- 新增 `chat` / `responses` 请求模式选择
+- 新增 `anthropic` 请求模式，支持 Anthropic Messages API
+- 支持 Anthropic 文本、图片、PDF、文本文件、工具调用、工具结果和 thinking 流式事件
+- 支持 Anthropic `tool_choice`、`disable_parallel_tool_use`、文档引用和 redacted thinking 往返
+- Anthropic 临时故障会按 SDK 风格重试，并保留上游错误类型与 request id
+- Anthropic extended thinking 默认只对 Claude 模型 ID 自动发送，兼容网关可用 `anthropicThinkingMode` 显式控制
+- 保留 `chat` / `responses` 请求模式选择
 - 优化 Gemini 兼容服务的工具调用、思考内容和签名续传体验
 - 优化 reasoning 内容在 Copilot Chat 中的展示
 - 模型请求输出上限优先使用用户配置值
-- 临时上游故障提示更友好，避免暴露底层服务内部信息
+- 非 Anthropic 临时上游故障提示更友好，避免暴露底层服务内部信息
 - 失败请求不再默认写入本地诊断文件，降低敏感内容残留风险
 
 ## 要求
@@ -62,7 +68,7 @@ Copilot Model Bridge 会把你自己的模型服务注册到 GitHub Copilot Chat
 | --- | --- |
 | VS Code | `1.99.0` 或更高 |
 | GitHub Copilot | 可使用 Copilot Chat 的账号 |
-| 模型服务 | OpenAI 兼容流式接口，或支持本扩展可选的 Responses 模式 |
+| 模型服务 | OpenAI 兼容流式接口，或支持本扩展可选的 Responses / Anthropic Messages 模式 |
 
 > [!NOTE]
 > 不同模型服务对工具调用、reasoning、图片输入和 Responses 模式的支持程度不同。建议先用一个基础文本模型验证连通性，再逐步开启高级能力。
@@ -75,6 +81,7 @@ Copilot Model Bridge 会把你自己的模型服务注册到 GitHub Copilot Chat
 4. 选择请求模式：
    - `chat`：适用于常见 OpenAI 兼容 Chat Completions 服务
    - `responses`：适用于支持 Responses 风格请求和流式事件的服务
+   - `anthropic`：适用于 Anthropic Messages API 或兼容网关
 5. 在该 Provider 下新增模型，填写模型 ID、显示名称、输入/输出 token 上限和能力开关。
 6. 打开 Copilot Chat，在模型选择器中选择刚添加的模型。
 
@@ -139,6 +146,55 @@ Kimi K2.5 (NVIDIA NIM)
 }
 ```
 
+### Anthropic Messages / Claude
+
+```json
+{
+  "id": "anthropic",
+  "displayName": "Anthropic",
+  "baseUrl": "https://api.anthropic.com/v1",
+  "apiKey": "YOUR_API_KEY",
+  "apiStyle": "anthropic",
+  "models": [
+    {
+      "id": "claude-sonnet-4-5",
+      "name": "Claude Sonnet 4.5",
+      "maxInputTokens": 200000,
+      "maxOutputTokens": 4096,
+      "supportsToolCalling": true,
+      "supportsVision": true,
+      "supportsReasoning": true,
+      "defaultReasoningLevel": "medium",
+      "anthropicThinkingDisplay": "summarized"
+    }
+  ]
+}
+```
+
+### MiniMax Anthropic 兼容接口
+
+```json
+{
+  "id": "minimax",
+  "displayName": "MiniMax",
+  "baseUrl": "https://api.minimax.io/anthropic",
+  "apiKey": "YOUR_API_KEY",
+  "apiStyle": "anthropic",
+  "models": [
+    {
+      "id": "MiniMax-M3",
+      "name": "MiniMax-M3",
+      "maxInputTokens": 1000000,
+      "maxOutputTokens": 4096,
+      "supportsToolCalling": true,
+      "supportsVision": true,
+      "supportsReasoning": true,
+      "anthropicThinkingMode": "enabled"
+    }
+  ]
+}
+```
+
 ## 常用 Base URL
 
 | 服务 | Base URL |
@@ -149,6 +205,8 @@ Kimi K2.5 (NVIDIA NIM)
 | Groq | `https://api.groq.com/openai/v1` |
 | OpenRouter | `https://openrouter.ai/api/v1` |
 | Together AI | `https://api.together.xyz/v1` |
+| Anthropic | `https://api.anthropic.com/v1` |
+| MiniMax Anthropic | `https://api.minimax.io/anthropic` |
 
 ## 模型能力字段
 
@@ -166,6 +224,10 @@ Kimi K2.5 (NVIDIA NIM)
 | `supportsReasoning` | 是否显示 Thinking Effort 配置 |
 | `supportedReasoningLevels` | 可选 reasoning 档位 |
 | `defaultReasoningLevel` | 默认 reasoning 档位 |
+| `enableDocumentCitations` | Anthropic 文档输入是否请求引用信息 |
+| `anthropicThinkingDisplay` | Anthropic thinking 返回方式：`summarized`、`omitted` |
+| `anthropicThinkingMode` | Anthropic extended thinking 发送策略：`auto`、`enabled`、`disabled` |
+| `disableParallelToolUse` | Anthropic 工具调用是否限制为单工具并行 |
 | `multiplier` / `multiplierNumeric` | VS Code 模型 UI 中展示的倍率标签 |
 
 ## 常用命令
@@ -190,12 +252,12 @@ Kimi K2.5 (NVIDIA NIM)
 1. 打开 VS Code Extensions 视图。
 2. 点击右上角 `...`。
 3. 选择 `Install from VSIX...`。
-4. 选择 `cmb-copilot-model-bridge-1.1.0.vsix`。
+4. 选择 `cmb-copilot-model-bridge-1.1.1.vsix`。
 
 也可以使用命令行：
 
 ```bash
-code --install-extension cmb-copilot-model-bridge-1.1.0.vsix
+code --install-extension cmb-copilot-model-bridge-1.1.1.vsix
 ```
 
 ## 排查建议
@@ -204,6 +266,7 @@ code --install-extension cmb-copilot-model-bridge-1.1.0.vsix
 | --- | --- |
 | 模型没有出现在 Copilot Chat | 确认 VS Code 版本、Copilot Chat 可用性，以及第三方语言模型 Provider 能力是否可用 |
 | 请求失败或无响应 | 先检查 Base URL、API Key、模型 ID 和服务是否支持流式响应 |
+| Anthropic 兼容接口返回 404/401 | 确认 Base URL 是否已经包含服务要求的前缀，例如 MiniMax 使用 `/anthropic` |
 | 工具调用失败 | 关闭 `supportsToolCalling` 验证基础对话，再逐步开启工具调用 |
 | 图片或文件输入失败 | 确认模型能力字段和上游服务实际支持范围一致 |
 | reasoning 不显示 | 确认模型启用了 `supportsReasoning`，并配置了合适的 reasoning 档位 |

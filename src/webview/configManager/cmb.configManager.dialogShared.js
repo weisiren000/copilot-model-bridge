@@ -17,6 +17,14 @@
       idHint: 'deepseek',
       apiKeyHint: 'sk-...',
     },
+    anthropic: {
+      label: 'Anthropic（Claude Messages API）',
+      name: 'Anthropic',
+      baseUrl: 'https://api.anthropic.com/v1',
+      idHint: 'anthropic',
+      apiKeyHint: 'sk-ant-...',
+      apiStyle: 'anthropic',
+    },
   };
 
   CMB.dialogShared = {
