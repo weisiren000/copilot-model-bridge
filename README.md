@@ -12,7 +12,7 @@
   <a href="https://marketplace.visualstudio.com/items?itemName=weisiren.cmb-copilot-model-bridge">
     <img src="https://img.shields.io/badge/VS%20Code-Marketplace-007ACC?style=flat-square&logo=visualstudiocode&logoColor=white" alt="VS Code Marketplace">
   </a>
-  <img src="https://img.shields.io/badge/Version-1.1.1-4C8BF5?style=flat-square" alt="Version 1.1.1">
+  <img src="https://img.shields.io/badge/Version-1.1.2-4C8BF5?style=flat-square" alt="Version 1.1.2">
   <img src="https://img.shields.io/badge/VS%20Code-%5E1.99.0-007ACC?style=flat-square" alt="VS Code 1.99.0+">
   <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
 </p>
@@ -47,6 +47,13 @@ Copilot Model Bridge 会把你自己的模型服务注册到 GitHub Copilot Chat
 - **多模态开关**：按模型声明图片、视频、文件输入能力；不支持的输入会给出清晰错误
 - **可视化配置管理器**：通过 Webview 管理 Provider 和模型，也支持命令面板向导
 - **模型元数据**：配置上下文长度、输出上限、倍率标签、模型家族、分类和状态图标
+
+## v1.1.2 更新重点
+
+- 重构模型元数据架构：将 VS Code 专属 UI 类型（ThemeIcon）与纯元数据层分离
+- 模型分类（category）简化为纯字符串，避免对象引用导致的选择器不稳定
+- 状态图标（statusIcon）移至 Provider 模型组装层管理，提升代码内聚性
+- 新增 provider.models 层单元测试覆盖
 
 ## v1.1.1 更新重点
 
