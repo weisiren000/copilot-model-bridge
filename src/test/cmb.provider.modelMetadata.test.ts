@@ -54,7 +54,7 @@ test('infers model family from model id and omits category by default', () => {
   assert.equal(metadata.category, undefined);
 });
 
-test('adds configured metadata category and safe status icon', () => {
+test('adds configured metadata category as a picker-safe string', () => {
   const metadata = buildModelMetadata({
     compoundId: 'provider::reasoner',
     provider: {
@@ -70,12 +70,32 @@ test('adds configured metadata category and safe status icon', () => {
       supportsToolCalling: true,
       categoryLabel: 'Reasoning',
       categoryOrder: 10,
+    },
+  });
+
+  assert.equal(metadata.category, 'Reasoning');
+  assert.equal('categoryOrder' in metadata, false);
+});
+
+test('keeps status icon ids out of pure metadata', () => {
+  const metadata = buildModelMetadata({
+    compoundId: 'provider::reasoner',
+    provider: {
+      id: 'provider',
+      displayName: 'Provider',
+      baseUrl: 'https://example.com/v1',
+    },
+    model: {
+      id: 'reasoner',
+      name: 'Reasoner',
+      maxInputTokens: 64000,
+      maxOutputTokens: 8192,
+      supportsToolCalling: true,
       statusIcon: 'sparkle',
     },
   });
 
-  assert.deepEqual(metadata.category, { label: 'Reasoning', order: 10 });
-  assert.equal(metadata.statusIcon, 'sparkle');
+  assert.equal('statusIcon' in metadata, false);
 });
 
 test('exposes VS Code input and output metadata', () => {

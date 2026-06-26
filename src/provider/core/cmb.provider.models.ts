@@ -5,7 +5,7 @@ import {
   buildModelCapabilities,
   buildModelReasoningConfigurationSchema,
 } from '../openaiCompatible';
-import { buildModelMetadata } from '../model/cmb.provider.modelMetadata';
+import { buildModelMetadata, normalizeStatusIcon } from '../model/cmb.provider.modelMetadata';
 
 const ID_SEP = '::';
 
@@ -28,10 +28,16 @@ export function buildModelList(): vscode.LanguageModelChatInformation[] {
         configurationSchema?: Record<string, unknown>;
         multiplier?: string;
         multiplierNumeric?: number;
+        statusIcon?: vscode.ThemeIcon;
       };
 
       if (billingMetadata.multiplierNumeric !== undefined) {
         metadata.multiplierNumeric = billingMetadata.multiplierNumeric;
+      }
+
+      const statusIcon = normalizeStatusIcon(model.statusIcon);
+      if (statusIcon) {
+        metadata.statusIcon = new vscode.ThemeIcon(statusIcon);
       }
 
       const configurationSchema = buildModelReasoningConfigurationSchema(model);

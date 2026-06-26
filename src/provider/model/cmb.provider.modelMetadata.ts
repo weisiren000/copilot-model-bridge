@@ -1,4 +1,4 @@
-import { ModelCategoryConfig, ModelConfig, ProviderConfig } from '../../types';
+import { ModelConfig, ProviderConfig } from '../../types';
 
 export interface ModelMetadata {
   id: string;
@@ -9,8 +9,7 @@ export interface ModelMetadata {
   maxOutputTokens: number;
   detail: string;
   tooltip: string;
-  category?: ModelCategoryConfig;
-  statusIcon?: string;
+  category?: string;
 }
 
 export interface BuildModelMetadataOptions {
@@ -35,11 +34,6 @@ export function buildModelMetadata(options: BuildModelMetadataOptions): ModelMet
   const category = buildCategory(options.model);
   if (category) {
     metadata.category = category;
-  }
-
-  const statusIcon = normalizeStatusIcon(options.model.statusIcon);
-  if (statusIcon) {
-    metadata.statusIcon = statusIcon;
   }
 
   return metadata;
@@ -87,17 +81,9 @@ function buildTooltip(
   return lines.join('\n');
 }
 
-function buildCategory(model: Pick<ModelConfig, 'categoryLabel' | 'categoryOrder'>): ModelCategoryConfig | undefined {
+function buildCategory(model: Pick<ModelConfig, 'categoryLabel' | 'categoryOrder'>): string | undefined {
   const label = normalizeNonEmpty(model.categoryLabel);
-  if (!label) {
-    return undefined;
-  }
-
-  const category: ModelCategoryConfig = { label };
-  if (typeof model.categoryOrder === 'number' && Number.isFinite(model.categoryOrder)) {
-    category.order = model.categoryOrder;
-  }
-  return category;
+  return label;
 }
 
 function normalizeNonEmpty(value: unknown): string | undefined {
