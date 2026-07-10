@@ -9,6 +9,7 @@ import {
   reduceConfigManagerMessage,
 } from './cmb.configManager.messages';
 import { fetchOpenAIModelList } from '../provider/openaiCompatible/cmb.openaiCompatible.modelsCatalog';
+import { getOpenAIModelProfile } from '../provider/openaiCompatible/cmb.openaiCompatible.openaiModels';
 
 const VIEW_TYPE = 'copilotModelBridge.configManager';
 
@@ -163,7 +164,10 @@ async function handleFetchModels(
   await panel.webview.postMessage({
     type: 'modelsList',
     token: message.token,
-    models: result.models,
+    models: result.models.map(id => ({
+      id,
+      defaults: getOpenAIModelProfile(message.baseUrl, id),
+    })),
     error: result.ok ? undefined : result.error,
   });
 }

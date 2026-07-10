@@ -15,20 +15,31 @@ import { OpenAIStreamChunk } from '../../../types';
  */
 export function reportThinkingPart(
   progress: vscode.Progress<vscode.LanguageModelResponsePart>,
-  value: string
+  value: string,
+  id?: string
 ): boolean {
+  const normalizedValue = normalizeThinkingText(value);
+  if (!normalizedValue) {
+    return true;
+  }
   const ctor = (vscode as unknown as {
-    LanguageModelThinkingPart?: new (value: string) => unknown;
+    LanguageModelThinkingPart?: new (value: string, id?: string) => unknown;
   }).LanguageModelThinkingPart;
   if (!ctor) {
     return false;
   }
   try {
-    progress.report(new ctor(value) as vscode.LanguageModelResponsePart);
+    progress.report(new ctor(normalizedValue, id) as vscode.LanguageModelResponsePart);
     return true;
   } catch {
     return false;
   }
+}
+
+export function normalizeThinkingText(value: string): string {
+  return value
+    .replace(/<!--\s*-->/g, '')
+    .replace(/(^|[^*])\*\*(?=\S)([^\r\n]*?\S)\*\*(?!\*)/gm, '$1$2');
 }
 
 /** 判断历史消息中的某个 part 是否是 ThinkingPart（兼容运行时缺失的情况） */
@@ -176,7 +187,7 @@ export async function consumeSSEStream(
     // 优先以 ThinkingPart 形式回报；如果当前 VS Code 不支持 ThinkingPart
     // 或运行时已有片段流过则直接用 DataPart 兜底，让 history 仍能携带
     // reasoning_content 用于多轮 replay。
-    const fallbackReasoning = reasoningBuffer || taggedThoughtBuffer;
+    const fallbackReasoning = normalizeThinkingText(reasoningBuffer || taggedThoughtBuffer);
     if (fallbackReasoning && !reasoningStreamed) {
       try {
         progress.report(new vscode.LanguageModelDataPart(

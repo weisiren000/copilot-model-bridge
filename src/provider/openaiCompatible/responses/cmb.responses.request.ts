@@ -21,7 +21,9 @@ export function buildResponsesRequestBody(options: ResponsesRequestOptions): Rec
   if (options.instructions) {
     requestBody.instructions = options.instructions;
   }
-  if (options.reasoningEffort && options.reasoningEffort !== 'none') {
+  if (options.reasoningEffort === 'none') {
+    requestBody.reasoning = { effort: 'none' };
+  } else if (options.reasoningEffort) {
     requestBody.reasoning = { effort: options.reasoningEffort, summary: 'auto' };
   }
 

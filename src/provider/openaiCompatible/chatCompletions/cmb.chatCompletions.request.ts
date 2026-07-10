@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { ReasoningLevel, ToolChoiceMode } from '../../../types';
 import { resolveReasoningLevel } from '..';
+import type { ChatMaxTokenField } from '../cmb.openaiCompatible.openaiModels';
 import { buildChatToolOptions } from './cmb.chatCompletions.tools';
 
 export interface ChatRequestOptions {
@@ -10,6 +11,8 @@ export interface ChatRequestOptions {
   supportsReasoning?: boolean;
   defaultReasoningLevel?: ReasoningLevel;
   supportedReasoningLevels?: ReasoningLevel[];
+  reasoningEffortOverride?: ReasoningLevel;
+  maxTokenField?: ChatMaxTokenField;
   toolChoiceMode?: ToolChoiceMode;
   responseOptions: vscode.ProvideLanguageModelChatResponseOptions;
   modelConfiguration?: { readonly [name: string]: unknown };
@@ -20,10 +23,12 @@ export function buildChatRequestBody(options: ChatRequestOptions): Record<string
     model: options.modelId,
     messages: options.messages,
     stream: true,
-    max_tokens: options.maxOutputTokens,
   };
+  requestBody[options.maxTokenField ?? 'max_tokens'] = options.maxOutputTokens;
 
-  if (options.supportsReasoning) {
+  if (options.reasoningEffortOverride) {
+    requestBody.reasoning_effort = options.reasoningEffortOverride;
+  } else if (options.supportsReasoning) {
     requestBody.reasoning_effort = resolveReasoningLevel(
       options.responseOptions.modelOptions,
       options.modelConfiguration,

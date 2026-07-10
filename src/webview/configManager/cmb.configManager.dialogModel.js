@@ -46,6 +46,7 @@
     CMB.el('dialog-model-family').value = '';
     CMB.el('dialog-max-input').value = '128000';
     CMB.el('dialog-max-output').value = '4096';
+    CMB.dialogShared.clearSelectedModelDefaults();
     const defaults = { supportsToolCalling: true, supportsEditTools: true };
     document.querySelectorAll('#model-modal [data-dialog-toggle]').forEach((node) => {
       const key = node.getAttribute('data-dialog-toggle');
@@ -68,10 +69,12 @@
       return;
     }
     const caps = readDialogToggles();
+    const modelDefaults = CMB.dialogShared.getSelectedModelDefaults(fields.id) || {};
     CMB.postMutate({
       type: 'createModel',
       providerId: provider.id,
       model: {
+        ...modelDefaults,
         id: fields.id,
         name: fields.name,
         family: fields.family || undefined,

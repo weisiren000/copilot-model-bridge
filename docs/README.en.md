@@ -12,6 +12,7 @@
   <a href="https://marketplace.visualstudio.com/items?itemName=weisiren.cmb-copilot-model-bridge">
     <img src="https://img.shields.io/badge/VS%20Code-Marketplace-007ACC?style=flat-square&logo=visualstudiocode&logoColor=white" alt="VS Code Marketplace">
   </a>
+  <img src="https://img.shields.io/badge/Version-1.1.3-4C8BF5?style=flat-square" alt="Version 1.1.3">
   <img src="https://img.shields.io/badge/VS%20Code-%5E1.99.0-007ACC?style=flat-square" alt="VS Code 1.99.0+">
   <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
 </p>
@@ -22,16 +23,25 @@
 
 ![Copilot Model Bridge configuration UI](../images/screenshot.png)
 
-Copilot Model Bridge registers your configured models in the Copilot Chat model picker. Any service compatible with the OpenAI Chat Completions streaming API can be connected, including Ollama, LM Studio, vLLM, NVIDIA NIM, Groq, OpenRouter, and Together AI.
+Copilot Model Bridge registers your configured models in the Copilot Chat model picker. It supports OpenAI-compatible Chat Completions, Responses API, and Anthropic Messages providers, including OpenAI, Ollama, LM Studio, vLLM, NVIDIA NIM, Groq, OpenRouter, Together AI, DeepSeek, Gemini-compatible gateways, and Anthropic-compatible services.
 
 ## Features
 
 - Manage multiple providers and models in one place
-- Stream responses through `/chat/completions`
+- Stream responses through Chat Completions, Responses API, or Anthropic Messages
+- Use built-in OpenAI GPT-5.6 Sol, Terra, and Luna model profiles
 - Configure a separate Base URL and API key per provider
 - Toggle tool calling, edit tool hints, and vision support per model
-- Configure Thinking Effort for reasoning models
+- Configure reasoning effort and use reasoning with function tools in Chat Completions
+- Display deduplicated reasoning summaries without leaked HTML or Markdown markers
 - Use a visual config manager or command palette wizards
+
+## v1.1.3 Highlights
+
+- Added official OpenAI GPT-5.6, Sol, Terra, and Luna model profiles
+- Added an OpenAI preset that uses the Responses API by default
+- Preserved reasoning effort when function tools are enabled in Chat Completions
+- Improved reasoning summary aggregation, deduplication, and display cleanup
 
 ## Requirements
 
@@ -39,7 +49,7 @@ Copilot Model Bridge registers your configured models in the Copilot Chat model 
 | --- | --- |
 | VS Code | `1.99.0` or newer |
 | GitHub Copilot | Copilot Chat on an Individual plan |
-| Model service | OpenAI-compatible `/chat/completions` endpoint with streaming support |
+| Model service | OpenAI-compatible streaming endpoint, Responses API, or Anthropic Messages endpoint |
 
 > [!NOTE]
 > If your VS Code build or organization policy disables the language model provider API, the extension can still be installed, but its models may not appear in Copilot Chat.
@@ -49,8 +59,9 @@ Copilot Model Bridge registers your configured models in the Copilot Chat model 
 1. Install [Copilot Model Bridge](https://marketplace.visualstudio.com/items?itemName=weisiren.cmb-copilot-model-bridge).
 2. Open the command palette and run `Copilot Model Bridge: Open Config Manager`.
 3. Add a provider with a name, Provider ID, Base URL, and API key.
-4. Add a model under that provider with its model ID, display name, token limits, and capability toggles.
-5. Open Copilot Chat and select the model from the model picker.
+4. Select `chat`, `responses`, or `anthropic` as the provider API style.
+5. Add a model under that provider with its model ID, display name, token limits, and capability toggles.
+6. Open Copilot Chat and select the model from the model picker.
 
 Models are shown as `<model name> (<provider name>)`, for example:
 

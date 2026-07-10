@@ -25,3 +25,19 @@ test('builds Responses request body with max_output_tokens and reasoning summary
     reasoning: { effort: 'medium', summary: 'auto' },
   });
 });
+
+test('sends explicit none reasoning effort instead of falling back to the model default', () => {
+  const {
+    buildResponsesRequestBody,
+  } = require('../provider/openaiCompatible/responses/cmb.responses.request') as typeof import('../provider/openaiCompatible/responses/cmb.responses.request');
+
+  const body = buildResponsesRequestBody({
+    modelId: 'gpt-5.6-sol',
+    input: [{ type: 'message', role: 'user', content: [{ type: 'input_text', text: 'hello' }] }],
+    maxOutputTokens: 128000,
+    reasoningEffort: 'none',
+    toolOptions: {},
+  });
+
+  assert.deepEqual(body.reasoning, { effort: 'none' });
+});

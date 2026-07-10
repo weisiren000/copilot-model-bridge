@@ -2,13 +2,23 @@
   'use strict';
 
   const CMB = window.CMB = window.CMB || {};
+  let selectedModelDefaults;
   const PROVIDER_PRESETS = {
-    'openai-compatible': {
-      label: 'OpenAI 兼容（标准 Chat Completions）',
-      name: 'OpenAI Compatible',
+    openai: {
+      label: 'OpenAI 官方（Responses API）',
+      name: 'OpenAI',
       baseUrl: 'https://api.openai.com/v1',
       idHint: 'openai',
       apiKeyHint: 'sk-...',
+      apiStyle: 'responses',
+    },
+    'openai-compatible': {
+      label: '通用 OpenAI 兼容（Chat Completions）',
+      name: 'OpenAI Compatible',
+      baseUrl: 'https://example.com/v1',
+      idHint: 'openai-compatible',
+      apiKeyHint: 'API key 或留空',
+      apiStyle: 'chat',
     },
     deepseek: {
       label: 'DeepSeek（V3 / V4 / R1）',
@@ -34,6 +44,8 @@
     showModelSuggestions,
     createSuggestionItem,
     hideSuggestions,
+    clearSelectedModelDefaults,
+    getSelectedModelDefaults,
   };
 
   function populatePresetSelect() {
@@ -71,23 +83,54 @@
       list.classList.add('visible');
       return;
     }
-    models.forEach((id) => list.appendChild(createSuggestionItem(id)));
+    models.forEach((model) => list.appendChild(createSuggestionItem(model)));
     list.classList.add('visible');
   }
 
-  function createSuggestionItem(id) {
+  function createSuggestionItem(model) {
+    const suggestion = normalizeModelSuggestion(model);
     const li = document.createElement('li');
-    li.textContent = id;
+    li.textContent = suggestion.id;
     li.addEventListener('mousedown', (event) => {
       event.preventDefault();
-      CMB.el('dialog-model-id').value = id;
-      const nameInput = CMB.el('dialog-model-name');
-      if (!nameInput.value.trim()) {
-        nameInput.value = id.split('/').pop() || id;
-      }
+      applyModelSuggestion(suggestion);
       hideSuggestions();
     });
     return li;
+  }
+
+  function normalizeModelSuggestion(model) {
+    return typeof model === 'string'
+      ? { id: model }
+      : { id: model.id, defaults: model.defaults };
+  }
+
+  function applyModelSuggestion(suggestion) {
+    const defaults = suggestion.defaults || {};
+    selectedModelDefaults = { ...defaults, id: suggestion.id };
+    CMB.el('dialog-model-id').value = suggestion.id;
+    CMB.el('dialog-model-name').value = defaults.name || suggestion.id.split('/').pop() || suggestion.id;
+    CMB.el('dialog-model-family').value = defaults.family || '';
+    CMB.el('dialog-max-input').value = String(defaults.maxInputTokens || 128000);
+    CMB.el('dialog-max-output').value = String(defaults.maxOutputTokens || 4096);
+    applyModelCapabilityDefaults(defaults);
+  }
+
+  function applyModelCapabilityDefaults(defaults) {
+    document.querySelectorAll('#model-modal [data-dialog-toggle]').forEach((node) => {
+      const key = node.getAttribute('data-dialog-toggle');
+      if (key && typeof defaults[key] === 'boolean') {
+        node.classList.toggle('on', defaults[key]);
+      }
+    });
+  }
+
+  function clearSelectedModelDefaults() {
+    selectedModelDefaults = undefined;
+  }
+
+  function getSelectedModelDefaults(modelId) {
+    return selectedModelDefaults?.id === modelId ? { ...selectedModelDefaults } : undefined;
   }
 
   function hideSuggestions() {

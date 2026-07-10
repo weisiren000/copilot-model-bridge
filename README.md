@@ -12,7 +12,7 @@
   <a href="https://marketplace.visualstudio.com/items?itemName=weisiren.cmb-copilot-model-bridge">
     <img src="https://img.shields.io/badge/VS%20Code-Marketplace-007ACC?style=flat-square&logo=visualstudiocode&logoColor=white" alt="VS Code Marketplace">
   </a>
-  <img src="https://img.shields.io/badge/Version-1.1.2-4C8BF5?style=flat-square" alt="Version 1.1.2">
+  <img src="https://img.shields.io/badge/Version-1.1.3-4C8BF5?style=flat-square" alt="Version 1.1.3">
   <img src="https://img.shields.io/badge/VS%20Code-%5E1.99.0-007ACC?style=flat-square" alt="VS Code 1.99.0+">
   <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
 </p>
@@ -39,14 +39,24 @@ Copilot Model Bridge 会把你自己的模型服务注册到 GitHub Copilot Chat
 
 - **多 Provider 管理**：为每个服务配置独立的名称、Base URL、API Key 和模型列表
 - **Chat Completions 模式**：支持 OpenAI 兼容的流式对话服务
-- **Responses 模式**：可为支持 Responses 风格的服务切换请求模式
+- **Responses 模式**：完整处理 Responses 流式文本、推理摘要和函数调用事件
+- **OpenAI 官方适配**：内置 Responses API 预设与 GPT-5.6 Sol、Terra、Luna 模型档案
 - **Anthropic Messages 模式**：支持 Claude / Anthropic 兼容 `/messages` 协议、工具调用、图片和文档输入
 - **Gemini 兼容增强**：优化 Gemini 兼容服务的地址识别、工具声明、思考内容和多轮工具调用体验
-- **Reasoning 展示**：支持 reasoning / thinking 内容的流式展示与最终摘要
+- **Reasoning 展示**：支持 reasoning / thinking 内容的流式展示、最终摘要、去重和显示清理
 - **工具调用能力**：按模型声明工具调用、编辑工具偏好和 Agent 模式提示能力
 - **多模态开关**：按模型声明图片、视频、文件输入能力；不支持的输入会给出清晰错误
 - **可视化配置管理器**：通过 Webview 管理 Provider 和模型，也支持命令面板向导
 - **模型元数据**：配置上下文长度、输出上限、倍率标签、模型家族、分类和状态图标
+
+## v1.1.3 更新重点
+
+- 新增 GPT-5.6、GPT-5.6 Sol、GPT-5.6 Terra、GPT-5.6 Luna 的 OpenAI 官方模型档案
+- OpenAI 官方 Provider 默认使用 Responses API，并支持完整的流式文本、推理摘要和函数调用
+- GPT-5.6 Chat Completions 使用 `max_completion_tokens`，允许 reasoning 与 function tools 同时启用
+- 正确传递显式 `none` reasoning 档位，不再错误回退到模型默认值
+- reasoning 摘要按条目聚合和去重，避免同一段思考内容重复显示
+- 清理思考内容中的空 HTML 注释和成对 Markdown 加粗标记，避免残留 `<!-- -->` 或 `**`
 
 ## v1.1.2 更新重点
 

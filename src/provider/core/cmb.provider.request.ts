@@ -1,5 +1,8 @@
 import * as vscode from 'vscode';
-import { resolveReasoningLevel } from '../openaiCompatible';
+import {
+  resolveOpenAIChatRequestPolicy,
+  resolveReasoningLevel,
+} from '../openaiCompatible';
 import {
   buildChatRequestBody,
   consumeSSEStream,
@@ -155,6 +158,18 @@ async function sendChatCompletionsRequest(context: RequestContext): Promise<void
   const requestUrl = isGemini
     ? resolveGeminiOpenAICompatibleUrl(provider, 'chat/completions')
     : `${provider.baseUrl}/chat/completions`;
+  const reasoningEffort = selectedModel.supportsReasoning
+    ? resolveReasoningLevel(
+      options.modelOptions,
+      modelConfiguration,
+      selectedModel.defaultReasoningLevel ?? 'medium',
+      selectedModel.supportedReasoningLevels
+    )
+    : undefined;
+  const chatPolicy = resolveOpenAIChatRequestPolicy({
+    providerBaseUrl: provider.baseUrl,
+    modelId: selectedModel.id,
+  });
   const requestBody = buildChatRequestBody({
     modelId: selectedModel.id,
     messages: apiMessages,
@@ -165,6 +180,8 @@ async function sendChatCompletionsRequest(context: RequestContext): Promise<void
     supportsReasoning: selectedModel.supportsReasoning,
     defaultReasoningLevel: selectedModel.defaultReasoningLevel,
     supportedReasoningLevels: selectedModel.supportedReasoningLevels,
+    reasoningEffortOverride: reasoningEffort,
+    maxTokenField: chatPolicy.maxTokenField,
     toolChoiceMode: selectedModel.toolChoiceMode,
     responseOptions: options,
     modelConfiguration,

@@ -2,7 +2,10 @@ import * as vscode from 'vscode';
 import { ResponsesStreamEvent } from '../../../types';
 import { DEEPSEEK_REASONING_MIME } from '../../deepseek/cmb.deepseek.adapter';
 import { createStreamFailureError } from '../cmb.openaiCompatible.errors';
-import { reportThinkingPart } from '../chatCompletions/cmb.chatCompletions.stream';
+import {
+  normalizeThinkingText,
+  reportThinkingPart,
+} from '../chatCompletions/cmb.chatCompletions.stream';
 
 interface PendingFunctionCall {
   callId: string;
@@ -10,6 +13,14 @@ interface PendingFunctionCall {
   arguments: string;
   reported: boolean;
 }
+
+interface PendingReasoningItem {
+  id?: string;
+  text: string;
+  reported: boolean;
+}
+
+type ReportReasoning = (value: string, id?: string) => void;
 
 export async function consumeResponsesSSEStream(
   body: ReadableStream<Uint8Array>,
@@ -19,34 +30,38 @@ export async function consumeResponsesSSEStream(
   const reader = body.getReader();
   const decoder = new TextDecoder();
   const calls = new Map<string, PendingFunctionCall>();
+  const reasoningItems = new Map<string, PendingReasoningItem>();
   let buffer = '';
-  let reasoningBuffer = '';
-  let reasoningStreamed = false;
+  const fallbackReasoning: string[] = [];
+  const reportReasoning: ReportReasoning = (value, id) => {
+    const normalizedValue = normalizeThinkingText(value);
+    if (!normalizedValue) {
+      return;
+    }
+    if (!reportThinkingPart(progress, normalizedValue, id)) {
+      fallbackReasoning.push(normalizedValue);
+    }
+  };
 
   try {
     while (!token.isCancellationRequested) {
       const { done, value } = await reader.read();
       if (done) {
-        handleBufferedFrame(buffer, calls, progress, value => {
-          reasoningBuffer += value;
-          reasoningStreamed = reportThinkingPart(progress, value) || reasoningStreamed;
-        });
+        handleBufferedFrame(buffer, calls, reasoningItems, progress, reportReasoning);
         break;
       }
       buffer += decoder.decode(value, { stream: true });
       const frames = buffer.split('\n\n');
       buffer = frames.pop() ?? '';
       for (const frame of frames) {
-        handleBufferedFrame(frame, calls, progress, value => {
-          reasoningBuffer += value;
-          reasoningStreamed = reportThinkingPart(progress, value) || reasoningStreamed;
-        });
+        handleBufferedFrame(frame, calls, reasoningItems, progress, reportReasoning);
       }
     }
   } finally {
-    if (reasoningBuffer && !reasoningStreamed) {
+    flushReasoningItems(reasoningItems, reportReasoning);
+    if (fallbackReasoning.length > 0) {
       progress.report(new vscode.LanguageModelDataPart(
-        new TextEncoder().encode(reasoningBuffer),
+        new TextEncoder().encode(fallbackReasoning.join('\n\n')),
         DEEPSEEK_REASONING_MIME
       ));
     }
@@ -57,29 +72,76 @@ export async function consumeResponsesSSEStream(
 function handleBufferedFrame(
   frame: string,
   calls: Map<string, PendingFunctionCall>,
+  reasoningItems: Map<string, PendingReasoningItem>,
   progress: vscode.Progress<vscode.LanguageModelResponsePart>,
-  reportReasoning: (value: string) => void
+  reportReasoning: ReportReasoning
 ): void {
   const event = parseFrame(frame);
   if (!event) {
     return;
   }
+  handleReasoningEvent(event, reasoningItems, reportReasoning);
+  flushReasoningBeforeOutput(event, reasoningItems, reportReasoning);
   handleEvent(event, calls, progress);
-  const summary = readReasoningSummary(event);
-  if (summary) {
-    reportReasoning(summary);
-  }
-  if (isReasoningDeltaEvent(event) && event.delta) {
-    reportReasoning(event.delta);
-  }
   if (event.type === 'response.failed' || event.type === 'response.incomplete') {
     throw createStreamFailureError(readResponseError(event));
   }
 }
 
+function flushReasoningBeforeOutput(
+  event: ResponsesStreamEvent,
+  reasoningItems: Map<string, PendingReasoningItem>,
+  reportReasoning: ReportReasoning
+): void {
+  if (!startsVisibleOutput(event)) {
+    return;
+  }
+  flushReasoningItems(reasoningItems, reportReasoning);
+}
+
+function startsVisibleOutput(event: ResponsesStreamEvent): boolean {
+  if (event.type === 'response.output_text.delta') {
+    return true;
+  }
+  return event.type === 'response.output_item.added' && event.item?.type === 'function_call';
+}
+
+function handleReasoningEvent(
+  event: ResponsesStreamEvent,
+  reasoningItems: Map<string, PendingReasoningItem>,
+  reportReasoning: ReportReasoning
+): void {
+  if (isReasoningDeltaEvent(event) && event.delta) {
+    getReasoningItem(reasoningItems, event).text += event.delta;
+    return;
+  }
+
+  const doneText = readReasoningDoneText(event);
+  if (doneText) {
+    getReasoningItem(reasoningItems, event).text = doneText;
+    return;
+  }
+
+  if (event.type !== 'response.output_item.done' || event.item?.type !== 'reasoning') {
+    return;
+  }
+  const item = getReasoningItem(reasoningItems, event);
+  reportReasoningItem(item, readReasoningSummary(event), reportReasoning);
+}
+
 function isReasoningDeltaEvent(event: ResponsesStreamEvent): boolean {
   return event.type === 'response.reasoning_summary_text.delta'
     || event.type === 'response.reasoning_text.delta';
+}
+
+function readReasoningDoneText(event: ResponsesStreamEvent): string {
+  if (
+    event.type !== 'response.reasoning_summary_text.done'
+    && event.type !== 'response.reasoning_text.done'
+  ) {
+    return '';
+  }
+  return typeof event.text === 'string' ? event.text : '';
 }
 
 function readReasoningSummary(event: ResponsesStreamEvent): string {
@@ -93,7 +155,47 @@ function readReasoningSummary(event: ResponsesStreamEvent): string {
 
   return event.item.summary
     .map(part => typeof part.text === 'string' ? part.text : '')
-    .join('');
+    .filter(Boolean)
+    .join('\n\n');
+}
+
+function getReasoningItem(
+  items: Map<string, PendingReasoningItem>,
+  event: ResponsesStreamEvent
+): PendingReasoningItem {
+  const key = readReasoningKey(event);
+  const item = items.get(key) ?? { text: '', reported: false };
+  item.id = event.item_id ?? event.item?.id ?? item.id;
+  items.set(key, item);
+  return item;
+}
+
+function readReasoningKey(event: ResponsesStreamEvent): string {
+  if (event.output_index !== undefined) {
+    return `output:${event.output_index}`;
+  }
+  return event.item_id ?? event.item?.id ?? 'reasoning:0';
+}
+
+function reportReasoningItem(
+  item: PendingReasoningItem,
+  summary: string,
+  reportReasoning: ReportReasoning
+): void {
+  if (item.reported) {
+    return;
+  }
+  item.reported = true;
+  reportReasoning(summary || item.text, item.id);
+}
+
+function flushReasoningItems(
+  items: Map<string, PendingReasoningItem>,
+  reportReasoning: ReportReasoning
+): void {
+  for (const item of items.values()) {
+    reportReasoningItem(item, '', reportReasoning);
+  }
 }
 
 function parseFrame(frame: string): ResponsesStreamEvent | undefined {

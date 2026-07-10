@@ -19,7 +19,7 @@ class LanguageModelToolCallPart {
 }
 
 class LanguageModelThinkingPart {
-  constructor(readonly value: string) {}
+  constructor(readonly value: string, readonly id?: string) {}
 }
 
 const vscodeMock = {
@@ -47,6 +47,9 @@ moduleLoader._load = function loadWithVscodeMock(
 const {
   consumeResponsesSSEStream,
 } = require('../provider/openaiCompatible/responses/cmb.responses.stream') as typeof import('../provider/openaiCompatible/responses/cmb.responses.stream');
+const {
+  normalizeThinkingText,
+} = require('../provider/openaiCompatible/chatCompletions/cmb.chatCompletions.stream') as typeof import('../provider/openaiCompatible/chatCompletions/cmb.chatCompletions.stream');
 
 const neverCancelledToken = {
   isCancellationRequested: false,
@@ -97,6 +100,63 @@ test('reports reasoning summary from final output item as thinking part', async 
   assert.equal(reported[0] instanceof LanguageModelThinkingPart, true);
   assert.equal((reported[0] as LanguageModelThinkingPart).value, 'checked factors');
   assert.equal((reported[1] as LanguageModelTextPart).value, 'answer');
+});
+
+test('reports a reasoning item once and prefers its final summary', async () => {
+  const reported: unknown[] = [];
+  await consumeResponsesSSEStream(streamFrom([
+    'event: response.reasoning_summary_text.delta',
+    'data: {"type":"response.reasoning_summary_text.delta","item_id":"rs_1","output_index":0,"delta":"**Preparing stash"}',
+    '',
+    'event: response.reasoning_summary_text.delta',
+    'data: {"type":"response.reasoning_summary_text.delta","item_id":"rs_1","output_index":0,"delta":" and inspecting conflicts**"}',
+    '',
+    'event: response.output_item.done',
+    'data: {"type":"response.output_item.done","item_id":"rs_1","output_index":0,"item":{"type":"reasoning","id":"rs_1","summary":[{"type":"summary_text","text":"<!-- -->**Preparing stash and inspecting conflicts**"}]}}',
+    '',
+  ]), { report: (part: unknown) => reported.push(part) } as never, neverCancelledToken as never);
+
+  const thinkingParts = reported.filter(part => part instanceof LanguageModelThinkingPart);
+  assert.equal(thinkingParts.length, 1);
+  assert.equal(
+    (thinkingParts[0] as LanguageModelThinkingPart).value,
+    'Preparing stash and inspecting conflicts'
+  );
+  assert.equal((thinkingParts[0] as LanguageModelThinkingPart).id, 'rs_1');
+});
+
+test('removes paired strong markers from thinking text without deleting ordinary asterisks', () => {
+  const value = [
+    '<!-- -->**Planning code review steps**',
+    '**Determining efficient git commands**',
+    'Keep *single* markers and 2 ** 3',
+  ].join('\n');
+
+  assert.equal(
+    normalizeThinkingText(value),
+    [
+      'Planning code review steps',
+      'Determining efficient git commands',
+      'Keep *single* markers and 2 ** 3',
+    ].join('\n')
+  );
+});
+
+test('flushes streamed reasoning once when no final summary arrives', async () => {
+  const reported: unknown[] = [];
+  await consumeResponsesSSEStream(streamFrom([
+    'event: response.reasoning_text.delta',
+    'data: {"type":"response.reasoning_text.delta","item_id":"rs_2","delta":"first "}',
+    '',
+    'event: response.reasoning_text.delta',
+    'data: {"type":"response.reasoning_text.delta","item_id":"rs_2","delta":"second"}',
+    '',
+  ]), { report: (part: unknown) => reported.push(part) } as never, neverCancelledToken as never);
+
+  const thinkingParts = reported.filter(part => part instanceof LanguageModelThinkingPart);
+  assert.equal(thinkingParts.length, 1);
+  assert.equal((thinkingParts[0] as LanguageModelThinkingPart).value, 'first second');
+  assert.equal((thinkingParts[0] as LanguageModelThinkingPart).id, 'rs_2');
 });
 
 test('reports final frame when stream ends without trailing blank line', async () => {
