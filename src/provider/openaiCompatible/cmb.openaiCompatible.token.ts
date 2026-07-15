@@ -7,6 +7,7 @@ const COPILOT_METADATA_MIME_TYPES = new Set([
   'context_management',
   'phase_data',
   'response_output_message_id',
+  'usage',
   'application/x-deepseek-reasoning',
 ]);
 

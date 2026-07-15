@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { ResponsesStreamEvent } from '../../../types';
 import { DEEPSEEK_REASONING_MIME } from '../../deepseek/cmb.deepseek.adapter';
 import { createStreamFailureError } from '../cmb.openaiCompatible.errors';
+import { readResponsesUsage, reportModelUsage } from '../cmb.openaiCompatible.usage';
 import {
   normalizeThinkingText,
   reportThinkingPart,
@@ -83,6 +84,10 @@ function handleBufferedFrame(
   handleReasoningEvent(event, reasoningItems, reportReasoning);
   flushReasoningBeforeOutput(event, reasoningItems, reportReasoning);
   handleEvent(event, calls, progress);
+  const usage = readResponsesUsage(event.response?.usage);
+  if (usage) {
+    reportModelUsage(progress, usage);
+  }
   if (event.type === 'response.failed' || event.type === 'response.incomplete') {
     throw createStreamFailureError(readResponseError(event));
   }

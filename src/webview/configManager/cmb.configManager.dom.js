@@ -35,6 +35,18 @@
     }
     return input.value;
   };
+  CMB.calculateContextWindowTokens = function calculateContextWindowTokens(maxInputTokens, maxOutputTokens) {
+    return Number(maxInputTokens) + Number(maxOutputTokens);
+  };
+  CMB.calculateMaxInputTokens = function calculateMaxInputTokens(contextWindowTokens, maxOutputTokens) {
+    return Number(contextWindowTokens) - Number(maxOutputTokens);
+  };
+  CMB.isValidTokenLimits = function isValidTokenLimits(contextWindowTokens, maxOutputTokens) {
+    return Number.isSafeInteger(contextWindowTokens)
+      && Number.isSafeInteger(maxOutputTokens)
+      && maxOutputTokens > 0
+      && contextWindowTokens > maxOutputTokens;
+  };
   CMB.formatTokens = function formatTokens(value) {
     if (typeof value !== 'number' || Number.isNaN(value)) return '-';
     if (value >= 1000000) return `${formatCompactNumber(value / 1000000)}M`;

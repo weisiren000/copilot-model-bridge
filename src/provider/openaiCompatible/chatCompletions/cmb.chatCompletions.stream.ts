@@ -5,6 +5,7 @@ import {
   encodeGeminiThoughtSignatureData,
 } from '../../gemini/cmb.gemini.adapter';
 import { OpenAIStreamChunk } from '../../../types';
+import { readOpenAIUsage, reportModelUsage } from '../cmb.openaiCompatible.usage';
 
 /**
  * 把一段 reasoning 文本以 LanguageModelThinkingPart 的形式回报给 VS Code，
@@ -116,6 +117,10 @@ export async function consumeSSEStream(
 
         try {
           const chunk: OpenAIStreamChunk = JSON.parse(data);
+          const usage = readOpenAIUsage(chunk.usage);
+          if (usage) {
+            reportModelUsage(progress, usage);
+          }
           const delta = chunk.choices?.[0]?.delta;
 
           if (delta?.content) {

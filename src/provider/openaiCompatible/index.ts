@@ -6,5 +6,6 @@ export * from './cmb.openaiCompatible.openaiModels';
 export * from './cmb.openaiCompatible.reasoning';
 export * from './cmb.openaiCompatible.requestHeaders';
 export * from './cmb.openaiCompatible.token';
+export * from './cmb.openaiCompatible.usage';
 export * from './chatCompletions';
 export * from './responses';

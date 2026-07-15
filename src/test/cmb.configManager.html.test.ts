@@ -1,5 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import vm from 'node:vm';
 import { renderConfigManagerHtml } from '../configManager';
 
 const FIXTURE = {
@@ -85,14 +88,43 @@ test('renders provider, model, validation, import, and save controls by element 
   }
 });
 
-test('renders model modal with max input and max output token fields', () => {
+test('renders model modal with context window, output, and calculated input fields', () => {
   const html = renderConfigManagerHtml(FIXTURE);
 
-  assert.match(html, /最大输入 Tokens/);
+  assert.match(html, /上下文窗口 Tokens/);
   assert.match(html, /最大输出 Tokens/);
-  assert.match(html, /设置模型可输入上限和输出上限/);
-  assert.doesNotMatch(html, /最大上下文 Tokens/);
-  assert.doesNotMatch(html, /id="dialog-context-window"/);
-  assert.match(html, /id="dialog-max-input"/);
+  assert.match(html, /可用输入 Tokens/);
+  assert.match(html, /设置厂商公布的总上下文窗口和最大输出上限/);
+  assert.match(html, /id="dialog-context-window"/);
   assert.match(html, /id="dialog-max-output"/);
+  assert.match(html, /id="dialog-available-input"[^>]*readonly/);
+  assert.doesNotMatch(html, /id="dialog-max-input"/);
+});
+
+test('converts between context window and provider token limits', () => {
+  const source = readFileSync(join(
+    process.cwd(),
+    'src/webview/configManager/cmb.configManager.dom.js'
+  ), 'utf8');
+  const context = {
+    window: { CMB: {} as Record<string, unknown> },
+    document: { getElementById: () => undefined },
+    console,
+    URL,
+    setTimeout,
+    clearTimeout,
+  };
+  vm.runInNewContext(source, context);
+  const cmb = context.window.CMB as {
+    calculateContextWindowTokens(maxInputTokens: number, maxOutputTokens: number): number;
+    calculateMaxInputTokens(contextWindowTokens: number, maxOutputTokens: number): number;
+    isValidTokenLimits(contextWindowTokens: number, maxOutputTokens: number): boolean;
+  };
+
+  assert.equal(cmb.calculateContextWindowTokens(343000, 128000), 471000);
+  assert.equal(cmb.calculateMaxInputTokens(471000, 128000), 343000);
+  assert.equal(cmb.calculateContextWindowTokens(128000, 4096), 132096);
+  assert.equal(cmb.isValidTokenLimits(471000, 128000), true);
+  assert.equal(cmb.isValidTokenLimits(128000, 128000), false);
+  assert.equal(cmb.isValidTokenLimits(Number.MAX_SAFE_INTEGER + 1, 4096), false);
 });

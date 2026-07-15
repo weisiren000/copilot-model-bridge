@@ -96,6 +96,21 @@ test('streams text deltas as LanguageModelTextPart instances', async () => {
   assert.ok(parts.every(part => part instanceof LanguageModelTextPart));
 });
 
+test('reports Chat Completions usage for the context window widget', async () => {
+  const parts = await collectStreamParts([
+    'data: {"choices":[],"usage":{"prompt_tokens":120,"completion_tokens":30,"total_tokens":150}}',
+    'data: [DONE]',
+  ]);
+
+  assert.equal(parts.length, 1);
+  assert.ok(parts[0] instanceof LanguageModelDataPart);
+  assert.equal((parts[0] as LanguageModelDataPart).mimeType, 'usage');
+  assert.deepEqual(
+    JSON.parse(new TextDecoder().decode((parts[0] as LanguageModelDataPart).data)),
+    { prompt_tokens: 120, completion_tokens: 30, total_tokens: 150 }
+  );
+});
+
 test('streams reasoning content as thinking parts when available', async () => {
   const parts = await collectStreamParts([
     'data: {"choices":[{"delta":{"reasoning_content":"because"},"finish_reason":null}]}',

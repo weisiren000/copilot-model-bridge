@@ -223,15 +223,20 @@ function renderModelModal(): string {
         </section>
         <section class="dialog-section">
           <h3>Token 限制</h3>
-          <p>设置模型可输入上限和输出上限。</p>
+          <p>设置厂商公布的总上下文窗口和最大输出上限。</p>
           <div class="form-grid">
             <div class="field">
-              <label for="dialog-max-input">最大输入 Tokens</label>
-              <input id="dialog-max-input" type="number" value="128000">
+              <label for="dialog-context-window">上下文窗口 Tokens</label>
+              <input id="dialog-context-window" type="number" min="2" step="1" value="132096">
             </div>
             <div class="field">
               <label for="dialog-max-output">最大输出 Tokens</label>
-              <input id="dialog-max-output" type="number" value="4096">
+              <input id="dialog-max-output" type="number" min="1" step="1" value="4096">
+            </div>
+            <div class="field wide">
+              <label for="dialog-available-input">可用输入 Tokens</label>
+              <input id="dialog-available-input" type="number" value="128000" readonly>
+              <small>由上下文窗口减去最大输出自动计算。</small>
             </div>
           </div>
         </section>

@@ -111,8 +111,12 @@
     CMB.el('dialog-model-id').value = suggestion.id;
     CMB.el('dialog-model-name').value = defaults.name || suggestion.id.split('/').pop() || suggestion.id;
     CMB.el('dialog-model-family').value = defaults.family || '';
-    CMB.el('dialog-max-input').value = String(defaults.maxInputTokens || 128000);
-    CMB.el('dialog-max-output').value = String(defaults.maxOutputTokens || 4096);
+    const maxOutputTokens = defaults.maxOutputTokens || 4096;
+    const maxInputTokens = defaults.maxInputTokens || 128000;
+    const contextWindowTokens = CMB.calculateContextWindowTokens(maxInputTokens, maxOutputTokens);
+    CMB.el('dialog-context-window').value = String(contextWindowTokens);
+    CMB.el('dialog-max-output').value = String(maxOutputTokens);
+    CMB.el('dialog-available-input').value = String(maxInputTokens);
     applyModelCapabilityDefaults(defaults);
   }
 

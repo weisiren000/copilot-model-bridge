@@ -62,6 +62,17 @@ test('ignores Copilot state metadata data parts instead of treating them as file
   }
 });
 
+test('ignores Copilot usage metadata instead of treating it as a file attachment', () => {
+  assert.deepEqual(
+    createOpenAIDataPartContent(
+      new TextEncoder().encode('{"prompt_tokens":10}'),
+      'usage',
+      {}
+    ),
+    []
+  );
+});
+
 test('converts image data parts to OpenAI-compatible image content', () => {
   assert.deepEqual(
     createOpenAIDataPartContent(new Uint8Array([1, 2, 3]), 'image/png', {}),

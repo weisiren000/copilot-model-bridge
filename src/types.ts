@@ -55,7 +55,17 @@ export interface ResponsesStreamEvent {
   name?: string;
   call_id?: string;
   error?: { message?: string; code?: string };
-  response?: { status?: string; error?: { message?: string; code?: string } };
+  response?: {
+    status?: string;
+    error?: { message?: string; code?: string };
+    usage?: {
+      input_tokens?: number;
+      output_tokens?: number;
+      total_tokens?: number;
+      input_tokens_details?: { cached_tokens?: number };
+      output_tokens_details?: { reasoning_tokens?: number };
+    };
+  };
   item?: {
     type: string;
     id?: string;
@@ -151,6 +161,17 @@ export interface OpenAIStreamChunk {
   object: string;
   created: number;
   model: string;
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    total_tokens?: number;
+    prompt_tokens_details?: { cached_tokens?: number };
+    completion_tokens_details?: {
+      reasoning_tokens?: number;
+      accepted_prediction_tokens?: number;
+      rejected_prediction_tokens?: number;
+    };
+  };
   choices: Array<{
     index: number;
     delta: {

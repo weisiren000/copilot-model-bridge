@@ -31,13 +31,17 @@
 
   function modelCardHtml(state, model) {
     const active = model.id === state.selectedModelId ? ' active' : '';
+    const contextWindowTokens = CMB.calculateContextWindowTokens(
+      model.maxInputTokens,
+      model.maxOutputTokens
+    );
     return `<button class="model-card${active}" data-model="${CMB.escapeAttr(model.id)}">
       <span class="card-top">
         <span class="card-name">${CMB.escapeHtml(model.name)}</span>
         <span class="badges">${modelBadgesHtml(model)}</span>
       </span>
       <span class="card-meta">${CMB.escapeHtml(model.id)}</span>
-      <span class="model-meta-row">${CMB.formatTokens(model.maxInputTokens)} 输入 / ${CMB.formatTokens(model.maxOutputTokens)} 输出</span>
+      <span class="model-meta-row">${CMB.formatTokens(contextWindowTokens)} 上下文 / ${CMB.formatTokens(model.maxOutputTokens)} 输出</span>
     </button>`;
   }
 
@@ -51,7 +55,13 @@
     if (model.supportsVision) badges.push({ text: '视觉', cls: 'success' });
     if (model.supportsReasoning) badges.push({ text: '推理', cls: 'reasoning' });
     if (badges.length === 0) {
-      badges.push({ text: CMB.formatTokens(model.maxInputTokens), cls: '' });
+      badges.push({
+        text: CMB.formatTokens(CMB.calculateContextWindowTokens(
+          model.maxInputTokens,
+          model.maxOutputTokens
+        )),
+        cls: '',
+      });
     }
     return badges.map((badge) => `<span class="badge${badge.cls ? ` ${badge.cls}` : ''}">${CMB.escapeHtml(badge.text)}</span>`).join('');
   }

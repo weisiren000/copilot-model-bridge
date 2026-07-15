@@ -28,6 +28,14 @@ test('estimates JSON and plain text data parts as decoded text', () => {
   ]), 5);
 });
 
+test('does not count Copilot usage metadata as model input', () => {
+  assert.equal(estimateChatMessageTokens([{
+    type: 'data',
+    mimeType: 'usage',
+    data: new TextEncoder().encode('{"prompt_tokens":10}'),
+  }]), 0);
+});
+
 test('estimates tool calls from name and serialized input', () => {
   assert.equal(estimateChatMessageTokens([
     { type: 'toolCall', name: 'read_file', input: { path: 'README.md' } },

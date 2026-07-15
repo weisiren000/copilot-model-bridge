@@ -1,6 +1,10 @@
 import * as vscode from 'vscode';
 import { reportThinkingPart } from '../openaiCompatible/chatCompletions/cmb.chatCompletions.stream';
 import {
+  readAnthropicUsage,
+  reportModelUsage,
+} from '../openaiCompatible/cmb.openaiCompatible.usage';
+import {
   ANTHROPIC_CITATION_MIME,
   ANTHROPIC_MESSAGE_METADATA_MIME,
   ANTHROPIC_REDACTED_THINKING_MIME,
@@ -22,6 +26,10 @@ interface ActiveToolUse {
   arguments: string;
 }
 
+interface AnthropicUsageState {
+  start?: Record<string, unknown>;
+}
+
 export async function consumeAnthropicSSEStream(
   body: ReadableStream<Uint8Array>,
   progress: vscode.Progress<vscode.LanguageModelResponsePart>,
@@ -32,6 +40,7 @@ export async function consumeAnthropicSSEStream(
   let buffer = '';
   let eventName = '';
   const activeToolUses: Record<number, ActiveToolUse> = {};
+  const usageState: AnthropicUsageState = {};
 
   try {
     while (true) {
@@ -46,11 +55,11 @@ export async function consumeAnthropicSSEStream(
       const frames = buffer.split('\n\n');
       buffer = frames.pop() ?? '';
       for (const frame of frames) {
-        eventName = processAnthropicFrame(frame, eventName, activeToolUses, progress);
+        eventName = processAnthropicFrame(frame, eventName, activeToolUses, usageState, progress);
       }
     }
     if (buffer.trim()) {
-      processAnthropicFrame(buffer, eventName, activeToolUses, progress);
+      processAnthropicFrame(buffer, eventName, activeToolUses, usageState, progress);
     }
   } finally {
     reader.releaseLock();
@@ -61,6 +70,7 @@ function processAnthropicFrame(
   frame: string,
   currentEventName: string,
   activeToolUses: Record<number, ActiveToolUse>,
+  usageState: AnthropicUsageState,
   progress: vscode.Progress<vscode.LanguageModelResponsePart>
 ): string {
   let eventName = currentEventName;
@@ -77,7 +87,7 @@ function processAnthropicFrame(
     return eventName;
   }
   for (const data of dataLines) {
-    handleAnthropicEvent(eventName, data, activeToolUses, progress);
+    handleAnthropicEvent(eventName, data, activeToolUses, usageState, progress);
   }
   return eventName;
 }
@@ -86,6 +96,7 @@ function handleAnthropicEvent(
   eventName: string,
   data: string,
   activeToolUses: Record<number, ActiveToolUse>,
+  usageState: AnthropicUsageState,
   progress: vscode.Progress<vscode.LanguageModelResponsePart>
 ): void {
   const event = safeParseJson(data);
@@ -97,11 +108,11 @@ function handleAnthropicEvent(
   }
 
   if (event.type === 'message_start') {
-    handleMessageStart(event, progress);
+    handleMessageStart(event, usageState, progress);
     return;
   }
   if (event.type === 'message_delta') {
-    handleMessageDelta(event, progress);
+    handleMessageDelta(event, usageState, progress);
     return;
   }
   if (event.type === 'content_block_start') {
@@ -215,6 +226,7 @@ function parseToolInput(value: string): object {
 
 function handleMessageStart(
   event: Record<string, unknown>,
+  usageState: AnthropicUsageState,
   progress: vscode.Progress<vscode.LanguageModelResponsePart>
 ): void {
   const message = event.message;
@@ -233,15 +245,21 @@ function handleMessageStart(
   }
   if (isRecord(message.usage)) {
     reportDataPart(progress, ANTHROPIC_USAGE_MIME, message.usage);
+    usageState.start = message.usage;
   }
 }
 
 function handleMessageDelta(
   event: Record<string, unknown>,
+  usageState: AnthropicUsageState,
   progress: vscode.Progress<vscode.LanguageModelResponsePart>
 ): void {
   if (isRecord(event.usage)) {
     reportDataPart(progress, ANTHROPIC_USAGE_MIME, event.usage);
+    const usage = readAnthropicUsage(usageState.start, event.usage);
+    if (usage) {
+      reportModelUsage(progress, usage);
+    }
   }
 }
 

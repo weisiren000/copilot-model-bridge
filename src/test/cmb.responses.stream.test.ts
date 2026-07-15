@@ -70,6 +70,32 @@ test('reports output text deltas', async () => {
   assert.deepEqual(reported.map(part => (part as { value: string }).value), ['Hello']);
 });
 
+test('reports Responses usage for the context window widget', async () => {
+  const reported: unknown[] = [];
+  await consumeResponsesSSEStream(streamFrom([
+    'event: response.completed',
+    'data: {"type":"response.completed","response":{"usage":{"input_tokens":200,"output_tokens":40,"total_tokens":240,"input_tokens_details":{"cached_tokens":50},"output_tokens_details":{"reasoning_tokens":10}}}}',
+    '',
+  ]), { report: (part: unknown) => reported.push(part) } as never, neverCancelledToken as never);
+
+  assert.equal(reported.length, 1);
+  assert.equal((reported[0] as LanguageModelDataPart).mimeType, 'usage');
+  assert.deepEqual(
+    JSON.parse(new TextDecoder().decode((reported[0] as LanguageModelDataPart).data)),
+    {
+      prompt_tokens: 200,
+      completion_tokens: 40,
+      total_tokens: 240,
+      prompt_tokens_details: { cached_tokens: 50 },
+      completion_tokens_details: {
+        reasoning_tokens: 10,
+        accepted_prediction_tokens: 0,
+        rejected_prediction_tokens: 0,
+      },
+    }
+  );
+});
+
 test('reports reasoning text deltas as thinking parts', async () => {
   const reported: unknown[] = [];
   await consumeResponsesSSEStream(streamFrom([

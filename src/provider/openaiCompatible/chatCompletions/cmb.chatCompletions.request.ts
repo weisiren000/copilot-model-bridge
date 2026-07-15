@@ -23,6 +23,7 @@ export function buildChatRequestBody(options: ChatRequestOptions): Record<string
     model: options.modelId,
     messages: options.messages,
     stream: true,
+    stream_options: { include_usage: true },
   };
   requestBody[options.maxTokenField ?? 'max_tokens'] = options.maxOutputTokens;
 

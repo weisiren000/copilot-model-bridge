@@ -121,7 +121,7 @@ test('reports Anthropic message metadata and usage events as data parts', async 
   const reported: unknown[] = [];
   await consumeAnthropicSSEStream(streamFrom([
     'event: message_start',
-    'data: {"type":"message_start","message":{"id":"msg_1","model":"claude-sonnet","usage":{"input_tokens":10,"output_tokens":1}}}',
+    'data: {"type":"message_start","message":{"id":"msg_1","model":"claude-sonnet","usage":{"input_tokens":10,"output_tokens":1,"cache_read_input_tokens":4,"cache_creation_input_tokens":2}}}',
     '',
     'event: message_delta',
     'data: {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":20}}',
@@ -137,10 +137,22 @@ test('reports Anthropic message metadata and usage events as data parts', async 
   assert.deepEqual(JSON.parse(new TextDecoder().decode((reported[1] as LanguageModelDataPart).data)), {
     input_tokens: 10,
     output_tokens: 1,
+    cache_read_input_tokens: 4,
+    cache_creation_input_tokens: 2,
   });
   assert.equal((reported[2] as LanguageModelDataPart).mimeType, ANTHROPIC_USAGE_MIME);
   assert.deepEqual(JSON.parse(new TextDecoder().decode((reported[2] as LanguageModelDataPart).data)), {
     output_tokens: 20,
+  });
+  assert.equal((reported[3] as LanguageModelDataPart).mimeType, 'usage');
+  assert.deepEqual(JSON.parse(new TextDecoder().decode((reported[3] as LanguageModelDataPart).data)), {
+    prompt_tokens: 16,
+    completion_tokens: 20,
+    total_tokens: 36,
+    prompt_tokens_details: {
+      cached_tokens: 4,
+      cache_creation_input_tokens: 2,
+    },
   });
 });
 

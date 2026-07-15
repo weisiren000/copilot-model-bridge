@@ -55,16 +55,25 @@
 
   function renderRoutingSection(model) {
     const e = CMB.escapeAttr;
+    const contextWindowTokens = CMB.calculateContextWindowTokens(
+      model.maxInputTokens,
+      model.maxOutputTokens
+    );
     return `<div class="subsection">
       <div class="block-title">路由与成本</div>
       <div class="form-grid">
         <div class="field">
-          <label>最大输入 Tokens</label>
-          <input type="number" data-scope="model" data-key="maxInputTokens" value="${model.maxInputTokens}">
+          <label>上下文窗口 Tokens</label>
+          <input type="number" min="2" step="1" data-token-field="contextWindowTokens" value="${contextWindowTokens}">
         </div>
         <div class="field">
           <label>最大输出 Tokens</label>
-          <input type="number" data-scope="model" data-key="maxOutputTokens" value="${model.maxOutputTokens}">
+          <input type="number" min="1" step="1" data-token-field="maxOutputTokens" value="${model.maxOutputTokens}">
+        </div>
+        <div class="field wide">
+          <label>可用输入 Tokens</label>
+          <input type="number" data-token-field="availableInputTokens" value="${model.maxInputTokens}" readonly>
+          <small>由上下文窗口减去最大输出自动计算。</small>
         </div>
         <div class="field">
           <label>工具选择模式</label>
@@ -120,6 +129,7 @@
 
   function bindModelInspectorInputs(provider, model) {
     bindModelTextInputs(provider, model);
+    bindModelTokenInputs(provider, model);
     bindModelToggles(provider, model);
     bindReasoningChips(provider, model);
     bindEditToolChips(provider, model);
@@ -153,6 +163,74 @@
         });
       });
     });
+  }
+
+  function bindModelTokenInputs(provider, model) {
+    const contextInput = document.querySelector('[data-token-field="contextWindowTokens"]');
+    const outputInput = document.querySelector('[data-token-field="maxOutputTokens"]');
+    const availableInput = document.querySelector('[data-token-field="availableInputTokens"]');
+    if (!contextInput || !outputInput || !availableInput) return;
+
+    const updateAvailableInput = () => {
+      const maxInputTokens = CMB.calculateMaxInputTokens(
+        Number(contextInput.value),
+        Number(outputInput.value)
+      );
+      availableInput.value = Number.isFinite(maxInputTokens) && maxInputTokens > 0
+        ? String(maxInputTokens)
+        : '';
+    };
+    const commitTokenLimits = () => {
+      const contextWindowTokens = Number(contextInput.value);
+      const maxOutputTokens = Number(outputInput.value);
+      if (!CMB.isValidTokenLimits(contextWindowTokens, maxOutputTokens)) {
+        CMB.showToast('上下文窗口必须是大于最大输出的正整数', 'error');
+        contextInput.value = String(CMB.calculateContextWindowTokens(
+          model.maxInputTokens,
+          model.maxOutputTokens
+        ));
+        outputInput.value = String(model.maxOutputTokens);
+        availableInput.value = String(model.maxInputTokens);
+        return;
+      }
+      const patch = {
+        maxInputTokens: CMB.calculateMaxInputTokens(contextWindowTokens, maxOutputTokens),
+        maxOutputTokens,
+      };
+      updateLocalModel(provider.id, model.id, patch);
+      CMB.postMutate({
+        type: 'updateModel',
+        providerId: provider.id,
+        modelId: model.id,
+        patch,
+      });
+    };
+    const commitWhenLeavingTokenInputs = (event) => {
+      const nextField = event.relatedTarget?.getAttribute?.('data-token-field');
+      if (nextField !== 'contextWindowTokens' && nextField !== 'maxOutputTokens') {
+        commitTokenLimits();
+      }
+    };
+
+    contextInput.addEventListener('input', updateAvailableInput);
+    outputInput.addEventListener('input', updateAvailableInput);
+    contextInput.addEventListener('focusout', commitWhenLeavingTokenInputs);
+    outputInput.addEventListener('focusout', commitWhenLeavingTokenInputs);
+  }
+
+  function updateLocalModel(providerId, modelId, patch) {
+    const state = CMB.getState();
+    const providers = state.providers.map((provider) => (
+      provider.id === providerId
+        ? {
+          ...provider,
+          models: provider.models.map((model) => (
+            model.id === modelId ? { ...model, ...patch } : model
+          )),
+        }
+        : provider
+    ));
+    CMB.setState({ ...state, providers, dirty: true });
   }
 
   function bindModelToggles(provider, model) {

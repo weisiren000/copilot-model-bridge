@@ -17,6 +17,8 @@
     });
     CMB.el('btn-model-confirm').addEventListener('click', submitModelDialog);
     CMB.el('btn-fetch-models').addEventListener('click', fetchModelList);
+    CMB.el('dialog-context-window').addEventListener('input', updateAvailableInput);
+    CMB.el('dialog-max-output').addEventListener('input', updateAvailableInput);
     document.addEventListener('click', handleSuggestionsOutsideClick);
     bindModelDialogToggles();
   }
@@ -44,8 +46,9 @@
     CMB.el('dialog-model-id').value = '';
     CMB.el('dialog-model-name').value = '';
     CMB.el('dialog-model-family').value = '';
-    CMB.el('dialog-max-input').value = '128000';
+    CMB.el('dialog-context-window').value = '132096';
     CMB.el('dialog-max-output').value = '4096';
+    updateAvailableInput();
     CMB.dialogShared.clearSelectedModelDefaults();
     const defaults = { supportsToolCalling: true, supportsEditTools: true };
     document.querySelectorAll('#model-modal [data-dialog-toggle]').forEach((node) => {
@@ -68,6 +71,10 @@
       CMB.showToast(`模型 "${fields.id}" 已存在`, 'error');
       return;
     }
+    if (!CMB.isValidTokenLimits(fields.contextWindow, fields.maxOutput)) {
+      CMB.showToast('上下文窗口必须是大于最大输出的正整数', 'error');
+      return;
+    }
     const caps = readDialogToggles();
     const modelDefaults = CMB.dialogShared.getSelectedModelDefaults(fields.id) || {};
     CMB.postMutate({
@@ -78,7 +85,7 @@
         id: fields.id,
         name: fields.name,
         family: fields.family || undefined,
-        maxInputTokens: fields.maxInput,
+        maxInputTokens: CMB.calculateMaxInputTokens(fields.contextWindow, fields.maxOutput),
         maxOutputTokens: fields.maxOutput,
         ...caps,
       },
@@ -91,9 +98,18 @@
       id: CMB.el('dialog-model-id').value.trim(),
       name: CMB.el('dialog-model-name').value.trim(),
       family: CMB.el('dialog-model-family').value.trim(),
-      maxInput: parseInt(CMB.el('dialog-max-input').value, 10) || 128000,
-      maxOutput: parseInt(CMB.el('dialog-max-output').value, 10) || 4096,
+      contextWindow: Number(CMB.el('dialog-context-window').value),
+      maxOutput: Number(CMB.el('dialog-max-output').value),
     };
+  }
+
+  function updateAvailableInput() {
+    const contextWindow = Number(CMB.el('dialog-context-window').value);
+    const maxOutput = Number(CMB.el('dialog-max-output').value);
+    const availableInput = CMB.calculateMaxInputTokens(contextWindow, maxOutput);
+    CMB.el('dialog-available-input').value = Number.isFinite(availableInput) && availableInput > 0
+      ? String(availableInput)
+      : '';
   }
 
   function readDialogToggles() {

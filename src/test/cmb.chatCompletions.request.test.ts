@@ -44,6 +44,7 @@ test('sends GPT-5.6 reasoning and function tools together through Chat Completio
   assert.equal(body.max_completion_tokens, 128000);
   assert.equal(body.max_tokens, undefined);
   assert.equal(body.reasoning_effort, 'medium');
+  assert.deepEqual(body.stream_options, { include_usage: true });
   assert.deepEqual(body.tools, [{
     type: 'function',
     function: {
