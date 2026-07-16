@@ -12,7 +12,7 @@
   <a href="https://marketplace.visualstudio.com/items?itemName=weisiren.cmb-copilot-model-bridge">
     <img src="https://img.shields.io/badge/VS%20Code-Marketplace-007ACC?style=flat-square&logo=visualstudiocode&logoColor=white" alt="VS Code Marketplace">
   </a>
-  <img src="https://img.shields.io/badge/Version-1.1.3-4C8BF5?style=flat-square" alt="Version 1.1.3">
+  <img src="https://img.shields.io/badge/Version-1.1.4-4C8BF5?style=flat-square" alt="Version 1.1.4">
   <img src="https://img.shields.io/badge/VS%20Code-%5E1.99.0-007ACC?style=flat-square" alt="VS Code 1.99.0+">
   <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
 </p>
@@ -48,6 +48,11 @@ Copilot Model Bridge 会把你自己的模型服务注册到 GitHub Copilot Chat
 - **多模态开关**：按模型声明图片、视频、文件输入能力；不支持的输入会给出清晰错误
 - **可视化配置管理器**：通过 Webview 管理 Provider 和模型，也支持命令面板向导
 - **模型元数据**：配置上下文长度、输出上限、倍率标签、模型家族、分类和状态图标
+
+## v1.1.4 更新重点
+
+- Chat Completions、Responses 和 Anthropic Messages 请求统一上报输入、输出与缓存 Token 用量
+- 配置管理器将 Token 限制拆分为上下文窗口、最大输出和自动计算的可用输入，减少配置不一致
 
 ## v1.1.3 更新重点
 
@@ -269,12 +274,12 @@ Kimi K2.5 (NVIDIA NIM)
 1. 打开 VS Code Extensions 视图。
 2. 点击右上角 `...`。
 3. 选择 `Install from VSIX...`。
-4. 选择 `cmb-copilot-model-bridge-1.1.1.vsix`。
+4. 选择 `cmb-copilot-model-bridge-1.1.4.vsix`。
 
 也可以使用命令行：
 
 ```bash
-code --install-extension cmb-copilot-model-bridge-1.1.1.vsix
+code --install-extension cmb-copilot-model-bridge-1.1.4.vsix
 ```
 
 ## 排查建议
