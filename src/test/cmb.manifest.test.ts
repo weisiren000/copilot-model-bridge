@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-test('declares only the proposal required for native thinking parts', () => {
+test('keeps the Marketplace manifest free of proposed APIs', () => {
   const manifest = JSON.parse(
     readFileSync(join(process.cwd(), 'package.json'), 'utf8')
   ) as {
@@ -12,9 +12,7 @@ test('declares only the proposal required for native thinking parts', () => {
     devDependencies: { '@types/vscode': string };
   };
 
-  assert.deepEqual(manifest.enabledApiProposals, [
-    'languageModelThinkingPart',
-  ]);
+  assert.equal(manifest.enabledApiProposals, undefined);
   assert.equal(manifest.engines.vscode, '^1.115.0');
   assert.equal(manifest.devDependencies['@types/vscode'], '1.115.0');
 });

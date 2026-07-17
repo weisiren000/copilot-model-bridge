@@ -12,8 +12,8 @@
   <a href="https://marketplace.visualstudio.com/items?itemName=weisiren.cmb-copilot-model-bridge">
     <img src="https://img.shields.io/badge/VS%20Code-Marketplace-007ACC?style=flat-square&logo=visualstudiocode&logoColor=white" alt="VS Code Marketplace">
   </a>
-  <img src="https://img.shields.io/badge/Version-1.1.3-4C8BF5?style=flat-square" alt="Version 1.1.3">
-  <img src="https://img.shields.io/badge/VS%20Code-%5E1.99.0-007ACC?style=flat-square" alt="VS Code 1.99.0+">
+  <img src="https://img.shields.io/badge/Version-1.1.5-4C8BF5?style=flat-square" alt="Version 1.1.5">
+  <img src="https://img.shields.io/badge/VS%20Code-%5E1.115.0-007ACC?style=flat-square" alt="VS Code 1.115.0+">
   <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
 </p>
 
@@ -23,7 +23,7 @@
 
 ![Copilot Model Bridge configuration UI](../images/screenshot.png)
 
-Copilot Model Bridge registers your configured models in the Copilot Chat model picker. It supports OpenAI-compatible Chat Completions, Responses API, and Anthropic Messages providers, including OpenAI, Ollama, LM Studio, vLLM, NVIDIA NIM, Groq, OpenRouter, Together AI, DeepSeek, Gemini-compatible gateways, and Anthropic-compatible services.
+Copilot Model Bridge registers your configured models in the Copilot Chat model picker. It supports OpenAI-compatible Chat Completions, Responses API, and Anthropic Messages providers, including OpenAI, Ollama, LM Studio, vLLM, NVIDIA NIM, Groq, Grok, OpenRouter, Together AI, DeepSeek, Gemini-compatible gateways, and Anthropic-compatible services.
 
 ## Features
 
@@ -33,8 +33,15 @@ Copilot Model Bridge registers your configured models in the Copilot Chat model 
 - Configure a separate Base URL and API key per provider
 - Toggle stable tool-calling and vision capabilities per model
 - Configure reasoning effort and preserve reasoning across multi-turn requests
-- Normalize and deduplicate reasoning data without depending on proposed VS Code APIs
+- Use native thinking parts when the host exposes them, with stable DataPart preservation and replay as the fallback
 - Use a visual config manager or command palette wizards
+
+## v1.1.5 Highlights
+
+- Added Grok model and compatible gateway support
+- Restored model-specific reasoning effort choices, including `none`, `low`, `medium`, `high`, `xhigh`, and `max`
+- Improved reasoning parsing, aggregation, and multi-turn replay across Chat Completions, Responses, and Anthropic Messages
+- Removed the Marketplace package's required dependency on proposed VS Code APIs
 
 ## v1.1.3 Highlights
 
@@ -52,7 +59,7 @@ Copilot Model Bridge registers your configured models in the Copilot Chat model 
 | Model service | OpenAI-compatible streaming endpoint, Responses API, or Anthropic Messages endpoint |
 
 > [!NOTE]
-> The extension uses only the stable language model provider API and does not require `--enable-proposed-api`. If your VS Code build or organization policy disables third-party providers, the extension can still be installed, but its models may not appear in Copilot Chat.
+> The Marketplace manifest does not declare proposed VS Code APIs and does not require `--enable-proposed-api`. If your VS Code build or organization policy disables third-party providers, the extension can still be installed, but its models may not appear in Copilot Chat.
 
 > [!NOTE]
 > VS Code's built-in **Custom Endpoint** supports Chat Completions, Responses, and Messages APIs. Use it directly for a single standard endpoint; this extension remains useful for managing multiple providers and compatibility differences.

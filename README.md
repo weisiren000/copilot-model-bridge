@@ -12,8 +12,8 @@
   <a href="https://marketplace.visualstudio.com/items?itemName=weisiren.cmb-copilot-model-bridge">
     <img src="https://img.shields.io/badge/VS%20Code-Marketplace-007ACC?style=flat-square&logo=visualstudiocode&logoColor=white" alt="VS Code Marketplace">
   </a>
-  <img src="https://img.shields.io/badge/Version-1.1.4-4C8BF5?style=flat-square" alt="Version 1.1.4">
-  <img src="https://img.shields.io/badge/VS%20Code-%5E1.99.0-007ACC?style=flat-square" alt="VS Code 1.99.0+">
+  <img src="https://img.shields.io/badge/Version-1.1.5-4C8BF5?style=flat-square" alt="Version 1.1.5">
+  <img src="https://img.shields.io/badge/VS%20Code-%5E1.115.0-007ACC?style=flat-square" alt="VS Code 1.115.0+">
   <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
 </p>
 
@@ -23,10 +23,10 @@
 
 ![Copilot Model Bridge 配置界面](images/screenshot.png)
 
-Copilot Model Bridge 会把你自己的模型服务注册到 GitHub Copilot Chat 的模型选择器中，让 Ollama、LM Studio、vLLM、NVIDIA NIM、Groq、OpenRouter、Together AI、DeepSeek、Gemini 兼容网关、Anthropic Messages 兼容服务等模型像内置模型一样使用。
+Copilot Model Bridge 会把你自己的模型服务注册到 GitHub Copilot Chat 的模型选择器中，让 Ollama、LM Studio、vLLM、NVIDIA NIM、Groq、Grok、OpenRouter、Together AI、DeepSeek、Gemini 兼容网关、Anthropic Messages 兼容服务等模型像内置模型一样使用。
 
 > [!IMPORTANT]
-> 这个扩展只使用 VS Code 已稳定发布的语言模型 Provider API，不需要 `--enable-proposed-api`。请使用 VS Code `1.115.0` 或更高版本，并确保当前 VS Code / GitHub Copilot 环境允许第三方语言模型 Provider。
+> Marketplace 版本不声明 VS Code proposed API，也不需要 `--enable-proposed-api`。请使用 VS Code `1.115.0` 或更高版本，并确保当前 VS Code / GitHub Copilot 环境允许第三方语言模型 Provider。
 
 ## 适合谁
 
@@ -43,11 +43,19 @@ Copilot Model Bridge 会把你自己的模型服务注册到 GitHub Copilot Chat
 - **OpenAI 官方适配**：内置 Responses API 预设与 GPT-5.6 Sol、Terra、Luna 模型档案
 - **Anthropic Messages 模式**：支持 Claude / Anthropic 兼容 `/messages` 协议、工具调用、图片和文档输入
 - **Gemini 兼容增强**：优化 Gemini 兼容服务的地址识别、工具声明、思考内容和多轮工具调用体验
-- **Reasoning 保留**：支持 reasoning / thinking 内容聚合、去重并通过稳定 DataPart 在多轮对话中回放
+- **Grok 兼容增强**：识别 Grok 模型与兼容网关，并按模型能力映射思考强度
+- **Reasoning 支持**：支持模型级思考强度选择；宿主开放原生思考部件时直接展示，否则通过稳定 DataPart 保留并回放
 - **工具调用能力**：按模型声明稳定的工具调用能力，支持 Agent 模式调用工具
 - **多模态开关**：按模型声明图片、视频、文件输入能力；不支持的输入会给出清晰错误
 - **可视化配置管理器**：通过 Webview 管理 Provider 和模型，也支持命令面板向导
 - **模型元数据**：配置上下文长度、输出上限、模型家族和说明信息
+
+## v1.1.5 更新重点
+
+- 新增 Grok 系列模型和兼容网关支持
+- 恢复按模型能力选择思考强度，支持 `none`、`low`、`medium`、`high`、`xhigh` 和 `max` 等档位
+- 优化 Chat Completions、Responses 和 Anthropic Messages 的思考内容解析、聚合与多轮回放
+- 移除 Marketplace 包对 proposed API 的强制依赖，实验接口不可用时不再影响模型请求
 
 ## v1.1.4 更新重点
 
@@ -246,7 +254,7 @@ Kimi K2.5 (NVIDIA NIM)
 | `supportsVision` | 是否支持图片输入 |
 | `supportsVideo` | 是否声明支持视频附件 |
 | `supportsFileInput` | 是否声明支持非图片文件输入 |
-| `supportsReasoning` | 是否向上游发送 reasoning 配置；稳定 API 下不显示 Thinking Effort 选择器 |
+| `supportsReasoning` | 是否声明模型支持 reasoning，并向上游发送对应配置 |
 | `supportedReasoningLevels` | 可选 reasoning 档位 |
 | `defaultReasoningLevel` | 默认 reasoning 档位 |
 | `enableDocumentCitations` | Anthropic 文档输入是否请求引用信息 |
@@ -277,12 +285,12 @@ Kimi K2.5 (NVIDIA NIM)
 1. 打开 VS Code Extensions 视图。
 2. 点击右上角 `...`。
 3. 选择 `Install from VSIX...`。
-4. 选择 `cmb-copilot-model-bridge-1.1.4.vsix`。
+4. 选择 `cmb-copilot-model-bridge-1.1.5.vsix`。
 
 也可以使用命令行：
 
 ```bash
-code --install-extension cmb-copilot-model-bridge-1.1.4.vsix
+code --install-extension cmb-copilot-model-bridge-1.1.5.vsix
 ```
 
 ## 排查建议
@@ -295,7 +303,7 @@ code --install-extension cmb-copilot-model-bridge-1.1.4.vsix
 | Anthropic 兼容接口返回 404/401 | 确认 Base URL 是否已经包含服务要求的前缀，例如 MiniMax 使用 `/anthropic` |
 | 工具调用失败 | 关闭 `supportsToolCalling` 验证基础对话，再逐步开启工具调用 |
 | 图片或文件输入失败 | 确认模型能力字段和上游服务实际支持范围一致 |
-| reasoning 不显示 | 稳定 Provider API 暂无折叠 Thinking UI；推理内容仍会保留并用于多轮请求 |
+| reasoning 不显示 | 当前宿主未开放原生思考部件时，Copilot Chat 可能只显示正文或工具调用；推理内容仍会保留并用于多轮请求 |
 
 ## 本地开发
 
