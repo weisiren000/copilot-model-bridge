@@ -31,9 +31,9 @@ Copilot Model Bridge registers your configured models in the Copilot Chat model 
 - Stream responses through Chat Completions, Responses API, or Anthropic Messages
 - Use built-in OpenAI GPT-5.6 Sol, Terra, and Luna model profiles
 - Configure a separate Base URL and API key per provider
-- Toggle tool calling, edit tool hints, and vision support per model
-- Configure reasoning effort and use reasoning with function tools in Chat Completions
-- Display deduplicated reasoning summaries without leaked HTML or Markdown markers
+- Toggle stable tool-calling and vision capabilities per model
+- Configure reasoning effort and preserve reasoning across multi-turn requests
+- Normalize and deduplicate reasoning data without depending on proposed VS Code APIs
 - Use a visual config manager or command palette wizards
 
 ## v1.1.3 Highlights
@@ -47,12 +47,15 @@ Copilot Model Bridge registers your configured models in the Copilot Chat model 
 
 | Item | Requirement |
 | --- | --- |
-| VS Code | `1.99.0` or newer |
+| VS Code | `1.115.0` or newer |
 | GitHub Copilot | Copilot Chat on an Individual plan |
 | Model service | OpenAI-compatible streaming endpoint, Responses API, or Anthropic Messages endpoint |
 
 > [!NOTE]
-> If your VS Code build or organization policy disables the language model provider API, the extension can still be installed, but its models may not appear in Copilot Chat.
+> The extension uses only the stable language model provider API and does not require `--enable-proposed-api`. If your VS Code build or organization policy disables third-party providers, the extension can still be installed, but its models may not appear in Copilot Chat.
+
+> [!NOTE]
+> VS Code's built-in **Custom Endpoint** supports Chat Completions, Responses, and Messages APIs. Use it directly for a single standard endpoint; this extension remains useful for managing multiple providers and compatibility differences.
 
 ## Quick Start
 

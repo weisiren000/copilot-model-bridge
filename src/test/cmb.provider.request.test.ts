@@ -16,6 +16,10 @@ class LanguageModelDataPart {
   constructor(readonly data: Uint8Array, readonly mimeType?: string) {}
 }
 
+class LanguageModelThinkingPart {
+  constructor(readonly value: string | string[]) {}
+}
+
 class LanguageModelToolCallPart {
   constructor(
     readonly callId: string,
@@ -41,6 +45,7 @@ const vscodeMock = {
     Required: 1,
   },
   LanguageModelDataPart,
+  LanguageModelThinkingPart,
   LanguageModelTextPart,
   LanguageModelToolCallPart,
   LanguageModelToolResultPart,
@@ -527,6 +532,135 @@ test('sends Responses request when provider apiStyle is responses', async () => 
     assert.equal(receivedBody?.max_output_tokens, 4096);
     assert.equal(receivedBody?.max_tokens, undefined);
     assert.equal(receivedBody?.stream, true);
+  } finally {
+    server.close();
+  }
+});
+
+test('normalizes Grok reasoning effort for Chat Completions proxies', async () => {
+  let receivedPath = '';
+  let receivedBody: Record<string, unknown> | undefined;
+  const server = http.createServer((req, res) => {
+    receivedPath = req.url ?? '';
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      receivedBody = JSON.parse(body);
+      res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+      res.end('data: [DONE]\n\n');
+    });
+  });
+
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address() as AddressInfo;
+  const provider: ProviderConfig = {
+    id: 'grok-proxy',
+    displayName: 'Grok Proxy',
+    baseUrl: `http://127.0.0.1:${address.port}/v1`,
+    apiKey: 'key',
+    apiStyle: 'chat',
+    models: [],
+  };
+
+  try {
+    await sendChatRequest(
+      provider,
+      {
+        id: 'grok-4.5',
+        name: 'Grok 4.5',
+        supportsReasoning: true,
+        defaultReasoningLevel: 'max',
+        supportedReasoningLevels: ['low', 'medium', 'high', 'max'],
+      },
+      {
+        id: 'grok-proxy::grok-4.5',
+        name: 'Grok 4.5',
+        family: 'grok',
+        version: '',
+        maxInputTokens: 500000,
+        maxOutputTokens: 128000,
+        capabilities: {},
+      },
+      [{
+        role: vscodeMock.LanguageModelChatMessageRole.User,
+        content: [new LanguageModelTextPart('hello')],
+      }, {
+        role: vscodeMock.LanguageModelChatMessageRole.Assistant,
+        content: [
+          new LanguageModelThinkingPart('internal summary'),
+          new LanguageModelTextPart('previous answer'),
+        ],
+      }] as never,
+      { toolMode: 0 } as never,
+      { report() {} },
+      { isCancellationRequested: false, onCancellationRequested: () => ({ dispose() {} }) } as never
+    );
+
+    assert.equal(receivedPath, '/v1/chat/completions');
+    assert.equal(receivedBody?.reasoning_effort, 'high');
+    const messages = receivedBody?.messages as Array<Record<string, unknown>>;
+    assert.equal('__reasoningContent' in messages[1], false);
+    assert.equal('reasoning_content' in messages[1], false);
+  } finally {
+    server.close();
+  }
+});
+
+test('normalizes Grok reasoning effort in Responses request bodies', async () => {
+  let receivedPath = '';
+  let receivedBody: Record<string, any> | undefined;
+  const server = http.createServer((req, res) => {
+    receivedPath = req.url ?? '';
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      receivedBody = JSON.parse(body);
+      res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+      res.end('data: {"type":"response.completed"}\n\n');
+    });
+  });
+
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address() as AddressInfo;
+  const provider: ProviderConfig = {
+    id: 'grok-proxy',
+    displayName: 'Grok Proxy',
+    baseUrl: `http://127.0.0.1:${address.port}/v1`,
+    apiKey: 'key',
+    apiStyle: 'responses',
+    models: [],
+  };
+
+  try {
+    await sendChatRequest(
+      provider,
+      {
+        id: 'grok-4.5',
+        name: 'Grok 4.5',
+        supportsReasoning: true,
+        defaultReasoningLevel: 'max',
+        supportedReasoningLevels: ['low', 'medium', 'high', 'max'],
+      },
+      {
+        id: 'grok-proxy::grok-4.5',
+        name: 'Grok 4.5',
+        family: 'grok',
+        version: '',
+        maxInputTokens: 500000,
+        maxOutputTokens: 128000,
+        capabilities: {},
+      },
+      [{
+        role: vscodeMock.LanguageModelChatMessageRole.User,
+        content: [new LanguageModelTextPart('hello')],
+      }] as never,
+      { toolMode: 0 } as never,
+      { report() {} },
+      { isCancellationRequested: false, onCancellationRequested: () => ({ dispose() {} }) } as never
+    );
+
+    assert.equal(receivedPath, '/v1/responses');
+    assert.deepEqual(receivedBody?.reasoning, { effort: 'high', summary: 'auto' });
   } finally {
     server.close();
   }

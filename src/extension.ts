@@ -17,9 +17,16 @@ import * as vscode from 'vscode';
 import { OpenAICompatChatProvider } from './provider/core/cmb.provider.chatProvider';
 import { registerCommands } from './commands/index';
 import { CONFIG_SECTION, LEGACY_CONFIG_SECTION } from './provider/config/cmb.provider.configKeys';
+import {
+  buildProposedApiLaunchCommand,
+  tryRegisterLanguageModelProvider,
+} from './compat/cmb.runtimeCompatibility';
 
 /** The vendor ID must exactly match the "vendor" field in package.json contributes */
 const VENDOR_ID = 'copilot-model-bridge';
+const NATIVE_MODEL_MANAGER_COMMAND = 'workbench.action.chat.manage';
+const OPEN_NATIVE_MODELS = '打开原生 Custom Endpoint';
+const COPY_LAUNCH_COMMAND = '复制临时启动命令';
 
 export function activate(context: vscode.ExtensionContext): void {
   console.log('[copilot-model-bridge] Extension activating...');
@@ -31,12 +38,15 @@ export function activate(context: vscode.ExtensionContext): void {
   const chatProvider = new OpenAICompatChatProvider();
   context.subscriptions.push(chatProvider);
 
-  const providerDisposable = vscode.lm.registerLanguageModelChatProvider(
-    VENDOR_ID,
-    chatProvider
+  const providerDisposable = tryRegisterLanguageModelProvider(
+    () => vscode.lm.registerLanguageModelChatProvider(VENDOR_ID, chatProvider)
   );
-  context.subscriptions.push(providerDisposable);
-  chatProvider.refreshModels();
+  if (providerDisposable) {
+    context.subscriptions.push(providerDisposable);
+    chatProvider.refreshModels();
+  } else {
+    void showProposedApiUnavailableMessage(context);
+  }
 
   // ── 2. Register all management commands ──────────────────────────────────
   registerCommands(context, () => chatProvider.refreshModels());
@@ -77,4 +87,29 @@ export function activate(context: vscode.ExtensionContext): void {
 
 export function deactivate(): void {
   console.log('[copilot-model-bridge] Extension deactivated.');
+}
+
+async function showProposedApiUnavailableMessage(
+  context: vscode.ExtensionContext
+): Promise<void> {
+  const warningKey = `proposedApiUnavailable:${vscode.version}`;
+  if (context.globalState.get<boolean>(warningKey)) {
+    return;
+  }
+  await context.globalState.update(warningKey, true);
+
+  const choice = await vscode.window.showErrorMessage(
+    'Copilot Model Bridge 无法注册模型：当前 VS Code 未授权此 Marketplace 扩展使用 '
+      + 'chatProvider 实验 API。可改用 VS Code 原生 Custom Endpoint；临时使用需要带 '
+      + '--enable-proposed-api 启动。',
+    OPEN_NATIVE_MODELS,
+    COPY_LAUNCH_COMMAND
+  );
+
+  if (choice === OPEN_NATIVE_MODELS) {
+    await vscode.commands.executeCommand(NATIVE_MODEL_MANAGER_COMMAND);
+  } else if (choice === COPY_LAUNCH_COMMAND) {
+    await vscode.env.clipboard.writeText(buildProposedApiLaunchCommand());
+    vscode.window.setStatusBarMessage('Copilot Model Bridge：启动命令已复制', 3000);
+  }
 }

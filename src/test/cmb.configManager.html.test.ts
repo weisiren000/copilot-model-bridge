@@ -101,6 +101,68 @@ test('renders model modal with context window, output, and calculated input fiel
   assert.doesNotMatch(html, /id="dialog-max-input"/);
 });
 
+test('provides an xAI Grok preset using the Responses API', () => {
+  const source = readFileSync(join(
+    process.cwd(),
+    'src/webview/configManager/cmb.configManager.dialogShared.js'
+  ), 'utf8');
+  const context = {
+    window: { CMB: {} as Record<string, unknown> },
+    document: {},
+    console,
+  };
+  vm.runInNewContext(source, context);
+  const cmb = context.window.CMB as {
+    dialogShared: {
+      PROVIDER_PRESETS: Record<string, Record<string, unknown>>;
+    };
+  };
+
+  assert.deepEqual(
+    { ...cmb.dialogShared.PROVIDER_PRESETS.xai },
+    {
+      label: 'xAI（Grok / Responses API）',
+      name: 'xAI',
+      baseUrl: 'https://api.x.ai/v1',
+      idHint: 'xai',
+      apiKeyHint: 'xai-...',
+      apiStyle: 'responses',
+    }
+  );
+});
+
+test('uses a model profile context window with the editable default request cap', () => {
+  const source = readFileSync(join(
+    process.cwd(),
+    'src/webview/configManager/cmb.configManager.dialogShared.js'
+  ), 'utf8');
+  const context = {
+    window: {
+      CMB: {
+        calculateContextWindowTokens: (input: number, output: number) => input + output,
+        calculateMaxInputTokens: (contextWindow: number, output: number) => contextWindow - output,
+      },
+    },
+    document: {},
+    console,
+  };
+  vm.runInNewContext(source, context);
+  const cmb = context.window.CMB as typeof context.window.CMB & {
+    dialogShared: {
+      resolveSuggestionTokenLimits(defaults: Record<string, unknown>): Record<string, number>;
+    };
+  };
+
+  assert.deepEqual(
+    { ...cmb.dialogShared.resolveSuggestionTokenLimits({ contextWindowTokens: 500000 }) },
+    {
+      contextWindowTokens: 500000,
+      maxOutputTokens: 4096,
+      maxInputTokens: 495904,
+    }
+  );
+});
+
 test('converts between context window and provider token limits', () => {
   const source = readFileSync(join(
     process.cwd(),

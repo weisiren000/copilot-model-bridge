@@ -6,16 +6,9 @@ const EDIT_TOOLS: readonly EditToolName[] = [
   'apply-patch',
   'code-rewrite',
 ];
-const DEFAULT_EDIT_TOOLS: readonly EditToolName[] = [
-  'find-replace',
-  'multi-find-replace',
-  'apply-patch',
-];
-
 export interface ModelCapabilities {
   toolCalling: boolean;
   imageInput: boolean;
-  editTools?: EditToolName[];
 }
 
 export type RequestedToolMode = 'auto' | 'required' | 'none';
@@ -27,24 +20,15 @@ export interface ResolveToolChoiceOptions {
 }
 
 export function buildModelCapabilities(
-  model: Partial<Pick<ModelConfig, 'supportsToolCalling' | 'supportsVision' | 'supportsEditTools' | 'preferredEditTools'>>
+  model: Partial<Pick<
+    ModelConfig,
+    'supportsToolCalling' | 'supportsVision' | 'supportsEditTools' | 'preferredEditTools'
+  >>
 ): ModelCapabilities {
-  const supportsToolCalling = model.supportsToolCalling ?? true;
-  const capabilities: ModelCapabilities = {
-    toolCalling: supportsToolCalling,
+  return {
+    toolCalling: model.supportsToolCalling ?? true,
     imageInput: model.supportsVision ?? false,
   };
-
-  const supportsEditTools = model.supportsEditTools ?? supportsToolCalling;
-  if (!supportsToolCalling || !supportsEditTools) {
-    return capabilities;
-  }
-
-  const editTools = normalizeEditTools(model.preferredEditTools ?? DEFAULT_EDIT_TOOLS);
-  if (editTools.length > 0) {
-    capabilities.editTools = editTools;
-  }
-  return capabilities;
 }
 
 export function resolveToolChoice(options: ResolveToolChoiceOptions): 'auto' | 'required' | 'none' | undefined {

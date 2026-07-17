@@ -7,34 +7,18 @@ import {
 import { OpenAIStreamChunk } from '../../../types';
 import { readOpenAIUsage, reportModelUsage } from '../cmb.openaiCompatible.usage';
 
-/**
- * 把一段 reasoning 文本以 LanguageModelThinkingPart 的形式回报给 VS Code，
- * 让 Copilot Chat UI 把它显示成可折叠的 thinking 区域。
- *
- * 返回 true 表示成功使用了 ThinkingPart；返回 false 时调用方应该退回到
- * DataPart 兜底，确保 history 中仍能携带 reasoning。
- */
-export function reportThinkingPart(
+export function reportReasoningDataPart(
   progress: vscode.Progress<vscode.LanguageModelResponsePart>,
-  value: string,
-  id?: string
-): boolean {
+  value: string
+): void {
   const normalizedValue = normalizeThinkingText(value);
   if (!normalizedValue) {
-    return true;
+    return;
   }
-  const ctor = (vscode as unknown as {
-    LanguageModelThinkingPart?: new (value: string, id?: string) => unknown;
-  }).LanguageModelThinkingPart;
-  if (!ctor) {
-    return false;
-  }
-  try {
-    progress.report(new ctor(normalizedValue, id) as vscode.LanguageModelResponsePart);
-    return true;
-  } catch {
-    return false;
-  }
+  progress.report(new vscode.LanguageModelDataPart(
+    new TextEncoder().encode(normalizedValue),
+    DEEPSEEK_REASONING_MIME
+  ));
 }
 
 export function normalizeThinkingText(value: string): string {
@@ -45,10 +29,10 @@ export function normalizeThinkingText(value: string): string {
 
 /** 判断历史消息中的某个 part 是否是 ThinkingPart（兼容运行时缺失的情况） */
 export function isThinkingPart(part: unknown): part is { value: string | string[] } {
-  const ctor = (vscode as unknown as {
-    LanguageModelThinkingPart?: new (...args: unknown[]) => unknown;
-  }).LanguageModelThinkingPart;
-  return !!ctor && part instanceof (ctor as new (...args: unknown[]) => object);
+  return typeof part === 'object'
+    && part !== null
+    && part.constructor?.name === 'LanguageModelThinkingPart'
+    && 'value' in part;
 }
 
 /** 从 ThinkingPart 中读取文本内容，兼容 string 与 string[] 两种形态 */
@@ -85,7 +69,6 @@ export async function consumeSSEStream(
   }> = {};
   const textThoughtSignatures: string[] = [];
   let reasoningBuffer = '';
-  let reasoningStreamed = false;
   let taggedThoughtBuffer = '';
   let insideTaggedThought = false;
 
@@ -132,9 +115,6 @@ export async function consumeSSEStream(
             for (const part of parts.parts) {
               if (part.kind === 'thinking') {
                 taggedThoughtBuffer += part.value;
-                if (reportThinkingPart(progress, part.value)) {
-                  reasoningStreamed = true;
-                }
               } else if (part.value) {
                 progress.report(new vscode.LanguageModelTextPart(part.value));
               }
@@ -142,15 +122,9 @@ export async function consumeSSEStream(
           }
           if (delta?.reasoning_content) {
             reasoningBuffer += delta.reasoning_content;
-            if (reportThinkingPart(progress, delta.reasoning_content)) {
-              reasoningStreamed = true;
-            }
           }
           if (delta?.reasoning) {
             reasoningBuffer += delta.reasoning;
-            if (reportThinkingPart(progress, delta.reasoning)) {
-              reasoningStreamed = true;
-            }
           }
           const deltaThoughtSignature = readGoogleThoughtSignature(delta);
           if (delta?.tool_calls) {
@@ -189,16 +163,12 @@ export async function consumeSSEStream(
       }
     }
   } finally {
-    // 优先以 ThinkingPart 形式回报；如果当前 VS Code 不支持 ThinkingPart
-    // 或运行时已有片段流过则直接用 DataPart 兜底，让 history 仍能携带
-    // reasoning_content 用于多轮 replay。
+    // Stable Provider API does not expose ThinkingPart. Preserve reasoning in a
+    // DataPart so it can still be replayed in later turns.
     const fallbackReasoning = normalizeThinkingText(reasoningBuffer || taggedThoughtBuffer);
-    if (fallbackReasoning && !reasoningStreamed) {
+    if (fallbackReasoning) {
       try {
-        progress.report(new vscode.LanguageModelDataPart(
-          new TextEncoder().encode(fallbackReasoning),
-          DEEPSEEK_REASONING_MIME
-        ));
+        reportReasoningDataPart(progress, fallbackReasoning);
       } catch {
         // 不让 reasoning DataPart 失败影响主流回报
       }

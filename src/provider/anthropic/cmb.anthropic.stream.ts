@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { reportThinkingPart } from '../openaiCompatible/chatCompletions/cmb.chatCompletions.stream';
+import { reportReasoningDataPart } from '../openaiCompatible/chatCompletions/cmb.chatCompletions.stream';
 import {
   readAnthropicUsage,
   reportModelUsage,
@@ -169,7 +169,7 @@ function handleContentBlockDelta(
     return;
   }
   if (delta.type === 'thinking_delta' && typeof delta.thinking === 'string') {
-    reportThinkingPart(progress, delta.thinking);
+    reportReasoningDataPart(progress, delta.thinking);
     return;
   }
   if (delta.type === 'signature_delta' && typeof delta.signature === 'string') {

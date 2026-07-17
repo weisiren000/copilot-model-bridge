@@ -5,7 +5,7 @@ import {
   resolveToolChoice,
 } from '../provider/openaiCompatible/cmb.openaiCompatible.capabilities';
 
-test('adds default edit tools for tool-calling models', () => {
+test('publishes stable tool-calling and vision capabilities', () => {
   assert.deepEqual(
     buildModelCapabilities({
       supportsToolCalling: true,
@@ -14,12 +14,11 @@ test('adds default edit tools for tool-calling models', () => {
     {
       toolCalling: true,
       imageInput: false,
-      editTools: ['find-replace', 'multi-find-replace', 'apply-patch'],
     }
   );
 });
 
-test('uses configured edit tools and filters unknown values', () => {
+test('does not publish proposal-only edit tool hints', () => {
   assert.deepEqual(
     buildModelCapabilities({
       supportsToolCalling: true,
@@ -30,7 +29,6 @@ test('uses configured edit tools and filters unknown values', () => {
     {
       toolCalling: true,
       imageInput: true,
-      editTools: ['code-rewrite', 'apply-patch'],
     }
   );
 });

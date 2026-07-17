@@ -9,6 +9,7 @@ import {
   reduceConfigManagerMessage,
 } from './cmb.configManager.messages';
 import { fetchOpenAIModelList } from '../provider/openaiCompatible/cmb.openaiCompatible.modelsCatalog';
+import { getGrokModelProfile } from '../provider/grok/cmb.grok.adapter';
 import { getOpenAIModelProfile } from '../provider/openaiCompatible/cmb.openaiCompatible.openaiModels';
 
 const VIEW_TYPE = 'copilotModelBridge.configManager';
@@ -166,7 +167,8 @@ async function handleFetchModels(
     token: message.token,
     models: result.models.map(id => ({
       id,
-      defaults: getOpenAIModelProfile(message.baseUrl, id),
+      defaults: getOpenAIModelProfile(message.baseUrl, id)
+        ?? getGrokModelProfile(message.baseUrl, id),
     })),
     error: result.ok ? undefined : result.error,
   });

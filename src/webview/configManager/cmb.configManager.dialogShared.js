@@ -27,6 +27,14 @@
       idHint: 'deepseek',
       apiKeyHint: 'sk-...',
     },
+    xai: {
+      label: 'xAI（Grok / Responses API）',
+      name: 'xAI',
+      baseUrl: 'https://api.x.ai/v1',
+      idHint: 'xai',
+      apiKeyHint: 'xai-...',
+      apiStyle: 'responses',
+    },
     anthropic: {
       label: 'Anthropic（Claude Messages API）',
       name: 'Anthropic',
@@ -46,6 +54,7 @@
     hideSuggestions,
     clearSelectedModelDefaults,
     getSelectedModelDefaults,
+    resolveSuggestionTokenLimits,
   };
 
   function populatePresetSelect() {
@@ -107,17 +116,28 @@
 
   function applyModelSuggestion(suggestion) {
     const defaults = suggestion.defaults || {};
+    const tokenLimits = resolveSuggestionTokenLimits(defaults);
     selectedModelDefaults = { ...defaults, id: suggestion.id };
     CMB.el('dialog-model-id').value = suggestion.id;
     CMB.el('dialog-model-name').value = defaults.name || suggestion.id.split('/').pop() || suggestion.id;
     CMB.el('dialog-model-family').value = defaults.family || '';
-    const maxOutputTokens = defaults.maxOutputTokens || 4096;
-    const maxInputTokens = defaults.maxInputTokens || 128000;
-    const contextWindowTokens = CMB.calculateContextWindowTokens(maxInputTokens, maxOutputTokens);
-    CMB.el('dialog-context-window').value = String(contextWindowTokens);
-    CMB.el('dialog-max-output').value = String(maxOutputTokens);
-    CMB.el('dialog-available-input').value = String(maxInputTokens);
+    CMB.el('dialog-context-window').value = String(tokenLimits.contextWindowTokens);
+    CMB.el('dialog-max-output').value = String(tokenLimits.maxOutputTokens);
+    CMB.el('dialog-available-input').value = String(tokenLimits.maxInputTokens);
     applyModelCapabilityDefaults(defaults);
+  }
+
+  function resolveSuggestionTokenLimits(defaults) {
+    // Profiles may publish a total context window without an output ceiling.
+    // Keep the dialog's editable default request cap instead of inventing one.
+    const maxOutputTokens = defaults.maxOutputTokens || 4096;
+    const contextWindowTokens = defaults.contextWindowTokens
+      || CMB.calculateContextWindowTokens(defaults.maxInputTokens || 128000, maxOutputTokens);
+    return {
+      contextWindowTokens,
+      maxOutputTokens,
+      maxInputTokens: CMB.calculateMaxInputTokens(contextWindowTokens, maxOutputTokens),
+    };
   }
 
   function applyModelCapabilityDefaults(defaults) {

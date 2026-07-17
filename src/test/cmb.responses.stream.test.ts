@@ -96,7 +96,7 @@ test('reports Responses usage for the context window widget', async () => {
   );
 });
 
-test('reports reasoning text deltas as thinking parts', async () => {
+test('preserves reasoning text deltas in a stable data part', async () => {
   const reported: unknown[] = [];
   await consumeResponsesSSEStream(streamFrom([
     'event: response.reasoning_text.delta',
@@ -107,12 +107,12 @@ test('reports reasoning text deltas as thinking parts', async () => {
     '',
   ]), { report: (part: unknown) => reported.push(part) } as never, neverCancelledToken as never);
 
-  assert.equal(reported[0] instanceof LanguageModelThinkingPart, true);
-  assert.equal((reported[0] as LanguageModelThinkingPart).value, 'think');
-  assert.equal((reported[1] as LanguageModelTextPart).value, 'answer');
+  assert.equal((reported[0] as LanguageModelTextPart).value, 'answer');
+  assert.equal((reported[1] as LanguageModelDataPart).mimeType, 'application/x-deepseek-reasoning');
+  assert.equal(new TextDecoder().decode((reported[1] as LanguageModelDataPart).data), 'think');
 });
 
-test('reports reasoning summary from final output item as thinking part', async () => {
+test('preserves a final reasoning summary in a stable data part', async () => {
   const reported: unknown[] = [];
   await consumeResponsesSSEStream(streamFrom([
     'event: response.output_item.done',
@@ -123,9 +123,11 @@ test('reports reasoning summary from final output item as thinking part', async 
     '',
   ]), { report: (part: unknown) => reported.push(part) } as never, neverCancelledToken as never);
 
-  assert.equal(reported[0] instanceof LanguageModelThinkingPart, true);
-  assert.equal((reported[0] as LanguageModelThinkingPart).value, 'checked factors');
-  assert.equal((reported[1] as LanguageModelTextPart).value, 'answer');
+  assert.equal((reported[0] as LanguageModelTextPart).value, 'answer');
+  assert.equal(
+    new TextDecoder().decode((reported[1] as LanguageModelDataPart).data),
+    'checked factors'
+  );
 });
 
 test('reports a reasoning item once and prefers its final summary', async () => {
@@ -142,13 +144,12 @@ test('reports a reasoning item once and prefers its final summary', async () => 
     '',
   ]), { report: (part: unknown) => reported.push(part) } as never, neverCancelledToken as never);
 
-  const thinkingParts = reported.filter(part => part instanceof LanguageModelThinkingPart);
-  assert.equal(thinkingParts.length, 1);
+  const reasoningParts = reported.filter(part => part instanceof LanguageModelDataPart);
+  assert.equal(reasoningParts.length, 1);
   assert.equal(
-    (thinkingParts[0] as LanguageModelThinkingPart).value,
+    new TextDecoder().decode((reasoningParts[0] as LanguageModelDataPart).data),
     'Preparing stash and inspecting conflicts'
   );
-  assert.equal((thinkingParts[0] as LanguageModelThinkingPart).id, 'rs_1');
 });
 
 test('removes paired strong markers from thinking text without deleting ordinary asterisks', () => {
@@ -179,10 +180,12 @@ test('flushes streamed reasoning once when no final summary arrives', async () =
     '',
   ]), { report: (part: unknown) => reported.push(part) } as never, neverCancelledToken as never);
 
-  const thinkingParts = reported.filter(part => part instanceof LanguageModelThinkingPart);
-  assert.equal(thinkingParts.length, 1);
-  assert.equal((thinkingParts[0] as LanguageModelThinkingPart).value, 'first second');
-  assert.equal((thinkingParts[0] as LanguageModelThinkingPart).id, 'rs_2');
+  const reasoningParts = reported.filter(part => part instanceof LanguageModelDataPart);
+  assert.equal(reasoningParts.length, 1);
+  assert.equal(
+    new TextDecoder().decode((reasoningParts[0] as LanguageModelDataPart).data),
+    'first second'
+  );
 });
 
 test('reports final frame when stream ends without trailing blank line', async () => {

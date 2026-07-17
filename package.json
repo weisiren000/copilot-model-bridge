@@ -11,7 +11,7 @@
     "url": "https://github.com/weisiren000/copilot-model-bridge"
   },
   "engines": {
-    "vscode": "^1.99.0"
+    "vscode": "^1.115.0"
   },
   "categories": [
     "AI",
@@ -31,10 +31,6 @@
   ],
   "activationEvents": [
     "onStartupFinished"
-  ],
-  "enabledApiProposals": [
-    "chatProvider",
-    "languageModelThinkingPart"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -218,11 +214,11 @@
                     },
                     "supportsEditTools": {
                       "type": "boolean",
-                      "description": "Whether the model exposes edit tool hints for Copilot Agent mode. Defaults to supportsToolCalling."
+                      "description": "Compatibility field retained in configuration. Stable VS Code provider APIs do not currently expose edit tool hints."
                     },
                     "preferredEditTools": {
                       "type": "array",
-                      "description": "Preferred edit tools for file modifications in Agent mode. Leave unset to use the default edit tools.",
+                      "description": "Compatibility field retained until VS Code stabilizes provider edit tool hints.",
                       "items": {
                         "type": "string",
                         "enum": [
@@ -247,7 +243,7 @@
                     "supportsReasoning": {
                       "type": "boolean",
                       "default": false,
-                      "description": "Whether the model exposes Thinking Effort configuration in the model picker"
+                      "description": "Whether reasoning options are sent upstream. Stable provider APIs do not currently expose a Thinking Effort picker."
                     },
                     "supportedReasoningLevels": {
                       "type": "array",
@@ -307,12 +303,12 @@
                     "multiplier": {
                       "type": "string",
                       "default": "0x",
-                      "description": "Request cost multiplier label shown in VS Code model UI, such as 0x, 1x, 0.5x, or High"
+                      "description": "Compatibility field retained until VS Code stabilizes provider pricing metadata."
                     },
                     "multiplierNumeric": {
                       "type": "number",
                       "minimum": 0,
-                      "description": "Numeric form of multiplier for VS Code cost comparisons. If unset, labels like 1x or 0.5x are inferred automatically."
+                      "description": "Compatibility field retained until VS Code stabilizes provider pricing metadata."
                     },
                     "family": {
                       "type": "string",
@@ -324,16 +320,16 @@
                     },
                     "categoryLabel": {
                       "type": "string",
-                      "description": "Optional category label for newer VS Code model management surfaces."
+                      "description": "Compatibility field retained until VS Code stabilizes provider category metadata."
                     },
                     "categoryOrder": {
                       "type": "number",
-                      "description": "Optional category sort order for newer VS Code model management surfaces."
+                      "description": "Compatibility field retained until VS Code stabilizes provider category metadata."
                     },
                     "statusIcon": {
                       "type": "string",
                       "pattern": "^[a-zA-Z][a-zA-Z0-9-]*$",
-                      "description": "Optional VS Code ThemeIcon id, such as sparkle or warning. The extension ignores unsafe icon ids."
+                      "description": "Compatibility field retained until VS Code stabilizes provider status icon metadata."
                     }
                   }
                 }
@@ -354,7 +350,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
-    "@types/vscode": "^1.99.0",
+    "@types/vscode": "1.115.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
     "eslint": "^9.0.0",

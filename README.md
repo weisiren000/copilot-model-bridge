@@ -26,7 +26,7 @@
 Copilot Model Bridge 会把你自己的模型服务注册到 GitHub Copilot Chat 的模型选择器中，让 Ollama、LM Studio、vLLM、NVIDIA NIM、Groq、OpenRouter、Together AI、DeepSeek、Gemini 兼容网关、Anthropic Messages 兼容服务等模型像内置模型一样使用。
 
 > [!IMPORTANT]
-> 这个扩展依赖 VS Code 的语言模型 Provider 能力。请使用 VS Code `1.99.0` 或更高版本，并确保当前 VS Code / GitHub Copilot 环境允许第三方语言模型 Provider。
+> 这个扩展只使用 VS Code 已稳定发布的语言模型 Provider API，不需要 `--enable-proposed-api`。请使用 VS Code `1.115.0` 或更高版本，并确保当前 VS Code / GitHub Copilot 环境允许第三方语言模型 Provider。
 
 ## 适合谁
 
@@ -43,11 +43,11 @@ Copilot Model Bridge 会把你自己的模型服务注册到 GitHub Copilot Chat
 - **OpenAI 官方适配**：内置 Responses API 预设与 GPT-5.6 Sol、Terra、Luna 模型档案
 - **Anthropic Messages 模式**：支持 Claude / Anthropic 兼容 `/messages` 协议、工具调用、图片和文档输入
 - **Gemini 兼容增强**：优化 Gemini 兼容服务的地址识别、工具声明、思考内容和多轮工具调用体验
-- **Reasoning 展示**：支持 reasoning / thinking 内容的流式展示、最终摘要、去重和显示清理
-- **工具调用能力**：按模型声明工具调用、编辑工具偏好和 Agent 模式提示能力
+- **Reasoning 保留**：支持 reasoning / thinking 内容聚合、去重并通过稳定 DataPart 在多轮对话中回放
+- **工具调用能力**：按模型声明稳定的工具调用能力，支持 Agent 模式调用工具
 - **多模态开关**：按模型声明图片、视频、文件输入能力；不支持的输入会给出清晰错误
 - **可视化配置管理器**：通过 Webview 管理 Provider 和模型，也支持命令面板向导
-- **模型元数据**：配置上下文长度、输出上限、倍率标签、模型家族、分类和状态图标
+- **模型元数据**：配置上下文长度、输出上限、模型家族和说明信息
 
 ## v1.1.4 更新重点
 
@@ -88,12 +88,15 @@ Copilot Model Bridge 会把你自己的模型服务注册到 GitHub Copilot Chat
 
 | 项目 | 要求 |
 | --- | --- |
-| VS Code | `1.99.0` 或更高 |
+| VS Code | `1.115.0` 或更高 |
 | GitHub Copilot | 可使用 Copilot Chat 的账号 |
 | 模型服务 | OpenAI 兼容流式接口，或支持本扩展可选的 Responses / Anthropic Messages 模式 |
 
 > [!NOTE]
 > 不同模型服务对工具调用、reasoning、图片输入和 Responses 模式的支持程度不同。建议先用一个基础文本模型验证连通性，再逐步开启高级能力。
+
+> [!NOTE]
+> VS Code 自带的 **Custom Endpoint** 已支持 Chat Completions、Responses 和 Messages API。只需连接单个标准端点时可直接使用原生能力；本扩展主要用于集中管理多个 Provider 以及处理兼容网关差异。
 
 ## 快速开始
 
@@ -237,13 +240,13 @@ Kimi K2.5 (NVIDIA NIM)
 | `maxInputTokens` | 模型最大输入 token 数 |
 | `maxOutputTokens` | 请求发送给上游的最大输出 token 数 |
 | `supportsToolCalling` | 是否声明支持工具调用 |
-| `supportsEditTools` | 是否为 Copilot Agent 模式暴露编辑工具提示 |
-| `preferredEditTools` | 偏好的编辑工具类型 |
+| `supportsEditTools` | 兼容保留字段；稳定 Provider API 暂不暴露编辑工具提示 |
+| `preferredEditTools` | 兼容保留字段；等待 VS Code 对应 API 稳定后再启用 |
 | `toolChoiceMode` | 工具选择策略：`auto`、`required`、`none`、`omit` |
 | `supportsVision` | 是否支持图片输入 |
 | `supportsVideo` | 是否声明支持视频附件 |
 | `supportsFileInput` | 是否声明支持非图片文件输入 |
-| `supportsReasoning` | 是否显示 Thinking Effort 配置 |
+| `supportsReasoning` | 是否向上游发送 reasoning 配置；稳定 API 下不显示 Thinking Effort 选择器 |
 | `supportedReasoningLevels` | 可选 reasoning 档位 |
 | `defaultReasoningLevel` | 默认 reasoning 档位 |
 | `enableDocumentCitations` | Anthropic 文档输入是否请求引用信息 |
@@ -287,11 +290,12 @@ code --install-extension cmb-copilot-model-bridge-1.1.4.vsix
 | 现象 | 建议 |
 | --- | --- |
 | 模型没有出现在 Copilot Chat | 确认 VS Code 版本、Copilot Chat 可用性，以及第三方语言模型 Provider 能力是否可用 |
+| 出现 `CANNOT use API proposal` | 升级到已移除 proposal 依赖的版本并重载 VS Code，不要长期使用 `--enable-proposed-api` 绕过 |
 | 请求失败或无响应 | 先检查 Base URL、API Key、模型 ID 和服务是否支持流式响应 |
 | Anthropic 兼容接口返回 404/401 | 确认 Base URL 是否已经包含服务要求的前缀，例如 MiniMax 使用 `/anthropic` |
 | 工具调用失败 | 关闭 `supportsToolCalling` 验证基础对话，再逐步开启工具调用 |
 | 图片或文件输入失败 | 确认模型能力字段和上游服务实际支持范围一致 |
-| reasoning 不显示 | 确认模型启用了 `supportsReasoning`，并配置了合适的 reasoning 档位 |
+| reasoning 不显示 | 稳定 Provider API 暂无折叠 Thinking UI；推理内容仍会保留并用于多轮请求 |
 
 ## 本地开发
 

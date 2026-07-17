@@ -44,7 +44,7 @@ const {
   buildModelList,
 } = require('../provider/core/cmb.provider.models') as typeof import('../provider/core/cmb.provider.models');
 
-test('builds picker metadata with VS Code compatible category and status icon', () => {
+test('publishes only stable VS Code model metadata', () => {
   storedProviders = [{
     id: 'provider',
     displayName: 'Provider',
@@ -62,15 +62,27 @@ test('builds picker metadata with VS Code compatible category and status icon', 
     }],
   }];
 
-  const [model] = buildModelList() as Array<{
+  const [model] = buildModelList() as unknown as Array<{
+    capabilities: Record<string, unknown>;
     category?: unknown;
     categoryOrder?: unknown;
     statusIcon?: unknown;
+    configurationSchema?: unknown;
+    editTools?: unknown;
+    isUserSelectable?: unknown;
+    multiplier?: unknown;
+    multiplierNumeric?: unknown;
   }>;
 
-  assert.equal(model.category, 'Reasoning');
+  assert.equal(model.category, undefined);
   assert.equal(model.categoryOrder, undefined);
-  assert.ok(model.statusIcon instanceof ThemeIcon);
-  assert.equal((model.statusIcon as ThemeIcon).id, 'sparkle');
+  assert.equal(model.statusIcon, undefined);
+  assert.equal(model.configurationSchema, undefined);
+  assert.equal(model.isUserSelectable, undefined);
+  assert.equal(model.multiplier, undefined);
+  assert.equal(model.multiplierNumeric, undefined);
+  assert.deepEqual(model.capabilities, {
+    toolCalling: true,
+    imageInput: false,
+  });
 });
-

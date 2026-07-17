@@ -30,6 +30,13 @@ import {
   isGeminiRequest,
   resolveGeminiOpenAICompatibleUrl,
 } from '../gemini/cmb.gemini.adapter';
+import {
+  isGrokRequest,
+  normalizeGrokReasoningEffort,
+  resolveGrokEndpointUrl,
+  resolveGrokApiStyle,
+  sanitizeGrokChatMessages,
+} from '../grok/cmb.grok.adapter';
 import { ModelConfig, ProviderConfig, ReasoningLevel } from '../../types';
 import {
   buildAnthropicRequestBody,
@@ -57,7 +64,8 @@ export async function sendChatRequest(
   }
 
   const modelConfiguration = readModelConfiguration(options);
-  if (resolveApiStyle(provider) === 'anthropic') {
+  const apiStyle = resolveApiStyle(provider);
+  if (apiStyle === 'anthropic') {
     await sendAnthropicRequest({
       provider,
       selectedModel,
@@ -78,7 +86,7 @@ export async function sendChatRequest(
     isGemini,
   });
 
-  if (resolveApiStyle(provider) === 'responses') {
+  if (apiStyle === 'responses') {
     await sendResponsesRequest({
       provider,
       selectedModel,
@@ -155,9 +163,12 @@ async function sendChatCompletionsRequest(context: RequestContext): Promise<void
   } = context;
   const isDeepSeek = isDeepSeekRequest(provider, selectedModel.id);
   const isGemini = isGeminiRequest(provider, selectedModel.id);
+  const isGrok = isGrokRequest(provider, selectedModel.id);
   const requestUrl = isGemini
     ? resolveGeminiOpenAICompatibleUrl(provider, 'chat/completions')
-    : `${provider.baseUrl}/chat/completions`;
+    : isGrok
+      ? resolveGrokEndpointUrl(provider.baseUrl, 'chat/completions')
+      : `${provider.baseUrl}/chat/completions`;
   const reasoningEffort = selectedModel.supportsReasoning
     ? resolveReasoningLevel(
       options.modelOptions,
@@ -170,6 +181,9 @@ async function sendChatCompletionsRequest(context: RequestContext): Promise<void
     providerBaseUrl: provider.baseUrl,
     modelId: selectedModel.id,
   });
+  const normalizedReasoningEffort = isGrok
+    ? normalizeGrokReasoningEffort(selectedModel.id, reasoningEffort)
+    : reasoningEffort;
   const requestBody = buildChatRequestBody({
     modelId: selectedModel.id,
     messages: apiMessages,
@@ -180,12 +194,16 @@ async function sendChatCompletionsRequest(context: RequestContext): Promise<void
     supportsReasoning: selectedModel.supportsReasoning,
     defaultReasoningLevel: selectedModel.defaultReasoningLevel,
     supportedReasoningLevels: selectedModel.supportedReasoningLevels,
-    reasoningEffortOverride: reasoningEffort,
+    reasoningEffortOverride: normalizedReasoningEffort,
     maxTokenField: chatPolicy.maxTokenField,
     toolChoiceMode: selectedModel.toolChoiceMode,
     responseOptions: options,
     modelConfiguration,
   });
+
+  if (isGrok) {
+    sanitizeGrokChatMessages(apiMessages);
+  }
 
   if (isGemini) {
     applyGeminiRequestPatch(requestBody, selectedModel.includeThoughts);
@@ -221,9 +239,12 @@ async function sendResponsesRequest(context: RequestContext): Promise<void> {
     token,
     modelConfiguration,
   } = context;
-  const requestUrl = `${provider.baseUrl}/responses`;
+  const isGrok = isGrokRequest(provider, selectedModel.id);
+  const requestUrl = isGrok
+    ? resolveGrokEndpointUrl(provider.baseUrl, 'responses')
+    : `${provider.baseUrl}/responses`;
   const responsesInput = convertToResponsesInput(apiMessages);
-  const reasoningEffort = selectedModel.supportsReasoning
+  const configuredReasoningEffort = selectedModel.supportsReasoning
     ? resolveReasoningLevel(
       options.modelOptions,
       modelConfiguration,
@@ -231,6 +252,9 @@ async function sendResponsesRequest(context: RequestContext): Promise<void> {
       selectedModel.supportedReasoningLevels
     )
     : undefined;
+  const reasoningEffort = isGrok
+    ? normalizeGrokReasoningEffort(selectedModel.id, configuredReasoningEffort)
+    : configuredReasoningEffort;
   const requestBody = buildResponsesRequestBody({
     modelId: selectedModel.id,
     input: responsesInput.input,
@@ -421,7 +445,12 @@ function calculateRetryDelayMillis(attempt: number): number {
   return Math.min(500 * (2 ** attempt), 8000);
 }
 
-function resolveApiStyle(provider: Pick<ProviderConfig, 'apiStyle'>): 'chat' | 'responses' | 'anthropic' {
+function resolveApiStyle(
+  provider: Pick<ProviderConfig, 'id' | 'baseUrl' | 'apiStyle'>
+): 'chat' | 'responses' | 'anthropic' {
+  if (isGrokRequest(provider, '')) {
+    return resolveGrokApiStyle(provider);
+  }
   if (provider.apiStyle === 'responses' || provider.apiStyle === 'anthropic') {
     return provider.apiStyle;
   }

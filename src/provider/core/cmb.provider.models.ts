@@ -1,11 +1,7 @@
 import * as vscode from 'vscode';
 import { getProviders } from '../config/cmb.provider.settings';
-import {
-  buildModelBillingMetadata,
-  buildModelCapabilities,
-  buildModelReasoningConfigurationSchema,
-} from '../openaiCompatible';
-import { buildModelMetadata, normalizeStatusIcon } from '../model/cmb.provider.modelMetadata';
+import { buildModelCapabilities } from '../openaiCompatible';
+import { buildModelMetadata } from '../model/cmb.provider.modelMetadata';
 
 const ID_SEP = '::';
 
@@ -13,39 +9,22 @@ export function buildModelList(): vscode.LanguageModelChatInformation[] {
   const result: vscode.LanguageModelChatInformation[] = [];
   for (const provider of getProviders()) {
     for (const model of provider.models) {
-      const billingMetadata = buildModelBillingMetadata(model);
-      const metadata = {
-        ...buildModelMetadata({
-          compoundId: `${provider.id}${ID_SEP}${model.id}`,
-          provider,
-          model,
-        }),
-        multiplier: billingMetadata.multiplier,
+      const modelMetadata = buildModelMetadata({
+        compoundId: `${provider.id}${ID_SEP}${model.id}`,
+        provider,
+        model,
+      });
+      result.push({
+        id: modelMetadata.id,
+        name: modelMetadata.name,
+        family: modelMetadata.family,
+        version: modelMetadata.version,
+        maxInputTokens: modelMetadata.maxInputTokens,
+        maxOutputTokens: modelMetadata.maxOutputTokens,
+        detail: modelMetadata.detail,
+        tooltip: modelMetadata.tooltip,
         capabilities: buildModelCapabilities(model),
-        isUserSelectable: true,
-      } as vscode.LanguageModelChatInformation & {
-        isUserSelectable: true;
-        configurationSchema?: Record<string, unknown>;
-        multiplier?: string;
-        multiplierNumeric?: number;
-        statusIcon?: vscode.ThemeIcon;
-      };
-
-      if (billingMetadata.multiplierNumeric !== undefined) {
-        metadata.multiplierNumeric = billingMetadata.multiplierNumeric;
-      }
-
-      const statusIcon = normalizeStatusIcon(model.statusIcon);
-      if (statusIcon) {
-        metadata.statusIcon = new vscode.ThemeIcon(statusIcon);
-      }
-
-      const configurationSchema = buildModelReasoningConfigurationSchema(model);
-      if (configurationSchema) {
-        metadata.configurationSchema = configurationSchema;
-      }
-
-      result.push(metadata);
+      });
     }
   }
   return result;
