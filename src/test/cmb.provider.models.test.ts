@@ -44,7 +44,7 @@ const {
   buildModelList,
 } = require('../provider/core/cmb.provider.models') as typeof import('../provider/core/cmb.provider.models');
 
-test('publishes only stable VS Code model metadata', () => {
+test('publishes reasoning configuration for the model picker', () => {
   storedProviders = [{
     id: 'provider',
     displayName: 'Provider',
@@ -56,6 +56,9 @@ test('publishes only stable VS Code model metadata', () => {
       maxInputTokens: 64000,
       maxOutputTokens: 8192,
       supportsToolCalling: true,
+      supportsReasoning: true,
+      supportedReasoningLevels: ['low', 'medium', 'high'],
+      defaultReasoningLevel: 'medium',
       categoryLabel: 'Reasoning',
       categoryOrder: 10,
       statusIcon: 'sparkle',
@@ -77,8 +80,24 @@ test('publishes only stable VS Code model metadata', () => {
   assert.equal(model.category, undefined);
   assert.equal(model.categoryOrder, undefined);
   assert.equal(model.statusIcon, undefined);
-  assert.equal(model.configurationSchema, undefined);
-  assert.equal(model.isUserSelectable, undefined);
+  assert.deepEqual(model.configurationSchema, {
+    properties: {
+      reasoningEffort: {
+        type: 'string',
+        title: 'Thinking Effort',
+        enum: ['low', 'medium', 'high'],
+        enumItemLabels: ['Low', 'Medium', 'High'],
+        enumDescriptions: [
+          'Faster responses with less reasoning',
+          'Balanced reasoning and speed',
+          'Greater reasoning depth but slower',
+        ],
+        default: 'medium',
+        group: 'navigation',
+      },
+    },
+  });
+  assert.equal(model.isUserSelectable, true);
   assert.equal(model.multiplier, undefined);
   assert.equal(model.multiplierNumeric, undefined);
   assert.deepEqual(model.capabilities, {

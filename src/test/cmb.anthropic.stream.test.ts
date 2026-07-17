@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import Module from 'node:module';
-import { DEEPSEEK_REASONING_MIME } from '../provider/deepseek/cmb.deepseek.adapter';
 
 class LanguageModelTextPart {
   constructor(readonly value: string) {}
@@ -97,7 +96,7 @@ test('reports Anthropic streamed tool use blocks', async () => {
   assert.deepEqual((reported[0] as LanguageModelToolCallPart).input, { path: 'README.md' });
 });
 
-test('preserves thinking deltas and signatures with stable data parts', async () => {
+test('reports thinking deltas and preserves thinking signatures', async () => {
   const reported: unknown[] = [];
   await consumeAnthropicSSEStream(streamFrom([
     'event: content_block_delta',
@@ -108,9 +107,8 @@ test('preserves thinking deltas and signatures with stable data parts', async ()
     '',
   ]), { report: (part: unknown) => reported.push(part) } as never, neverCancelledToken as never);
 
-  assert.equal(reported[0] instanceof LanguageModelDataPart, true);
-  assert.equal((reported[0] as LanguageModelDataPart).mimeType, DEEPSEEK_REASONING_MIME);
-  assert.equal(new TextDecoder().decode((reported[0] as LanguageModelDataPart).data), 'plan');
+  assert.equal(reported[0] instanceof LanguageModelThinkingPart, true);
+  assert.equal((reported[0] as LanguageModelThinkingPart).value, 'plan');
   assert.equal(reported[1] instanceof LanguageModelDataPart, true);
   assert.equal((reported[1] as LanguageModelDataPart).mimeType, ANTHROPIC_THINKING_SIGNATURE_MIME);
   assert.deepEqual(JSON.parse(new TextDecoder().decode((reported[1] as LanguageModelDataPart).data)), {

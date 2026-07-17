@@ -1,6 +1,9 @@
 import * as vscode from 'vscode';
 import { getProviders } from '../config/cmb.provider.settings';
-import { buildModelCapabilities } from '../openaiCompatible';
+import {
+  buildModelCapabilities,
+  buildModelReasoningConfigurationSchema,
+} from '../openaiCompatible';
 import { buildModelMetadata } from '../model/cmb.provider.modelMetadata';
 
 const ID_SEP = '::';
@@ -14,7 +17,7 @@ export function buildModelList(): vscode.LanguageModelChatInformation[] {
         provider,
         model,
       });
-      result.push({
+      const metadata = {
         id: modelMetadata.id,
         name: modelMetadata.name,
         family: modelMetadata.family,
@@ -24,7 +27,16 @@ export function buildModelList(): vscode.LanguageModelChatInformation[] {
         detail: modelMetadata.detail,
         tooltip: modelMetadata.tooltip,
         capabilities: buildModelCapabilities(model),
-      });
+        isUserSelectable: true,
+      } as vscode.LanguageModelChatInformation & {
+        configurationSchema?: Record<string, unknown>;
+        isUserSelectable: true;
+      };
+      const configurationSchema = buildModelReasoningConfigurationSchema(model);
+      if (configurationSchema) {
+        metadata.configurationSchema = configurationSchema;
+      }
+      result.push(metadata);
     }
   }
   return result;

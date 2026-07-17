@@ -111,19 +111,18 @@ test('reports Chat Completions usage for the context window widget', async () =>
   );
 });
 
-test('uses stable data parts for reasoning even when proposed ThinkingPart exists', async () => {
+test('streams reasoning content as thinking parts when available', async () => {
   const parts = await collectStreamParts([
     'data: {"choices":[{"delta":{"reasoning_content":"because"},"finish_reason":null}]}',
     'data: [DONE]',
   ]);
 
   assert.equal(parts.length, 1);
-  assert.ok(parts[0] instanceof LanguageModelDataPart);
-  assert.equal((parts[0] as LanguageModelDataPart).mimeType, DEEPSEEK_REASONING_MIME);
-  assert.equal(new TextDecoder().decode((parts[0] as LanguageModelDataPart).data), 'because');
+  assert.ok(parts[0] instanceof LanguageModelThinkingPart);
+  assert.equal((parts[0] as LanguageModelThinkingPart).value, 'because');
 });
 
-test('preserves Gemini reasoning in a stable data part', async () => {
+test('streams Gemini reasoning field as thinking parts', async () => {
   const parts = await collectStreamParts([
     'data: {"choices":[{"delta":{"reasoning":"thinking step"},"finish_reason":null}]}',
     'data: {"choices":[{"delta":{"content":"final answer"},"finish_reason":null}]}',
@@ -131,25 +130,26 @@ test('preserves Gemini reasoning in a stable data part', async () => {
   ]);
 
   assert.equal(parts.length, 2);
-  assert.ok(parts[0] instanceof LanguageModelTextPart);
-  assert.equal((parts[0] as LanguageModelTextPart).value, 'final answer');
-  assert.ok(parts[1] instanceof LanguageModelDataPart);
-  assert.equal((parts[1] as LanguageModelDataPart).mimeType, DEEPSEEK_REASONING_MIME);
-  assert.equal(new TextDecoder().decode((parts[1] as LanguageModelDataPart).data), 'thinking step');
+  assert.ok(parts[0] instanceof LanguageModelThinkingPart);
+  assert.equal((parts[0] as LanguageModelThinkingPart).value, 'thinking step');
+  assert.equal((parts[1] as LanguageModelTextPart).value, 'final answer');
 });
 
-test('preserves Gemini tagged thoughts in a stable data part', async () => {
+test('streams Gemini tagged thoughts as thinking parts', async () => {
   const parts = await collectStreamParts([
     'data: {"choices":[{"delta":{"content":"<think>plan"},"finish_reason":null}]}',
     'data: {"choices":[{"delta":{"content":" first</think>answer"},"finish_reason":null}]}',
     'data: [DONE]',
   ]);
 
-  assert.equal(parts.length, 2);
-  assert.ok(parts[0] instanceof LanguageModelTextPart);
-  assert.equal((parts[0] as LanguageModelTextPart).value, 'answer');
-  assert.ok(parts[1] instanceof LanguageModelDataPart);
-  assert.equal(new TextDecoder().decode((parts[1] as LanguageModelDataPart).data), 'plan first');
+  assert.equal(parts.length, 3);
+  assert.ok(parts[0] instanceof LanguageModelThinkingPart);
+  assert.ok(parts[1] instanceof LanguageModelThinkingPart);
+  assert.equal(
+    `${(parts[0] as LanguageModelThinkingPart).value}${(parts[1] as LanguageModelThinkingPart).value}`,
+    'plan first'
+  );
+  assert.equal((parts[2] as LanguageModelTextPart).value, 'answer');
 });
 
 test('falls back to reasoning data part when ThinkingPart is unavailable', async () => {
@@ -168,6 +168,32 @@ test('falls back to reasoning data part when ThinkingPart is unavailable', async
     assert.equal(new TextDecoder().decode((parts[0] as LanguageModelDataPart).data), 'hidden');
   } finally {
     vscodeMock.LanguageModelThinkingPart = previousThinkingPart;
+  }
+});
+
+test('falls back without throwing when proposed ThinkingPart access is denied', async () => {
+  const previousThinkingPart = vscodeMock.LanguageModelThinkingPart;
+  Object.defineProperty(vscodeMock, 'LanguageModelThinkingPart', {
+    configurable: true,
+    get() {
+      throw new Error('Extension cannot use API proposal: languageModelThinkingPart');
+    },
+  });
+  try {
+    const parts = await collectStreamParts([
+      'data: {"choices":[{"delta":{"reasoning_content":"safe"},"finish_reason":null}]}',
+      'data: [DONE]',
+    ]);
+
+    assert.equal(parts.length, 1);
+    assert.ok(parts[0] instanceof LanguageModelDataPart);
+    assert.equal(new TextDecoder().decode((parts[0] as LanguageModelDataPart).data), 'safe');
+  } finally {
+    Object.defineProperty(vscodeMock, 'LanguageModelThinkingPart', {
+      configurable: true,
+      value: previousThinkingPart,
+      writable: true,
+    });
   }
 });
 

@@ -1,5 +1,8 @@
 import * as vscode from 'vscode';
-import { reportReasoningDataPart } from '../openaiCompatible/chatCompletions/cmb.chatCompletions.stream';
+import {
+  reportReasoningDataPart,
+  reportThinkingPart,
+} from '../openaiCompatible/chatCompletions/cmb.chatCompletions.stream';
 import {
   readAnthropicUsage,
   reportModelUsage,
@@ -169,7 +172,9 @@ function handleContentBlockDelta(
     return;
   }
   if (delta.type === 'thinking_delta' && typeof delta.thinking === 'string') {
-    reportReasoningDataPart(progress, delta.thinking);
+    if (!reportThinkingPart(progress, delta.thinking)) {
+      reportReasoningDataPart(progress, delta.thinking);
+    }
     return;
   }
   if (delta.type === 'signature_delta' && typeof delta.signature === 'string') {

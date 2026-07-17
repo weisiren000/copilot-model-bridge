@@ -5,6 +5,7 @@ import { createStreamFailureError } from '../cmb.openaiCompatible.errors';
 import { readResponsesUsage, reportModelUsage } from '../cmb.openaiCompatible.usage';
 import {
   normalizeThinkingText,
+  reportThinkingPart,
 } from '../chatCompletions/cmb.chatCompletions.stream';
 
 interface PendingFunctionCall {
@@ -33,12 +34,14 @@ export async function consumeResponsesSSEStream(
   const reasoningItems = new Map<string, PendingReasoningItem>();
   let buffer = '';
   const fallbackReasoning: string[] = [];
-  const reportReasoning: ReportReasoning = value => {
+  const reportReasoning: ReportReasoning = (value, id) => {
     const normalizedValue = normalizeThinkingText(value);
     if (!normalizedValue) {
       return;
     }
-    fallbackReasoning.push(normalizedValue);
+    if (!reportThinkingPart(progress, normalizedValue, id)) {
+      fallbackReasoning.push(normalizedValue);
+    }
   };
 
   try {

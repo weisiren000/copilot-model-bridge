@@ -7,6 +7,29 @@ import {
 import { OpenAIStreamChunk } from '../../../types';
 import { readOpenAIUsage, reportModelUsage } from '../cmb.openaiCompatible.usage';
 
+export function reportThinkingPart(
+  progress: vscode.Progress<vscode.LanguageModelResponsePart>,
+  value: string,
+  id?: string
+): boolean {
+  const normalizedValue = normalizeThinkingText(value);
+  if (!normalizedValue) {
+    return true;
+  }
+  try {
+    const ctor = (vscode as unknown as {
+      LanguageModelThinkingPart?: new (value: string, id?: string) => unknown;
+    }).LanguageModelThinkingPart;
+    if (!ctor) {
+      return false;
+    }
+    progress.report(new ctor(normalizedValue, id) as vscode.LanguageModelResponsePart);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function reportReasoningDataPart(
   progress: vscode.Progress<vscode.LanguageModelResponsePart>,
   value: string
@@ -69,6 +92,7 @@ export async function consumeSSEStream(
   }> = {};
   const textThoughtSignatures: string[] = [];
   let reasoningBuffer = '';
+  let reasoningStreamed = false;
   let taggedThoughtBuffer = '';
   let insideTaggedThought = false;
 
@@ -115,6 +139,9 @@ export async function consumeSSEStream(
             for (const part of parts.parts) {
               if (part.kind === 'thinking') {
                 taggedThoughtBuffer += part.value;
+                if (reportThinkingPart(progress, part.value)) {
+                  reasoningStreamed = true;
+                }
               } else if (part.value) {
                 progress.report(new vscode.LanguageModelTextPart(part.value));
               }
@@ -122,9 +149,15 @@ export async function consumeSSEStream(
           }
           if (delta?.reasoning_content) {
             reasoningBuffer += delta.reasoning_content;
+            if (reportThinkingPart(progress, delta.reasoning_content)) {
+              reasoningStreamed = true;
+            }
           }
           if (delta?.reasoning) {
             reasoningBuffer += delta.reasoning;
+            if (reportThinkingPart(progress, delta.reasoning)) {
+              reasoningStreamed = true;
+            }
           }
           const deltaThoughtSignature = readGoogleThoughtSignature(delta);
           if (delta?.tool_calls) {
@@ -163,10 +196,9 @@ export async function consumeSSEStream(
       }
     }
   } finally {
-    // Stable Provider API does not expose ThinkingPart. Preserve reasoning in a
-    // DataPart so it can still be replayed in later turns.
+    // Preserve reasoning for replay when ThinkingPart is unavailable or denied.
     const fallbackReasoning = normalizeThinkingText(reasoningBuffer || taggedThoughtBuffer);
-    if (fallbackReasoning) {
+    if (fallbackReasoning && !reasoningStreamed) {
       try {
         reportReasoningDataPart(progress, fallbackReasoning);
       } catch {

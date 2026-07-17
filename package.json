@@ -32,6 +32,9 @@
   "activationEvents": [
     "onStartupFinished"
   ],
+  "enabledApiProposals": [
+    "languageModelThinkingPart"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "languageModelChatProviders": [
@@ -243,7 +246,7 @@
                     "supportsReasoning": {
                       "type": "boolean",
                       "default": false,
-                      "description": "Whether reasoning options are sent upstream. Stable provider APIs do not currently expose a Thinking Effort picker."
+                      "description": "Whether the model exposes Thinking Effort configuration in the model picker"
                     },
                     "supportedReasoningLevels": {
                       "type": "array",
