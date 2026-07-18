@@ -888,6 +888,54 @@ test('sends Anthropic Messages request when provider apiStyle is anthropic', asy
   }
 });
 
+test('adds the v1 segment for Anthropic Grok providers configured at the origin root', async () => {
+  let receivedPath = '';
+  const server = http.createServer((req, res) => {
+    receivedPath = req.url ?? '';
+    req.resume();
+    res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+    res.end('event: message_stop\ndata: {"type":"message_stop"}\n\n');
+  });
+
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address() as AddressInfo;
+  const provider: ProviderConfig = {
+    id: 'yuzGrok',
+    displayName: 'yuzGrok',
+    baseUrl: `http://127.0.0.1:${address.port}`,
+    apiKey: 'grok-key',
+    apiStyle: 'anthropic',
+    models: [],
+  };
+
+  try {
+    await sendChatRequest(
+      provider,
+      { id: 'grok-4.5', name: 'Grok 4.5' },
+      {
+        id: 'yuzGrok::grok-4.5',
+        name: 'Grok 4.5',
+        family: 'grok',
+        version: '',
+        maxInputTokens: 500000,
+        maxOutputTokens: 64000,
+        capabilities: {},
+      },
+      [{
+        role: vscodeMock.LanguageModelChatMessageRole.User,
+        content: [new LanguageModelTextPart('hello')],
+      }] as never,
+      { toolMode: 0 } as never,
+      { report() {} },
+      { isCancellationRequested: false, onCancellationRequested: () => ({ dispose() {} }) } as never
+    );
+
+    assert.equal(receivedPath, '/v1/messages');
+  } finally {
+    server.close();
+  }
+});
+
 test('passes Anthropic thinking display and parallel tool settings from model config', async () => {
   let receivedBody: Record<string, any> | undefined;
   const server = http.createServer((req, res) => {

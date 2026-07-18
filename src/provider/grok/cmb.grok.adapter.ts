@@ -118,7 +118,18 @@ export function resolveGrokApiStyle(
 }
 
 export function resolveGrokEndpointUrl(baseUrl: string, endpointPath: string): string {
-  return `${baseUrl.replace(/\/+$/, '')}/${endpointPath.replace(/^\/+/, '')}`;
+  const normalizedEndpoint = endpointPath.replace(/^\/+/, '');
+
+  try {
+    const url = new URL(baseUrl);
+    const normalizedBasePath = url.pathname.replace(/\/+$/, '');
+    url.pathname = normalizedBasePath || '/v1';
+    url.search = '';
+    url.hash = '';
+    return `${url.toString().replace(/\/+$/, '')}/${normalizedEndpoint}`;
+  } catch {
+    return `${baseUrl.replace(/\/+$/, '')}/${normalizedEndpoint}`;
+  }
 }
 
 export function sanitizeGrokChatMessages(messages: Array<Record<string, unknown>>): void {

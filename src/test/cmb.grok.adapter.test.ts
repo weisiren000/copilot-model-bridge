@@ -67,6 +67,10 @@ test('forces official xAI endpoints to Responses while preserving proxy API styl
 
 test('resolves Grok endpoint URLs without duplicate slashes', () => {
   assert.equal(
+    resolveGrokEndpointUrl('https://yuzapi.fun', 'messages'),
+    'https://yuzapi.fun/v1/messages'
+  );
+  assert.equal(
     resolveGrokEndpointUrl('https://api.x.ai/v1/', 'responses'),
     'https://api.x.ai/v1/responses'
   );

@@ -301,7 +301,9 @@ async function sendAnthropicRequest(context: AnthropicRequestContext): Promise<v
     token,
     modelConfiguration,
   } = context;
-  const requestUrl = `${provider.baseUrl}/messages`;
+  const requestUrl = isGrokRequest(provider, selectedModel.id)
+    ? resolveGrokEndpointUrl(provider.baseUrl, 'messages')
+    : `${provider.baseUrl}/messages`;
   const anthropicMessages = convertToAnthropicMessages(messages, {
     supportsVideo: selectedModel.supportsVideo,
     supportsFileInput: selectedModel.supportsFileInput,

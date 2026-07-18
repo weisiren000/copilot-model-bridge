@@ -58,3 +58,29 @@ test('sends GPT-5.6 reasoning and function tools together through Chat Completio
     },
   }]);
 });
+
+test('adds an empty object schema for Chat Completions tools without input parameters', () => {
+  const body = buildChatRequestBody({
+    modelId: 'grok-4.5',
+    messages: [{ role: 'user', content: 'hello' }],
+    maxOutputTokens: 64,
+    responseOptions: {
+      tools: [{
+        name: 'terminal_last_command',
+        description: 'Get the last terminal command',
+      }],
+    },
+  } as never);
+
+  assert.deepEqual(body.tools, [{
+    type: 'function',
+    function: {
+      name: 'terminal_last_command',
+      description: 'Get the last terminal command',
+      parameters: {
+        type: 'object',
+        properties: {},
+      },
+    },
+  }]);
+});
