@@ -12,7 +12,7 @@
   <a href="https://marketplace.visualstudio.com/items?itemName=weisiren.cmb-copilot-model-bridge">
     <img src="https://img.shields.io/badge/VS%20Code-Marketplace-007ACC?style=flat-square&logo=visualstudiocode&logoColor=white" alt="VS Code Marketplace">
   </a>
-  <img src="https://img.shields.io/badge/Version-1.1.5-4C8BF5?style=flat-square" alt="Version 1.1.5">
+  <img src="https://img.shields.io/badge/Version-1.1.6-4C8BF5?style=flat-square" alt="Version 1.1.6">
   <img src="https://img.shields.io/badge/VS%20Code-%5E1.115.0-007ACC?style=flat-square" alt="VS Code 1.115.0+">
   <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
 </p>
@@ -50,6 +50,13 @@ Copilot Model Bridge 会把你自己的模型服务注册到 GitHub Copilot Chat
 - **可视化配置管理器**：通过 Webview 管理 Provider 和模型，也支持命令面板向导
 - **模型元数据**：配置上下文长度、输出上限、模型家族和说明信息
 
+## v1.1.6 更新重点
+
+- 修复 Kimi 在多轮对话和工具调用后思考内容无法继续显示或回放的问题
+- 修复 Grok 兼容网关根地址缺少 `/v1` 时请求失败的问题
+- 修复无参数工具缺少空对象 Schema 时被部分 Grok 网关拒绝的问题
+- 增强 Chat Completions、Responses 和 Anthropic Messages 的思考流结束与多轮衔接
+
 ## v1.1.5 更新重点
 
 - 新增 Grok 系列模型和兼容网关支持
@@ -57,12 +64,15 @@ Copilot Model Bridge 会把你自己的模型服务注册到 GitHub Copilot Chat
 - 优化 Chat Completions、Responses 和 Anthropic Messages 的思考内容解析、聚合与多轮回放
 - 移除 Marketplace 包对 proposed API 的强制依赖，实验接口不可用时不再影响模型请求
 
-## v1.1.4 更新重点
+<details>
+<summary>v1.1.4 及更早版本</summary>
+
+### v1.1.4 更新重点
 
 - Chat Completions、Responses 和 Anthropic Messages 请求统一上报输入、输出与缓存 Token 用量
 - 配置管理器将 Token 限制拆分为上下文窗口、最大输出和自动计算的可用输入，减少配置不一致
 
-## v1.1.3 更新重点
+### v1.1.3 更新重点
 
 - 新增 GPT-5.6、GPT-5.6 Sol、GPT-5.6 Terra、GPT-5.6 Luna 的 OpenAI 官方模型档案
 - OpenAI 官方 Provider 默认使用 Responses API，并支持完整的流式文本、推理摘要和函数调用
@@ -71,14 +81,14 @@ Copilot Model Bridge 会把你自己的模型服务注册到 GitHub Copilot Chat
 - reasoning 摘要按条目聚合和去重，避免同一段思考内容重复显示
 - 清理思考内容中的空 HTML 注释和成对 Markdown 加粗标记，避免残留 `<!-- -->` 或 `**`
 
-## v1.1.2 更新重点
+### v1.1.2 更新重点
 
 - 重构模型元数据架构：将 VS Code 专属 UI 类型（ThemeIcon）与纯元数据层分离
 - 模型分类（category）简化为纯字符串，避免对象引用导致的选择器不稳定
 - 状态图标（statusIcon）移至 Provider 模型组装层管理，提升代码内聚性
 - 新增 provider.models 层单元测试覆盖
 
-## v1.1.1 更新重点
+### v1.1.1 更新重点
 
 - 新增 `anthropic` 请求模式，支持 Anthropic Messages API
 - 支持 Anthropic 文本、图片、PDF、文本文件、工具调用、工具结果和 thinking 流式事件
@@ -92,6 +102,8 @@ Copilot Model Bridge 会把你自己的模型服务注册到 GitHub Copilot Chat
 - 非 Anthropic 临时上游故障提示更友好，避免暴露底层服务内部信息
 - 失败请求不再默认写入本地诊断文件，降低敏感内容残留风险
 
+</details>
+
 ## 要求
 
 | 项目 | 要求 |
@@ -103,6 +115,9 @@ Copilot Model Bridge 会把你自己的模型服务注册到 GitHub Copilot Chat
 > [!NOTE]
 > 不同模型服务对工具调用、reasoning、图片输入和 Responses 模式的支持程度不同。建议先用一个基础文本模型验证连通性，再逐步开启高级能力。
 
+> [!TIP]
+> Grok 4.5 推荐使用 `responses` 模式，原生思考强度仅支持 `low`、`medium` 和 `high`，其中 `high` 为最高档位；`xhigh` 和 `max` 不是 Grok 4.5 的原生档位。
+
 > [!NOTE]
 > VS Code 自带的 **Custom Endpoint** 已支持 Chat Completions、Responses 和 Messages API。只需连接单个标准端点时可直接使用原生能力；本扩展主要用于集中管理多个 Provider 以及处理兼容网关差异。
 
@@ -113,7 +128,7 @@ Copilot Model Bridge 会把你自己的模型服务注册到 GitHub Copilot Chat
 3. 新增 Provider，填写 Provider ID、显示名称、Base URL、API Key。
 4. 选择请求模式：
    - `chat`：适用于常见 OpenAI 兼容 Chat Completions 服务
-   - `responses`：适用于支持 Responses 风格请求和流式事件的服务
+   - `responses`：适用于 OpenAI、xAI/Grok 及支持 Responses 风格请求和流式事件的服务
    - `anthropic`：适用于 Anthropic Messages API 或兼容网关
 5. 在该 Provider 下新增模型，填写模型 ID、显示名称、输入/输出 token 上限和能力开关。
 6. 打开 Copilot Chat，在模型选择器中选择刚添加的模型。
@@ -285,12 +300,12 @@ Kimi K2.5 (NVIDIA NIM)
 1. 打开 VS Code Extensions 视图。
 2. 点击右上角 `...`。
 3. 选择 `Install from VSIX...`。
-4. 选择 `cmb-copilot-model-bridge-1.1.5.vsix`。
+4. 选择 `cmb-copilot-model-bridge-1.1.6.vsix`。
 
 也可以使用命令行：
 
 ```bash
-code --install-extension cmb-copilot-model-bridge-1.1.5.vsix
+code --install-extension cmb-copilot-model-bridge-1.1.6.vsix
 ```
 
 ## 排查建议

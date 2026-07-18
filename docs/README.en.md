@@ -12,7 +12,7 @@
   <a href="https://marketplace.visualstudio.com/items?itemName=weisiren.cmb-copilot-model-bridge">
     <img src="https://img.shields.io/badge/VS%20Code-Marketplace-007ACC?style=flat-square&logo=visualstudiocode&logoColor=white" alt="VS Code Marketplace">
   </a>
-  <img src="https://img.shields.io/badge/Version-1.1.5-4C8BF5?style=flat-square" alt="Version 1.1.5">
+  <img src="https://img.shields.io/badge/Version-1.1.6-4C8BF5?style=flat-square" alt="Version 1.1.6">
   <img src="https://img.shields.io/badge/VS%20Code-%5E1.115.0-007ACC?style=flat-square" alt="VS Code 1.115.0+">
   <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
 </p>
@@ -36,19 +36,31 @@ Copilot Model Bridge registers your configured models in the Copilot Chat model 
 - Use native thinking parts when the host exposes them, with stable DataPart preservation and replay as the fallback
 - Use a visual config manager or command palette wizards
 
-## v1.1.5 Highlights
+## v1.1.6 Highlights
+
+- Fixed Kimi reasoning display and replay across multi-turn tool workflows
+- Fixed Grok gateway routing when a provider is configured at the origin root without `/v1`
+- Added empty object schemas for parameterless tools rejected by strict Grok gateways
+- Improved reasoning stream completion and multi-turn continuity across all three API styles
+
+<details>
+<summary>v1.1.5 and earlier</summary>
+
+### v1.1.5 Highlights
 
 - Added Grok model and compatible gateway support
 - Restored model-specific reasoning effort choices, including `none`, `low`, `medium`, `high`, `xhigh`, and `max`
 - Improved reasoning parsing, aggregation, and multi-turn replay across Chat Completions, Responses, and Anthropic Messages
 - Removed the Marketplace package's required dependency on proposed VS Code APIs
 
-## v1.1.3 Highlights
+### v1.1.3 Highlights
 
 - Added official OpenAI GPT-5.6, Sol, Terra, and Luna model profiles
 - Added an OpenAI preset that uses the Responses API by default
 - Preserved reasoning effort when function tools are enabled in Chat Completions
 - Improved reasoning summary aggregation, deduplication, and display cleanup
+
+</details>
 
 ## Requirements
 
@@ -63,6 +75,9 @@ Copilot Model Bridge registers your configured models in the Copilot Chat model 
 
 > [!NOTE]
 > VS Code's built-in **Custom Endpoint** supports Chat Completions, Responses, and Messages APIs. Use it directly for a single standard endpoint; this extension remains useful for managing multiple providers and compatibility differences.
+
+> [!TIP]
+> Use the `responses` API style for Grok 4.5. Its native reasoning levels are `low`, `medium`, and `high`; `xhigh` and `max` are not native Grok 4.5 levels.
 
 ## Quick Start
 
