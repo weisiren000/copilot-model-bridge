@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import {
   reportReasoningDataPart,
+  reportThinkingDone,
   reportThinkingPart,
 } from '../openaiCompatible/chatCompletions/cmb.chatCompletions.stream';
 import {
@@ -33,6 +34,10 @@ interface AnthropicUsageState {
   start?: Record<string, unknown>;
 }
 
+interface AnthropicThinkingState {
+  active: boolean;
+}
+
 export async function consumeAnthropicSSEStream(
   body: ReadableStream<Uint8Array>,
   progress: vscode.Progress<vscode.LanguageModelResponsePart>,
@@ -44,6 +49,7 @@ export async function consumeAnthropicSSEStream(
   let eventName = '';
   const activeToolUses: Record<number, ActiveToolUse> = {};
   const usageState: AnthropicUsageState = {};
+  const thinkingState: AnthropicThinkingState = { active: false };
 
   try {
     while (true) {
@@ -58,13 +64,28 @@ export async function consumeAnthropicSSEStream(
       const frames = buffer.split('\n\n');
       buffer = frames.pop() ?? '';
       for (const frame of frames) {
-        eventName = processAnthropicFrame(frame, eventName, activeToolUses, usageState, progress);
+        eventName = processAnthropicFrame(
+          frame,
+          eventName,
+          activeToolUses,
+          usageState,
+          thinkingState,
+          progress
+        );
       }
     }
     if (buffer.trim()) {
-      processAnthropicFrame(buffer, eventName, activeToolUses, usageState, progress);
+      processAnthropicFrame(
+        buffer,
+        eventName,
+        activeToolUses,
+        usageState,
+        thinkingState,
+        progress
+      );
     }
   } finally {
+    finishThinking(progress, thinkingState);
     reader.releaseLock();
   }
 }
@@ -74,6 +95,7 @@ function processAnthropicFrame(
   currentEventName: string,
   activeToolUses: Record<number, ActiveToolUse>,
   usageState: AnthropicUsageState,
+  thinkingState: AnthropicThinkingState,
   progress: vscode.Progress<vscode.LanguageModelResponsePart>
 ): string {
   let eventName = currentEventName;
@@ -90,7 +112,14 @@ function processAnthropicFrame(
     return eventName;
   }
   for (const data of dataLines) {
-    handleAnthropicEvent(eventName, data, activeToolUses, usageState, progress);
+    handleAnthropicEvent(
+      eventName,
+      data,
+      activeToolUses,
+      usageState,
+      thinkingState,
+      progress
+    );
   }
   return eventName;
 }
@@ -100,6 +129,7 @@ function handleAnthropicEvent(
   data: string,
   activeToolUses: Record<number, ActiveToolUse>,
   usageState: AnthropicUsageState,
+  thinkingState: AnthropicThinkingState,
   progress: vscode.Progress<vscode.LanguageModelResponsePart>
 ): void {
   const event = safeParseJson(data);
@@ -119,21 +149,22 @@ function handleAnthropicEvent(
     return;
   }
   if (event.type === 'content_block_start') {
-    handleContentBlockStart(event, activeToolUses, progress);
+    handleContentBlockStart(event, activeToolUses, thinkingState, progress);
     return;
   }
   if (event.type === 'content_block_delta') {
-    handleContentBlockDelta(event, activeToolUses, progress);
+    handleContentBlockDelta(event, activeToolUses, thinkingState, progress);
     return;
   }
   if (event.type === 'content_block_stop') {
-    handleContentBlockStop(event, activeToolUses, progress);
+    handleContentBlockStop(event, activeToolUses, thinkingState, progress);
   }
 }
 
 function handleContentBlockStart(
   event: Record<string, unknown>,
   activeToolUses: Record<number, ActiveToolUse>,
+  thinkingState: AnthropicThinkingState,
   progress: vscode.Progress<vscode.LanguageModelResponsePart>
 ): void {
   const index = readIndex(event);
@@ -148,6 +179,7 @@ function handleContentBlockStart(
   if (block.type !== 'tool_use') {
     return;
   }
+  finishThinking(progress, thinkingState);
   activeToolUses[index] = {
     id: typeof block.id === 'string' ? block.id : `toolu_${index}`,
     name: typeof block.name === 'string' ? block.name : '',
@@ -161,6 +193,7 @@ function handleContentBlockStart(
 function handleContentBlockDelta(
   event: Record<string, unknown>,
   activeToolUses: Record<number, ActiveToolUse>,
+  thinkingState: AnthropicThinkingState,
   progress: vscode.Progress<vscode.LanguageModelResponsePart>
 ): void {
   const delta = event.delta;
@@ -168,11 +201,14 @@ function handleContentBlockDelta(
     return;
   }
   if (delta.type === 'text_delta' && typeof delta.text === 'string') {
+    finishThinking(progress, thinkingState);
     progress.report(new vscode.LanguageModelTextPart(delta.text));
     return;
   }
   if (delta.type === 'thinking_delta' && typeof delta.thinking === 'string') {
-    if (!reportThinkingPart(progress, delta.thinking)) {
+    if (reportThinkingPart(progress, delta.thinking)) {
+      thinkingState.active = true;
+    } else {
       reportReasoningDataPart(progress, delta.thinking);
     }
     return;
@@ -202,8 +238,10 @@ function handleContentBlockDelta(
 function handleContentBlockStop(
   event: Record<string, unknown>,
   activeToolUses: Record<number, ActiveToolUse>,
+  thinkingState: AnthropicThinkingState,
   progress: vscode.Progress<vscode.LanguageModelResponsePart>
 ): void {
+  finishThinking(progress, thinkingState);
   const index = readIndex(event);
   if (index === undefined || !activeToolUses[index]) {
     return;
@@ -215,6 +253,17 @@ function handleContentBlockStop(
     toolUse.name,
     parseToolInput(toolUse.arguments)
   ));
+}
+
+function finishThinking(
+  progress: vscode.Progress<vscode.LanguageModelResponsePart>,
+  state: AnthropicThinkingState
+): void {
+  if (!state.active) {
+    return;
+  }
+  reportThinkingDone(progress);
+  state.active = false;
 }
 
 function parseToolInput(value: string): object {

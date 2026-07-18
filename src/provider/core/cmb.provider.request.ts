@@ -37,6 +37,11 @@ import {
   resolveGrokApiStyle,
   sanitizeGrokChatMessages,
 } from '../grok/cmb.grok.adapter';
+import {
+  applyKimiRequestPatch,
+  getKimiModelKind,
+  normalizeKimiReasoningModel,
+} from '../kimi/cmb.kimi.adapter';
 import { ModelConfig, ProviderConfig, ReasoningLevel } from '../../types';
 import {
   buildAnthropicRequestBody,
@@ -164,17 +169,19 @@ async function sendChatCompletionsRequest(context: RequestContext): Promise<void
   const isDeepSeek = isDeepSeekRequest(provider, selectedModel.id);
   const isGemini = isGeminiRequest(provider, selectedModel.id);
   const isGrok = isGrokRequest(provider, selectedModel.id);
+  const isKimi = getKimiModelKind(selectedModel.id) !== undefined;
+  const reasoningModel = normalizeKimiReasoningModel(selectedModel);
   const requestUrl = isGemini
     ? resolveGeminiOpenAICompatibleUrl(provider, 'chat/completions')
     : isGrok
       ? resolveGrokEndpointUrl(provider.baseUrl, 'chat/completions')
       : `${provider.baseUrl}/chat/completions`;
-  const reasoningEffort = selectedModel.supportsReasoning
+  const reasoningEffort = reasoningModel.supportsReasoning
     ? resolveReasoningLevel(
       options.modelOptions,
       modelConfiguration,
-      selectedModel.defaultReasoningLevel ?? 'medium',
-      selectedModel.supportedReasoningLevels
+      reasoningModel.defaultReasoningLevel ?? 'medium',
+      reasoningModel.supportedReasoningLevels
     )
     : undefined;
   const chatPolicy = resolveOpenAIChatRequestPolicy({
@@ -191,9 +198,9 @@ async function sendChatCompletionsRequest(context: RequestContext): Promise<void
       resolveConfiguredMaxOutputTokens(selectedModel, model),
       { isDeepSeek }
     ),
-    supportsReasoning: selectedModel.supportsReasoning,
-    defaultReasoningLevel: selectedModel.defaultReasoningLevel,
-    supportedReasoningLevels: selectedModel.supportedReasoningLevels,
+    supportsReasoning: reasoningModel.supportsReasoning,
+    defaultReasoningLevel: reasoningModel.defaultReasoningLevel,
+    supportedReasoningLevels: reasoningModel.supportedReasoningLevels,
     reasoningEffortOverride: normalizedReasoningEffort,
     maxTokenField: chatPolicy.maxTokenField,
     toolChoiceMode: selectedModel.toolChoiceMode,
@@ -207,6 +214,14 @@ async function sendChatCompletionsRequest(context: RequestContext): Promise<void
 
   if (isGemini) {
     applyGeminiRequestPatch(requestBody, selectedModel.includeThoughts);
+  }
+
+  if (isKimi) {
+    applyKimiRequestPatch(requestBody, {
+      modelId: selectedModel.id,
+      supportsReasoning: Boolean(reasoningModel.supportsReasoning),
+      reasoningLevel: reasoningEffort,
+    });
   }
 
   if (isDeepSeek) {

@@ -135,6 +135,151 @@ test('caps DeepSeek request max_tokens before sending the API request', async ()
   }
 });
 
+test('applies the Kimi K3 preserved-thinking contract in tool loops', async () => {
+  let receivedBody: Record<string, any> | undefined;
+  const server = http.createServer((req, res) => {
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      receivedBody = JSON.parse(body);
+      res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+      res.end('data: [DONE]\n\n');
+    });
+  });
+
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address() as AddressInfo;
+  const provider: ProviderConfig = {
+    id: 'opencode',
+    displayName: 'OpenCode',
+    baseUrl: `http://127.0.0.1:${address.port}/v1`,
+    apiKey: 'key',
+    apiStyle: 'chat',
+    models: [],
+  };
+
+  try {
+    await sendChatRequest(
+      provider,
+      {
+        id: 'kimi-k3',
+        name: 'Kimi K3',
+        supportsReasoning: true,
+        supportedReasoningLevels: ['low', 'medium', 'high', 'xhigh', 'max'],
+        defaultReasoningLevel: 'medium',
+      },
+      {
+        id: 'opencode::kimi-k3',
+        name: 'Kimi K3',
+        family: 'kimi',
+        version: '',
+        maxInputTokens: 192000,
+        maxOutputTokens: 64000,
+        capabilities: {},
+      },
+      [
+        {
+          role: vscodeMock.LanguageModelChatMessageRole.Assistant,
+          content: [
+            new LanguageModelThinkingPart('inspect first'),
+            new LanguageModelToolCallPart('call-1', 'read_file', { path: 'README.md' }),
+          ],
+        },
+        {
+          role: vscodeMock.LanguageModelChatMessageRole.User,
+          content: [
+            new LanguageModelToolResultPart('call-1', [
+              new LanguageModelTextPart('file contents'),
+            ]),
+          ],
+        },
+      ] as never,
+      { toolMode: 0 } as never,
+      { report() {} },
+      {
+        isCancellationRequested: false,
+        onCancellationRequested: () => ({ dispose() {} }),
+      } as never
+    );
+
+    assert.equal(receivedBody?.reasoning_effort, 'max');
+    assert.equal(receivedBody?.messages?.[0]?.reasoning_content, 'inspect first');
+    assert.equal(receivedBody?.messages?.[0]?.__reasoningContent, undefined);
+  } finally {
+    server.close();
+  }
+});
+
+test('uses Kimi K2.6 thinking parameters instead of reasoning_effort', async () => {
+  let receivedBody: Record<string, any> | undefined;
+  const server = http.createServer((req, res) => {
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      receivedBody = JSON.parse(body);
+      res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+      res.end('data: [DONE]\n\n');
+    });
+  });
+
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address() as AddressInfo;
+  const provider: ProviderConfig = {
+    id: 'moonshot',
+    displayName: 'Moonshot',
+    baseUrl: `http://127.0.0.1:${address.port}/v1`,
+    apiKey: 'key',
+    apiStyle: 'chat',
+    models: [],
+  };
+
+  try {
+    await sendChatRequest(
+      provider,
+      {
+        id: 'kimi-k2.6',
+        name: 'Kimi K2.6',
+        supportsReasoning: true,
+        supportedReasoningLevels: ['medium', 'high', 'max'],
+        defaultReasoningLevel: 'medium',
+        toolChoiceMode: 'required',
+      },
+      {
+        id: 'moonshot::kimi-k2.6',
+        name: 'Kimi K2.6',
+        family: 'kimi',
+        version: '',
+        maxInputTokens: 256000,
+        maxOutputTokens: 32000,
+        capabilities: {},
+      },
+      [{
+        role: vscodeMock.LanguageModelChatMessageRole.User,
+        content: [new LanguageModelTextPart('hello')],
+      }] as never,
+      {
+        toolMode: vscodeMock.LanguageModelChatToolMode.Required,
+        tools: [{
+          name: 'read_file',
+          description: 'Read a file',
+          inputSchema: { type: 'object', properties: {} },
+        }],
+      } as never,
+      { report() {} },
+      {
+        isCancellationRequested: false,
+        onCancellationRequested: () => ({ dispose() {} }),
+      } as never
+    );
+
+    assert.equal(receivedBody?.reasoning_effort, undefined);
+    assert.deepEqual(receivedBody?.thinking, { type: 'enabled', keep: 'all' });
+    assert.equal(receivedBody?.tool_choice, 'auto');
+  } finally {
+    server.close();
+  }
+});
+
 test('applies Gemini adapter before sending the API request', async () => {
   let receivedBody: Record<string, any> | undefined;
   const server = http.createServer((req, res) => {

@@ -5,6 +5,7 @@ import { createStreamFailureError } from '../cmb.openaiCompatible.errors';
 import { readResponsesUsage, reportModelUsage } from '../cmb.openaiCompatible.usage';
 import {
   normalizeThinkingText,
+  reportThinkingDone,
   reportThinkingPart,
 } from '../chatCompletions/cmb.chatCompletions.stream';
 
@@ -22,6 +23,7 @@ interface PendingReasoningItem {
 }
 
 type ReportReasoning = (value: string, id?: string) => void;
+type FinishThinking = () => void;
 
 export async function consumeResponsesSSEStream(
   body: ReadableStream<Uint8Array>,
@@ -34,32 +36,57 @@ export async function consumeResponsesSSEStream(
   const reasoningItems = new Map<string, PendingReasoningItem>();
   let buffer = '';
   const fallbackReasoning: string[] = [];
+  let thinkingActive = false;
   const reportReasoning: ReportReasoning = (value, id) => {
     const normalizedValue = normalizeThinkingText(value);
     if (!normalizedValue) {
       return;
     }
-    if (!reportThinkingPart(progress, normalizedValue, id)) {
+    if (reportThinkingPart(progress, normalizedValue, id)) {
+      thinkingActive = true;
+    } else {
       fallbackReasoning.push(normalizedValue);
     }
+  };
+  const finishThinking: FinishThinking = () => {
+    if (!thinkingActive) {
+      return;
+    }
+    reportThinkingDone(progress);
+    thinkingActive = false;
   };
 
   try {
     while (!token.isCancellationRequested) {
       const { done, value } = await reader.read();
       if (done) {
-        handleBufferedFrame(buffer, calls, reasoningItems, progress, reportReasoning);
+        handleBufferedFrame(
+          buffer,
+          calls,
+          reasoningItems,
+          progress,
+          reportReasoning,
+          finishThinking
+        );
         break;
       }
       buffer += decoder.decode(value, { stream: true });
       const frames = buffer.split('\n\n');
       buffer = frames.pop() ?? '';
       for (const frame of frames) {
-        handleBufferedFrame(frame, calls, reasoningItems, progress, reportReasoning);
+        handleBufferedFrame(
+          frame,
+          calls,
+          reasoningItems,
+          progress,
+          reportReasoning,
+          finishThinking
+        );
       }
     }
   } finally {
     flushReasoningItems(reasoningItems, reportReasoning);
+    finishThinking();
     if (fallbackReasoning.length > 0) {
       progress.report(new vscode.LanguageModelDataPart(
         new TextEncoder().encode(fallbackReasoning.join('\n\n')),
@@ -75,14 +102,20 @@ function handleBufferedFrame(
   calls: Map<string, PendingFunctionCall>,
   reasoningItems: Map<string, PendingReasoningItem>,
   progress: vscode.Progress<vscode.LanguageModelResponsePart>,
-  reportReasoning: ReportReasoning
+  reportReasoning: ReportReasoning,
+  finishThinking: FinishThinking
 ): void {
   const event = parseFrame(frame);
   if (!event) {
     return;
   }
   handleReasoningEvent(event, reasoningItems, reportReasoning);
-  flushReasoningBeforeOutput(event, reasoningItems, reportReasoning);
+  flushReasoningBeforeOutput(
+    event,
+    reasoningItems,
+    reportReasoning,
+    finishThinking
+  );
   handleEvent(event, calls, progress);
   const usage = readResponsesUsage(event.response?.usage);
   if (usage) {
@@ -96,12 +129,14 @@ function handleBufferedFrame(
 function flushReasoningBeforeOutput(
   event: ResponsesStreamEvent,
   reasoningItems: Map<string, PendingReasoningItem>,
-  reportReasoning: ReportReasoning
+  reportReasoning: ReportReasoning,
+  finishThinking: FinishThinking
 ): void {
   if (!startsVisibleOutput(event)) {
     return;
   }
   flushReasoningItems(reasoningItems, reportReasoning);
+  finishThinking();
 }
 
 function startsVisibleOutput(event: ResponsesStreamEvent): boolean {

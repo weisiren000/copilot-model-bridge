@@ -5,6 +5,7 @@ import {
   buildModelReasoningConfigurationSchema,
 } from '../openaiCompatible';
 import { buildModelMetadata } from '../model/cmb.provider.modelMetadata';
+import { normalizeKimiReasoningModel } from '../kimi/cmb.kimi.adapter';
 
 const ID_SEP = '::';
 
@@ -12,6 +13,7 @@ export function buildModelList(): vscode.LanguageModelChatInformation[] {
   const result: vscode.LanguageModelChatInformation[] = [];
   for (const provider of getProviders()) {
     for (const model of provider.models) {
+      const reasoningModel = normalizeKimiReasoningModel(model);
       const modelMetadata = buildModelMetadata({
         compoundId: `${provider.id}${ID_SEP}${model.id}`,
         provider,
@@ -32,7 +34,7 @@ export function buildModelList(): vscode.LanguageModelChatInformation[] {
         configurationSchema?: Record<string, unknown>;
         isUserSelectable: true;
       };
-      const configurationSchema = buildModelReasoningConfigurationSchema(model);
+      const configurationSchema = buildModelReasoningConfigurationSchema(reasoningModel);
       if (configurationSchema) {
         metadata.configurationSchema = configurationSchema;
       }

@@ -19,7 +19,11 @@ class LanguageModelToolCallPart {
 }
 
 class LanguageModelThinkingPart {
-  constructor(readonly value: string) {}
+  constructor(
+    readonly value: string,
+    readonly id?: string,
+    readonly metadata?: Record<string, unknown>
+  ) {}
 }
 
 const vscodeMock = {
@@ -105,6 +109,9 @@ test('reports thinking deltas and preserves thinking signatures', async () => {
     'event: content_block_delta',
     'data: {"type":"content_block_delta","index":0,"delta":{"type":"signature_delta","signature":"sig-1"}}',
     '',
+    'event: content_block_stop',
+    'data: {"type":"content_block_stop","index":0}',
+    '',
   ]), { report: (part: unknown) => reported.push(part) } as never, neverCancelledToken as never);
 
   assert.equal(reported[0] instanceof LanguageModelThinkingPart, true);
@@ -114,6 +121,9 @@ test('reports thinking deltas and preserves thinking signatures', async () => {
   assert.deepEqual(JSON.parse(new TextDecoder().decode((reported[1] as LanguageModelDataPart).data)), {
     index: 0,
     signature: 'sig-1',
+  });
+  assert.deepEqual((reported[2] as LanguageModelThinkingPart).metadata, {
+    vscode_reasoning_done: true,
   });
 });
 

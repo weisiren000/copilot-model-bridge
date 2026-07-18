@@ -28,7 +28,11 @@ class LanguageModelToolCallPart {
 }
 
 class LanguageModelThinkingPart {
-  constructor(readonly value: string) {}
+  constructor(
+    readonly value: string,
+    readonly id?: string,
+    readonly metadata?: Record<string, unknown>
+  ) {}
 }
 
 const vscodeMock = {
@@ -111,15 +115,19 @@ test('reports Chat Completions usage for the context window widget', async () =>
   );
 });
 
-test('streams reasoning content as thinking parts when available', async () => {
+test('closes a thinking sequence when a Chat Completions stream ends', async () => {
   const parts = await collectStreamParts([
     'data: {"choices":[{"delta":{"reasoning_content":"because"},"finish_reason":null}]}',
     'data: [DONE]',
   ]);
 
-  assert.equal(parts.length, 1);
+  assert.equal(parts.length, 2);
   assert.ok(parts[0] instanceof LanguageModelThinkingPart);
   assert.equal((parts[0] as LanguageModelThinkingPart).value, 'because');
+  assert.ok(parts[1] instanceof LanguageModelThinkingPart);
+  assert.deepEqual((parts[1] as LanguageModelThinkingPart).metadata, {
+    vscode_reasoning_done: true,
+  });
 });
 
 test('streams Gemini reasoning field as thinking parts', async () => {
@@ -129,10 +137,13 @@ test('streams Gemini reasoning field as thinking parts', async () => {
     'data: [DONE]',
   ]);
 
-  assert.equal(parts.length, 2);
+  assert.equal(parts.length, 3);
   assert.ok(parts[0] instanceof LanguageModelThinkingPart);
   assert.equal((parts[0] as LanguageModelThinkingPart).value, 'thinking step');
-  assert.equal((parts[1] as LanguageModelTextPart).value, 'final answer');
+  assert.deepEqual((parts[1] as LanguageModelThinkingPart).metadata, {
+    vscode_reasoning_done: true,
+  });
+  assert.equal((parts[2] as LanguageModelTextPart).value, 'final answer');
 });
 
 test('streams Gemini tagged thoughts as thinking parts', async () => {
@@ -142,14 +153,17 @@ test('streams Gemini tagged thoughts as thinking parts', async () => {
     'data: [DONE]',
   ]);
 
-  assert.equal(parts.length, 3);
+  assert.equal(parts.length, 4);
   assert.ok(parts[0] instanceof LanguageModelThinkingPart);
   assert.ok(parts[1] instanceof LanguageModelThinkingPart);
   assert.equal(
     `${(parts[0] as LanguageModelThinkingPart).value}${(parts[1] as LanguageModelThinkingPart).value}`,
     'plan first'
   );
-  assert.equal((parts[2] as LanguageModelTextPart).value, 'answer');
+  assert.deepEqual((parts[2] as LanguageModelThinkingPart).metadata, {
+    vscode_reasoning_done: true,
+  });
+  assert.equal((parts[3] as LanguageModelTextPart).value, 'answer');
 });
 
 test('falls back to reasoning data part when ThinkingPart is unavailable', async () => {

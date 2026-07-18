@@ -105,3 +105,42 @@ test('publishes reasoning configuration for the model picker', () => {
     imageInput: false,
   });
 });
+
+test('publishes only the reasoning levels accepted by Kimi K3', () => {
+  storedProviders = [{
+    id: 'opencode',
+    displayName: 'OpenCode',
+    baseUrl: 'https://opencode.ai/zen/go/v1',
+    apiKey: 'key',
+    models: [{
+      id: 'kimi-k3',
+      name: 'Kimi K3',
+      maxInputTokens: 192000,
+      maxOutputTokens: 64000,
+      supportsToolCalling: true,
+      supportsReasoning: true,
+      supportedReasoningLevels: ['low', 'medium', 'high', 'xhigh', 'max'],
+      defaultReasoningLevel: 'medium',
+    }],
+  }];
+
+  const [model] = buildModelList() as unknown as Array<{
+    configurationSchema?: {
+      properties?: {
+        reasoningEffort?: {
+          enum?: string[];
+          default?: string;
+        };
+      };
+    };
+  }>;
+
+  assert.deepEqual(
+    model.configurationSchema?.properties?.reasoningEffort?.enum,
+    ['max']
+  );
+  assert.equal(
+    model.configurationSchema?.properties?.reasoningEffort?.default,
+    'max'
+  );
+});

@@ -18,12 +18,39 @@ export function reportThinkingPart(
   }
   try {
     const ctor = (vscode as unknown as {
-      LanguageModelThinkingPart?: new (value: string, id?: string) => unknown;
+      LanguageModelThinkingPart?: new (
+        value: string,
+        id?: string,
+        metadata?: Record<string, unknown>
+      ) => unknown;
     }).LanguageModelThinkingPart;
     if (!ctor) {
       return false;
     }
     progress.report(new ctor(normalizedValue, id) as vscode.LanguageModelResponsePart);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function reportThinkingDone(
+  progress: vscode.Progress<vscode.LanguageModelResponsePart>
+): boolean {
+  try {
+    const ctor = (vscode as unknown as {
+      LanguageModelThinkingPart?: new (
+        value: string,
+        id?: string,
+        metadata?: Record<string, unknown>
+      ) => unknown;
+    }).LanguageModelThinkingPart;
+    if (!ctor) {
+      return false;
+    }
+    progress.report(new ctor('', '', {
+      vscode_reasoning_done: true,
+    }) as vscode.LanguageModelResponsePart);
     return true;
   } catch {
     return false;
@@ -52,10 +79,22 @@ export function normalizeThinkingText(value: string): string {
 
 /** 判断历史消息中的某个 part 是否是 ThinkingPart（兼容运行时缺失的情况） */
 export function isThinkingPart(part: unknown): part is { value: string | string[] } {
-  return typeof part === 'object'
-    && part !== null
-    && part.constructor?.name === 'LanguageModelThinkingPart'
-    && 'value' in part;
+  if (typeof part !== 'object' || part === null || !('value' in part)) {
+    return false;
+  }
+
+  try {
+    const ctor = (vscode as unknown as {
+      LanguageModelThinkingPart?: new (...args: any[]) => object;
+    }).LanguageModelThinkingPart;
+    if (ctor && part instanceof ctor) {
+      return true;
+    }
+  } catch {
+    // Older VS Code builds can deny access to the proposed constructor.
+  }
+
+  return part.constructor?.name === 'LanguageModelThinkingPart';
 }
 
 /** 从 ThinkingPart 中读取文本内容，兼容 string 与 string[] 两种形态 */
@@ -93,6 +132,7 @@ export async function consumeSSEStream(
   const textThoughtSignatures: string[] = [];
   let reasoningBuffer = '';
   let reasoningStreamed = false;
+  let thinkingActive = false;
   let taggedThoughtBuffer = '';
   let insideTaggedThought = false;
 
@@ -130,6 +170,20 @@ export async function consumeSSEStream(
           }
           const delta = chunk.choices?.[0]?.delta;
 
+          if (delta?.reasoning_content) {
+            reasoningBuffer += delta.reasoning_content;
+            if (reportThinkingPart(progress, delta.reasoning_content)) {
+              reasoningStreamed = true;
+              thinkingActive = true;
+            }
+          }
+          if (delta?.reasoning) {
+            reasoningBuffer += delta.reasoning;
+            if (reportThinkingPart(progress, delta.reasoning)) {
+              reasoningStreamed = true;
+              thinkingActive = true;
+            }
+          }
           if (delta?.content) {
             const parts = splitTaggedThoughtContent(
               delta.content,
@@ -141,26 +195,23 @@ export async function consumeSSEStream(
                 taggedThoughtBuffer += part.value;
                 if (reportThinkingPart(progress, part.value)) {
                   reasoningStreamed = true;
+                  thinkingActive = true;
                 }
               } else if (part.value) {
+                if (thinkingActive) {
+                  reportThinkingDone(progress);
+                  thinkingActive = false;
+                }
                 progress.report(new vscode.LanguageModelTextPart(part.value));
               }
             }
           }
-          if (delta?.reasoning_content) {
-            reasoningBuffer += delta.reasoning_content;
-            if (reportThinkingPart(progress, delta.reasoning_content)) {
-              reasoningStreamed = true;
-            }
-          }
-          if (delta?.reasoning) {
-            reasoningBuffer += delta.reasoning;
-            if (reportThinkingPart(progress, delta.reasoning)) {
-              reasoningStreamed = true;
-            }
-          }
           const deltaThoughtSignature = readGoogleThoughtSignature(delta);
           if (delta?.tool_calls) {
+            if (thinkingActive) {
+              reportThinkingDone(progress);
+              thinkingActive = false;
+            }
             const firstToolCallIndex = findFirstToolCallIndex(delta.tool_calls);
             for (const tc of delta.tool_calls) {
               // 跳过 index 缺失的异常 tool_call 分片
@@ -196,6 +247,9 @@ export async function consumeSSEStream(
       }
     }
   } finally {
+    if (thinkingActive) {
+      reportThinkingDone(progress);
+    }
     // Preserve reasoning for replay when ThinkingPart is unavailable or denied.
     const fallbackReasoning = normalizeThinkingText(reasoningBuffer || taggedThoughtBuffer);
     if (fallbackReasoning && !reasoningStreamed) {

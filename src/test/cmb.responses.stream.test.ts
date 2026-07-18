@@ -19,7 +19,11 @@ class LanguageModelToolCallPart {
 }
 
 class LanguageModelThinkingPart {
-  constructor(readonly value: string, readonly id?: string) {}
+  constructor(
+    readonly value: string,
+    readonly id?: string,
+    readonly metadata?: Record<string, unknown>
+  ) {}
 }
 
 const vscodeMock = {
@@ -109,7 +113,10 @@ test('reports reasoning text deltas as thinking parts', async () => {
 
   assert.equal(reported[0] instanceof LanguageModelThinkingPart, true);
   assert.equal((reported[0] as LanguageModelThinkingPart).value, 'think');
-  assert.equal((reported[1] as LanguageModelTextPart).value, 'answer');
+  assert.deepEqual((reported[1] as LanguageModelThinkingPart).metadata, {
+    vscode_reasoning_done: true,
+  });
+  assert.equal((reported[2] as LanguageModelTextPart).value, 'answer');
 });
 
 test('reports reasoning summary from final output item as thinking part', async () => {
@@ -125,7 +132,10 @@ test('reports reasoning summary from final output item as thinking part', async 
 
   assert.equal(reported[0] instanceof LanguageModelThinkingPart, true);
   assert.equal((reported[0] as LanguageModelThinkingPart).value, 'checked factors');
-  assert.equal((reported[1] as LanguageModelTextPart).value, 'answer');
+  assert.deepEqual((reported[1] as LanguageModelThinkingPart).metadata, {
+    vscode_reasoning_done: true,
+  });
+  assert.equal((reported[2] as LanguageModelTextPart).value, 'answer');
 });
 
 test('reports a reasoning item once and prefers its final summary', async () => {
@@ -142,13 +152,23 @@ test('reports a reasoning item once and prefers its final summary', async () => 
     '',
   ]), { report: (part: unknown) => reported.push(part) } as never, neverCancelledToken as never);
 
-  const thinkingParts = reported.filter(part => part instanceof LanguageModelThinkingPart);
+  const thinkingParts = reported.filter(part => (
+    part instanceof LanguageModelThinkingPart
+    && !part.metadata?.vscode_reasoning_done
+  ));
   assert.equal(thinkingParts.length, 1);
   assert.equal(
     (thinkingParts[0] as LanguageModelThinkingPart).value,
     'Preparing stash and inspecting conflicts'
   );
   assert.equal((thinkingParts[0] as LanguageModelThinkingPart).id, 'rs_1');
+  assert.equal(
+    reported.some(part => (
+      part instanceof LanguageModelThinkingPart
+      && part.metadata?.vscode_reasoning_done === true
+    )),
+    true
+  );
 });
 
 test('removes paired strong markers from thinking text without deleting ordinary asterisks', () => {
@@ -179,10 +199,20 @@ test('flushes streamed reasoning once when no final summary arrives', async () =
     '',
   ]), { report: (part: unknown) => reported.push(part) } as never, neverCancelledToken as never);
 
-  const thinkingParts = reported.filter(part => part instanceof LanguageModelThinkingPart);
+  const thinkingParts = reported.filter(part => (
+    part instanceof LanguageModelThinkingPart
+    && !part.metadata?.vscode_reasoning_done
+  ));
   assert.equal(thinkingParts.length, 1);
   assert.equal((thinkingParts[0] as LanguageModelThinkingPart).value, 'first second');
   assert.equal((thinkingParts[0] as LanguageModelThinkingPart).id, 'rs_2');
+  assert.equal(
+    reported.some(part => (
+      part instanceof LanguageModelThinkingPart
+      && part.metadata?.vscode_reasoning_done === true
+    )),
+    true
+  );
 });
 
 test('reports final frame when stream ends without trailing blank line', async () => {

@@ -277,3 +277,38 @@ test('preserves DeepSeek reasoning content from thinking and data parts', () => 
     __reasoningContent: 'think hard and replay',
   }]);
 });
+
+test('preserves thinking when the VS Code runtime minifies the constructor name', () => {
+  const RuntimeThinkingPart = class Ki {
+    constructor(readonly value: string | string[]) {}
+  };
+  const previousThinkingPart = vscodeMock.LanguageModelThinkingPart;
+  vscodeMock.LanguageModelThinkingPart = RuntimeThinkingPart;
+
+  try {
+    const messages = [{
+      role: vscodeMock.LanguageModelChatMessageRole.Assistant,
+      name: undefined,
+      content: [
+        new RuntimeThinkingPart('inspect the next file'),
+        new LanguageModelToolCallPart('call-1', 'read_file', { path: 'README.md' }),
+      ],
+    }];
+
+    assert.deepEqual(convertMessages(messages as never, {}), [{
+      role: 'assistant',
+      content: null,
+      tool_calls: [{
+        id: 'call-1',
+        type: 'function',
+        function: {
+          name: 'read_file',
+          arguments: '{"path":"README.md"}',
+        },
+      }],
+      __reasoningContent: 'inspect the next file',
+    }]);
+  } finally {
+    vscodeMock.LanguageModelThinkingPart = previousThinkingPart;
+  }
+});
