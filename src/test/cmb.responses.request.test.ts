@@ -58,6 +58,59 @@ test('sends explicit none reasoning effort instead of falling back to the model 
   assert.deepEqual(body.reasoning, { effort: 'none' });
 });
 
+test('derives a hashed prompt cache key from the stable GPT-5.6 request prefix', () => {
+  const {
+    buildResponsesRequestBody,
+  } = require('../provider/openaiCompatible/responses/cmb.responses.request') as typeof import('../provider/openaiCompatible/responses/cmb.responses.request');
+  const firstUserMessage = {
+    type: 'message' as const,
+    role: 'user' as const,
+    content: [{ type: 'input_text' as const, text: 'private project question' }],
+  };
+  const common = {
+    modelId: 'gpt-5.6-sol',
+    instructions: 'Use the repository rules.',
+    maxOutputTokens: 128000,
+    toolOptions: {
+      tools: [{ type: 'function', name: 'read_file', parameters: { type: 'object' } }],
+    },
+  };
+
+  const firstBody = buildResponsesRequestBody({
+    ...common,
+    input: [firstUserMessage],
+  });
+  const laterBody = buildResponsesRequestBody({
+    ...common,
+    input: [
+      firstUserMessage,
+      {
+        type: 'message',
+        role: 'assistant',
+        content: [{ type: 'output_text', text: 'Earlier answer' }],
+      },
+      {
+        type: 'message',
+        role: 'user',
+        content: [{ type: 'input_text', text: 'Follow-up question' }],
+      },
+    ],
+  });
+  const differentConversation = buildResponsesRequestBody({
+    ...common,
+    input: [{
+      type: 'message',
+      role: 'user',
+      content: [{ type: 'input_text', text: 'different private question' }],
+    }],
+  });
+
+  assert.match(firstBody.prompt_cache_key as string, /^cmb_[A-Za-z0-9_-]{43}$/);
+  assert.equal(laterBody.prompt_cache_key, firstBody.prompt_cache_key);
+  assert.notEqual(differentConversation.prompt_cache_key, firstBody.prompt_cache_key);
+  assert.doesNotMatch(firstBody.prompt_cache_key as string, /private project question/);
+});
+
 test('adds an empty object schema for Responses tools without input parameters', () => {
   const {
     buildResponsesToolOptions,
