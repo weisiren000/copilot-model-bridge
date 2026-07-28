@@ -48,6 +48,7 @@
     CMB.el('dialog-model-family').value = '';
     CMB.el('dialog-context-window').value = '132096';
     CMB.el('dialog-max-output').value = '4096';
+    CMB.el('dialog-image-detail').value = 'high';
     updateAvailableInput();
     CMB.dialogShared.clearSelectedModelDefaults();
     const defaults = { supportsToolCalling: true, supportsEditTools: true };
@@ -87,6 +88,7 @@
         family: fields.family || undefined,
         maxInputTokens: CMB.calculateMaxInputTokens(fields.contextWindow, fields.maxOutput),
         maxOutputTokens: fields.maxOutput,
+        imageDetail: fields.imageDetail,
         ...caps,
       },
     });
@@ -100,6 +102,7 @@
       family: CMB.el('dialog-model-family').value.trim(),
       contextWindow: Number(CMB.el('dialog-context-window').value),
       maxOutput: Number(CMB.el('dialog-max-output').value),
+      imageDetail: CMB.el('dialog-image-detail').value,
     };
   }
 

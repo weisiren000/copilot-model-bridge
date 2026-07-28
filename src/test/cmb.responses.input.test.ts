@@ -10,7 +10,7 @@ test('converts user text and image content to Responses input parts', () => {
     role: 'user',
     content: [
       { type: 'text', text: 'look' },
-      { type: 'image_url', image_url: { url: 'data:image/png;base64,/w==' } },
+      { type: 'image_url', image_url: { url: 'data:image/png;base64,/w==', detail: 'high' } },
     ],
   }]);
 
@@ -20,7 +20,7 @@ test('converts user text and image content to Responses input parts', () => {
       role: 'user',
       content: [
         { type: 'input_text', text: 'look' },
-        { type: 'input_image', image_url: 'data:image/png;base64,/w==' },
+        { type: 'input_image', image_url: 'data:image/png;base64,/w==', detail: 'high' },
       ],
     }],
   });

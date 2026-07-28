@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 import {
+  estimateChatMessageTokens,
+  estimateSerializedTokens,
   resolveOpenAIChatRequestPolicy,
   resolveReasoningLevel,
 } from '../openaiCompatible';
@@ -7,6 +9,7 @@ import {
   buildChatRequestBody,
   consumeSSEStream,
   convertMessages,
+  toTokenEstimateParts,
 } from '../openaiCompatible/chatCompletions';
 import { buildChatRequestHeaders } from '../openaiCompatible/cmb.openaiCompatible.requestHeaders';
 import { createHttpError } from '../openaiCompatible/cmb.openaiCompatible.errors';
@@ -84,10 +87,13 @@ export async function sendChatRequest(
     return;
   }
 
+  assertInputWithinBudget(model, selectedModel, messages, options);
+
   const isGemini = isGeminiRequest(provider, selectedModel.id);
   const apiMessages = convertMessages(messages, {
     supportsVideo: selectedModel.supportsVideo,
     supportsFileInput: selectedModel.supportsFileInput,
+    imageDetail: selectedModel.imageDetail,
     isGemini,
   });
 
@@ -143,6 +149,7 @@ type SelectedModel = Pick<ModelConfig, 'id' | 'name'> & Partial<Pick<ModelConfig
   | 'supportsVideo'
   | 'supportsFileInput'
   | 'supportsVision'
+  | 'imageDetail'
   | 'supportsReasoning'
   | 'defaultReasoningLevel'
   | 'supportedReasoningLevels'
@@ -154,6 +161,43 @@ type SelectedModel = Pick<ModelConfig, 'id' | 'name'> & Partial<Pick<ModelConfig
   | 'toolChoiceMode'
   | 'maxOutputTokens'
 >>;
+
+const INPUT_TOKEN_SAFETY_RATIO = 0.05;
+const MIN_INPUT_TOKEN_SAFETY_MARGIN = 1024;
+const MAX_INPUT_TOKEN_SAFETY_RATIO = 0.25;
+
+function assertInputWithinBudget(
+  model: vscode.LanguageModelChatInformation,
+  selectedModel: Pick<SelectedModel, 'imageDetail'>,
+  messages: readonly vscode.LanguageModelChatRequestMessage[],
+  options: vscode.ProvideLanguageModelChatResponseOptions
+): void {
+  const maxInputTokens = model.maxInputTokens;
+  if (!Number.isFinite(maxInputTokens) || maxInputTokens <= 0) {
+    return;
+  }
+  const estimatedInputTokens = messages.reduce(
+    (total, message) => total + estimateChatMessageTokens(
+      toTokenEstimateParts(message.content),
+      selectedModel.imageDetail
+    ),
+    estimateSerializedTokens(options.tools ?? [])
+  );
+  const safetyMargin = Math.min(
+    Math.max(
+      MIN_INPUT_TOKEN_SAFETY_MARGIN,
+      Math.ceil(maxInputTokens * INPUT_TOKEN_SAFETY_RATIO)
+    ),
+    Math.floor(maxInputTokens * MAX_INPUT_TOKEN_SAFETY_RATIO)
+  );
+  const allowedInputTokens = Math.max(1, maxInputTokens - safetyMargin);
+  if (estimatedInputTokens > allowedInputTokens) {
+    throw new Error(
+      `Estimated input tokens (${estimatedInputTokens}) exceed the safe model input limit `
+      + `(${allowedInputTokens} of ${maxInputTokens}). Reduce conversation history or image detail.`
+    );
+  }
+}
 
 async function sendChatCompletionsRequest(context: RequestContext): Promise<void> {
   const {

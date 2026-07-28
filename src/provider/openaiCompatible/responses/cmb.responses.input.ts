@@ -1,4 +1,4 @@
-import { ResponsesContentPart, ResponsesInputItem } from '../../../types';
+import { ImageDetail, ResponsesContentPart, ResponsesInputItem } from '../../../types';
 
 interface ChatMessage {
   role: string;
@@ -79,14 +79,22 @@ function convertContentParts(value: unknown, mode: 'input' | 'output'): Response
 
   const parts: ResponsesContentPart[] = [];
   for (const part of value) {
-    const contentPart = part as { type?: unknown; text?: unknown; image_url?: { url?: unknown } };
+    const contentPart = part as {
+      type?: unknown;
+      text?: unknown;
+      image_url?: { url?: unknown; detail?: ImageDetail };
+    };
     if (contentPart.type === 'text' && typeof contentPart.text === 'string') {
       parts.push(createTextPart(contentPart.text, mode));
     } else if (
       contentPart.type === 'image_url'
       && typeof contentPart.image_url?.url === 'string'
     ) {
-      parts.push({ type: 'input_image', image_url: contentPart.image_url.url });
+      parts.push({
+        type: 'input_image',
+        image_url: contentPart.image_url.url,
+        ...(contentPart.image_url.detail ? { detail: contentPart.image_url.detail } : {}),
+      });
     }
   }
   return parts;

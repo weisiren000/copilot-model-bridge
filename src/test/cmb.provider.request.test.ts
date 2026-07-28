@@ -1293,3 +1293,63 @@ test('does not write Gemini failure diagnostics to disk', async () => {
     server.close();
   }
 });
+
+test('rejects an oversized image request before contacting the upstream provider', async () => {
+  let requestCount = 0;
+  const server = http.createServer((req, res) => {
+    requestCount += 1;
+    req.resume();
+    res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+    res.end('data: [DONE]\n\n');
+  });
+
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address() as AddressInfo;
+  const image = new Uint8Array(24);
+  image.set([137, 80, 78, 71, 13, 10, 26, 10]);
+  const view = new DataView(image.buffer);
+  view.setUint32(16, 2048);
+  view.setUint32(20, 1024);
+
+  try {
+    await assert.rejects(
+      sendChatRequest(
+        {
+          id: 'openai',
+          displayName: 'OpenAI',
+          baseUrl: `http://127.0.0.1:${address.port}/v1`,
+          apiKey: 'key',
+          apiStyle: 'responses',
+          models: [],
+        },
+        {
+          id: 'gpt-5.6-sol',
+          name: 'GPT 5.6 Sol',
+          supportsVision: true,
+          maxOutputTokens: 128,
+        },
+        {
+          id: 'openai::gpt-5.6-sol',
+          name: 'GPT 5.6 Sol',
+          family: 'gpt',
+          version: '',
+          maxInputTokens: 1024,
+          maxOutputTokens: 128,
+          capabilities: { imageInput: true },
+        },
+        [{
+          role: vscodeMock.LanguageModelChatMessageRole.User,
+          content: [new LanguageModelDataPart(image, 'image/png')],
+        }] as never,
+        { toolMode: 0 } as never,
+        { report() {} },
+        { isCancellationRequested: false, onCancellationRequested: () => ({ dispose() {} }) } as never
+      ),
+      /estimated input tokens/i
+    );
+
+    assert.equal(requestCount, 0);
+  } finally {
+    server.close();
+  }
+});

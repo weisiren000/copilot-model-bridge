@@ -1,4 +1,10 @@
-import { EditToolName, ModelConfig, ReasoningLevel, ToolChoiceMode } from '../../types';
+import {
+  EditToolName,
+  ImageDetail,
+  ModelConfig,
+  ReasoningLevel,
+  ToolChoiceMode,
+} from '../../types';
 
 const DEFAULT_INPUT_TOKENS = 128000;
 const DEFAULT_OUTPUT_TOKENS = 4096;
@@ -7,6 +13,7 @@ const DEFAULT_TOOL_CHOICE_MODE: ToolChoiceMode = 'required';
 const DEFAULT_MULTIPLIER = '0x';
 const VALID_REASONING_LEVELS: readonly ReasoningLevel[] = ['none', 'low', 'medium', 'high', 'xhigh', 'max'];
 const VALID_TOOL_CHOICE_MODES: readonly ToolChoiceMode[] = ['auto', 'required', 'none', 'omit'];
+const VALID_IMAGE_DETAILS: readonly ImageDetail[] = ['low', 'high', 'auto', 'original'];
 const VALID_EDIT_TOOLS: readonly EditToolName[] = [
   'find-replace',
   'multi-find-replace',
@@ -18,7 +25,11 @@ type RawModelConfig = Partial<ModelConfig> & Pick<ModelConfig, 'id' | 'name'>;
 type LegacyModelConfig = RawModelConfig & { contextWindowTokens?: unknown };
 
 export function normalizeModelConfig(model: LegacyModelConfig): ModelConfig {
-  const { contextWindowTokens: _legacyContextWindowTokens, ...modelWithoutLegacyContext } = model;
+  const {
+    contextWindowTokens: _legacyContextWindowTokens,
+    imageDetail: rawImageDetail,
+    ...modelWithoutLegacyContext
+  } = model;
   const cleanModel = modelWithoutLegacyContext as RawModelConfig;
   const supportsReasoning = shouldSupportReasoning(cleanModel);
   const supportsToolCalling = cleanModel.supportsToolCalling ?? true;
@@ -26,6 +37,7 @@ export function normalizeModelConfig(model: LegacyModelConfig): ModelConfig {
   const defaultReasoningLevel = normalizeDefaultReasoningLevel(cleanModel.defaultReasoningLevel, supportsReasoning);
   const maxOutputTokens = normalizePositiveInteger(cleanModel.maxOutputTokens, DEFAULT_OUTPUT_TOKENS);
   const maxInputTokens = normalizePositiveInteger(cleanModel.maxInputTokens, DEFAULT_INPUT_TOKENS);
+  const imageDetail = normalizeImageDetail(rawImageDetail);
 
   return {
     ...modelWithoutLegacyContext,
@@ -35,6 +47,7 @@ export function normalizeModelConfig(model: LegacyModelConfig): ModelConfig {
     maxOutputTokens,
     supportsToolCalling,
     supportsVision: cleanModel.supportsVision ?? false,
+    ...(imageDetail ? { imageDetail } : {}),
     supportsVideo: cleanModel.supportsVideo ?? false,
     supportsFileInput: cleanModel.supportsFileInput ?? false,
     supportsEditTools,
@@ -121,6 +134,12 @@ function normalizeToolChoiceMode(mode: unknown): ToolChoiceMode {
 
 function isToolChoiceMode(value: unknown): value is ToolChoiceMode {
   return typeof value === 'string' && VALID_TOOL_CHOICE_MODES.includes(value as ToolChoiceMode);
+}
+
+function normalizeImageDetail(value: unknown): ImageDetail | undefined {
+  return typeof value === 'string' && VALID_IMAGE_DETAILS.includes(value as ImageDetail)
+    ? value as ImageDetail
+    : undefined;
 }
 
 function normalizeMultiplierLabel(multiplier: unknown): string {

@@ -15,6 +15,16 @@ test('converts image bytes to OpenAI-compatible data URL content', () => {
   });
 });
 
+test('sends image detail only when the model config specifies it', () => {
+  assert.deepEqual(createOpenAIImagePart(new Uint8Array([1]), 'image/png', 'low'), {
+    type: 'image_url',
+    image_url: {
+      url: 'data:image/png;base64,AQ==',
+      detail: 'low',
+    },
+  });
+});
+
 test('keeps text and image parts together for multimodal messages', () => {
   const image = createOpenAIImagePart(new Uint8Array([255]), 'image/jpeg');
 

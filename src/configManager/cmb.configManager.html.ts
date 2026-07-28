@@ -251,6 +251,17 @@ function renderModelModal(): string {
             <div class="toggle" data-dialog-toggle="supportsFileInput"><span class="switch"></span><span>文件输入</span></div>
             <div class="toggle" data-dialog-toggle="supportsReasoning"><span class="switch"></span><span>推理力度</span></div>
           </div>
+          <div class="form-grid">
+            <div class="field wide">
+              <label for="dialog-image-detail">图片细节级别</label>
+              <select id="dialog-image-detail">
+                <option value="low">low（节省上下文）</option>
+                <option value="high" selected>high（默认）</option>
+                <option value="auto">auto（由模型决定）</option>
+                <option value="original">original（保留原始细节）</option>
+              </select>
+            </div>
+          </div>
         </section>
       </div>
       <footer class="dialog-actions">

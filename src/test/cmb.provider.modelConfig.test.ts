@@ -197,6 +197,26 @@ test('keeps configured multimodal attachment policy flags', () => {
   assert.equal(model.supportsFileInput, true);
 });
 
+test('normalizes invalid image detail settings instead of forwarding them upstream', () => {
+  const model = normalizeModelConfig({
+    id: 'invalid-image-detail-model',
+    name: 'Invalid Image Detail Model',
+    imageDetail: 'ultra' as never,
+  });
+
+  assert.equal(model.imageDetail, undefined);
+});
+
+test('keeps valid image detail settings', () => {
+  const model = normalizeModelConfig({
+    id: 'image-detail-model',
+    name: 'Image Detail Model',
+    imageDetail: 'low',
+  });
+
+  assert.equal(model.imageDetail, 'low');
+});
+
 test('defaults tool choice mode to required semantics', () => {
   const model = normalizeModelConfig({
     id: 'tool-choice-model',

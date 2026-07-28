@@ -7,6 +7,7 @@ import {
 import {
   buildOpenAIContent,
   createOpenAIDataPartContent,
+  AttachmentPolicy,
   OpenAIContentPart,
 } from '../cmb.openaiCompatible.content';
 import {
@@ -56,9 +57,7 @@ export function safeTokenText(value: unknown): string {
  */
 export function convertMessages(
   messages: readonly vscode.LanguageModelChatRequestMessage[],
-  attachmentPolicy: {
-    supportsVideo?: boolean;
-    supportsFileInput?: boolean;
+  attachmentPolicy: AttachmentPolicy & {
     /**
      * 当请求目标是 Gemini 时设为 true，重放 tool_calls 时如果历史里没有对应
      * thought_signature DataPart，会注入官方文档允许的 dummy 签名以避免 400。
@@ -75,7 +74,7 @@ export function convertMessages(
     let textContent = '';
     const dataContent: OpenAIContentPart[] = [];
     const toolCalls: any[] = [];
-    const toolResults: any[] = [];
+    const toolResults: ConvertedToolResult[] = [];
     let reasoningContent = '';
     const geminiToolCallSignatures = collectGeminiToolCallSignatures(msg.content);
 
@@ -124,31 +123,25 @@ export function convertMessages(
           };
         }
       } else if (part instanceof vscode.LanguageModelToolResultPart) {
-        let resultStr = '';
-        for (const resPart of part.content) {
-          if (resPart instanceof vscode.LanguageModelTextPart) {
-            resultStr += resPart.value;
-          } else if (typeof resPart === 'string') {
-            resultStr += resPart;
-          } else {
-            try { resultStr += JSON.stringify(resPart); } catch { }
-          }
-        }
-        const tr: any = {
-          role: 'tool',
-          tool_call_id: part.callId,
-          content: resultStr || 'Success'
-        };
-        if (toolCallIdToName[part.callId]) {
-          tr.name = toolCallIdToName[part.callId];
-        }
-        toolResults.push(tr);
+        toolResults.push(convertToolResult(
+          part,
+          toolCallIdToName[part.callId],
+          attachmentPolicy
+        ));
       }
     }
 
     if (toolResults.length > 0) {
-      for (const tr of toolResults) {
-        result.push(tr);
+      const toolResultImages: OpenAIContentPart[] = [];
+      for (const toolResult of toolResults) {
+        result.push(toolResult.message);
+        toolResultImages.push(...toolResult.imageParts);
+      }
+      if (toolResultImages.length > 0) {
+        result.push({
+          role: 'user',
+          content: buildOpenAIContent('', toolResultImages),
+        });
       }
     }
 
@@ -174,6 +167,72 @@ export function convertMessages(
     }
   }
   return result;
+}
+
+interface ConvertedToolResult {
+  message: Record<string, unknown>;
+  imageParts: OpenAIContentPart[];
+}
+
+function convertToolResult(
+  part: vscode.LanguageModelToolResultPart,
+  toolName: string | undefined,
+  attachmentPolicy: AttachmentPolicy
+): ConvertedToolResult {
+  const content = convertToolResultContent(part.content, attachmentPolicy);
+  const message: Record<string, unknown> = {
+    role: 'tool',
+    tool_call_id: part.callId,
+    content: content.text || 'Success',
+  };
+  if (toolName) {
+    message.name = toolName;
+  }
+  return { message, imageParts: content.imageParts };
+}
+
+function convertToolResultContent(
+  parts: readonly unknown[],
+  attachmentPolicy: AttachmentPolicy
+): { text: string; imageParts: OpenAIContentPart[] } {
+  let text = '';
+  const imageParts: OpenAIContentPart[] = [];
+  for (const part of parts) {
+    if (part instanceof vscode.LanguageModelTextPart) {
+      text += part.value;
+    } else if (typeof part === 'string') {
+      text += part;
+    } else if (part instanceof vscode.LanguageModelDataPart) {
+      appendDataPartContent(
+        part,
+        { ...attachmentPolicy, unsupportedDataPartBehavior: 'describe' },
+        imageParts,
+        value => { text += value; }
+      );
+    } else if (part !== undefined && part !== null) {
+      text += safeTokenText(part);
+    }
+  }
+  return { text, imageParts };
+}
+
+function appendDataPartContent(
+  part: vscode.LanguageModelDataPart,
+  attachmentPolicy: AttachmentPolicy,
+  imageParts: OpenAIContentPart[],
+  appendText: (value: string) => void
+): void {
+  for (const converted of createOpenAIDataPartContent(
+    part.data,
+    part.mimeType,
+    attachmentPolicy
+  )) {
+    if (converted.type === 'text') {
+      appendText(converted.text);
+    } else {
+      imageParts.push(converted);
+    }
+  }
 }
 
 function collectGeminiToolCallSignatures(

@@ -4,6 +4,7 @@
   const CMB = window.CMB = window.CMB || {};
   const TOOL_CHOICE_MODES = ['required', 'auto', 'none', 'omit'];
   const CATEGORY_OPTIONS = ['', 'Reasoning', 'Chat', 'Vision', 'Agent', 'Embedding', 'Audio'];
+  const IMAGE_DETAIL_OPTIONS = ['low', 'high', 'auto', 'original'];
 
   function renderModelInspector(provider, model) {
     const h = CMB.escapeHtml;
@@ -123,6 +124,14 @@
             <span>${h(label)}</span>
           </div>
         `).join('')}
+      </div>
+      <div class="form-grid">
+        <div class="field wide">
+          <label>图片细节级别</label>
+          <select data-scope="model" data-key="imageDetail">
+            ${CMB.selectOptions(IMAGE_DETAIL_OPTIONS, model.imageDetail || 'high')}
+          </select>
+        </div>
       </div>
     </div>`;
   }

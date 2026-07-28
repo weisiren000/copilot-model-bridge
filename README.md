@@ -12,7 +12,7 @@
   <a href="https://marketplace.visualstudio.com/items?itemName=weisiren.cmb-copilot-model-bridge">
     <img src="https://img.shields.io/badge/VS%20Code-Marketplace-007ACC?style=flat-square&logo=visualstudiocode&logoColor=white" alt="VS Code Marketplace">
   </a>
-  <img src="https://img.shields.io/badge/Version-1.1.6-4C8BF5?style=flat-square" alt="Version 1.1.6">
+  <img src="https://img.shields.io/badge/Version-1.1.7-4C8BF5?style=flat-square" alt="Version 1.1.7">
   <img src="https://img.shields.io/badge/VS%20Code-%5E1.115.0-007ACC?style=flat-square" alt="VS Code 1.115.0+">
   <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
 </p>
@@ -49,6 +49,13 @@ Copilot Model Bridge 会把你自己的模型服务注册到 GitHub Copilot Chat
 - **多模态开关**：按模型声明图片、视频、文件输入能力；不支持的输入会给出清晰错误
 - **可视化配置管理器**：通过 Webview 管理 Provider 和模型，也支持命令面板向导
 - **模型元数据**：配置上下文长度、输出上限、模型家族和说明信息
+
+## v1.1.7 更新重点
+
+- 修复图片工具结果被序列化成巨量文本、导致长任务快速耗尽上下文的问题
+- 图片工具结果改为真正的多模态输入，并保持并行工具调用的合法消息顺序
+- 增加图片与中文内容的输入 Token 估算，在请求发送前拦截明显超限的上下文
+- 新增图片细节级别配置，可按模型选择 `low`、`high`、`auto` 或 `original`
 
 ## v1.1.6 更新重点
 
@@ -267,6 +274,7 @@ Kimi K2.5 (NVIDIA NIM)
 | `preferredEditTools` | 兼容保留字段；等待 VS Code 对应 API 稳定后再启用 |
 | `toolChoiceMode` | 工具选择策略：`auto`、`required`、`none`、`omit` |
 | `supportsVision` | 是否支持图片输入 |
+| `imageDetail` | 可选图片细节级别：`low`、`high`、`auto`、`original`；未配置时不额外发送该字段 |
 | `supportsVideo` | 是否声明支持视频附件 |
 | `supportsFileInput` | 是否声明支持非图片文件输入 |
 | `supportsReasoning` | 是否声明模型支持 reasoning，并向上游发送对应配置 |
@@ -300,12 +308,12 @@ Kimi K2.5 (NVIDIA NIM)
 1. 打开 VS Code Extensions 视图。
 2. 点击右上角 `...`。
 3. 选择 `Install from VSIX...`。
-4. 选择 `cmb-copilot-model-bridge-1.1.6.vsix`。
+4. 选择 `cmb-copilot-model-bridge-1.1.7.vsix`。
 
 也可以使用命令行：
 
 ```bash
-code --install-extension cmb-copilot-model-bridge-1.1.6.vsix
+code --install-extension cmb-copilot-model-bridge-1.1.7.vsix
 ```
 
 ## 排查建议

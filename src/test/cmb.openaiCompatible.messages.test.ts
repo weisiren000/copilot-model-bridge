@@ -117,6 +117,121 @@ test('converts text and image user messages to OpenAI-compatible content', () =>
   }]);
 });
 
+test('preserves image data from tool results as multimodal user input', () => {
+  const messages = [
+    {
+      role: vscodeMock.LanguageModelChatMessageRole.Assistant,
+      name: undefined,
+      content: [
+        new LanguageModelToolCallPart('call-image', 'view_image', { filePath: 'preview.png' }),
+      ],
+    },
+    {
+      role: vscodeMock.LanguageModelChatMessageRole.User,
+      name: undefined,
+      content: [
+        new LanguageModelToolResultPart('call-image', [
+          new LanguageModelTextPart('Image attached.'),
+          new LanguageModelDataPart(new Uint8Array([255]), 'image/png'),
+        ]),
+      ],
+    },
+  ];
+
+  assert.deepEqual(convertMessages(messages, {}), [
+    {
+      role: 'assistant',
+      content: null,
+      tool_calls: [{
+        id: 'call-image',
+        type: 'function',
+        function: {
+          name: 'view_image',
+          arguments: '{"filePath":"preview.png"}',
+        },
+      }],
+    },
+    {
+      role: 'tool',
+      tool_call_id: 'call-image',
+      name: 'view_image',
+      content: 'Image attached.',
+    },
+    {
+      role: 'user',
+      content: [{
+        type: 'image_url',
+        image_url: {
+          url: 'data:image/png;base64,/w==',
+        },
+      }],
+    },
+  ]);
+});
+
+test('keeps all parallel tool results before replaying their images', () => {
+  const messages = [
+    {
+      role: vscodeMock.LanguageModelChatMessageRole.Assistant,
+      name: undefined,
+      content: [
+        new LanguageModelToolCallPart('call-1', 'view_image', { filePath: 'first.png' }),
+        new LanguageModelToolCallPart('call-2', 'view_image', { filePath: 'second.png' }),
+      ],
+    },
+    {
+      role: vscodeMock.LanguageModelChatMessageRole.User,
+      name: undefined,
+      content: [
+        new LanguageModelToolResultPart('call-1', [
+          new LanguageModelDataPart(new Uint8Array([1]), 'image/png'),
+        ]),
+        new LanguageModelToolResultPart('call-2', [
+          new LanguageModelDataPart(new Uint8Array([2]), 'image/png'),
+        ]),
+      ],
+    },
+  ];
+
+  const converted = convertMessages(messages, {});
+
+  assert.deepEqual(converted.map(message => message.role), [
+    'assistant',
+    'tool',
+    'tool',
+    'user',
+  ]);
+  assert.equal(converted[3].content.length, 2);
+});
+
+test('describes unknown binary tool results instead of failing the request', () => {
+  const messages = [
+    {
+      role: vscodeMock.LanguageModelChatMessageRole.Assistant,
+      name: undefined,
+      content: [
+        new LanguageModelToolCallPart('call-binary', 'read_asset', { path: 'asset.bin' }),
+      ],
+    },
+    {
+      role: vscodeMock.LanguageModelChatMessageRole.User,
+      name: undefined,
+      content: [
+        new LanguageModelToolResultPart('call-binary', [
+          new LanguageModelDataPart(new Uint8Array([1, 2, 3]), 'application/octet-stream'),
+        ]),
+      ],
+    },
+  ];
+
+  const converted = convertMessages(messages, {});
+
+  assert.equal(
+    converted[1].content,
+    '[Binary tool result omitted: application/octet-stream, 3 bytes]'
+  );
+});
+
 test('converts assistant tool calls and following tool results', () => {
   const messages = [
     {

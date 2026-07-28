@@ -13,10 +13,13 @@ export type AnthropicThinkingMode = 'auto' | 'enabled' | 'disabled';
 export type EditToolName = 'find-replace' | 'multi-find-replace' | 'apply-patch' | 'code-rewrite';
 export type ProviderApiStyle = 'chat' | 'responses' | 'anthropic';
 export type ToolChoiceMode = 'auto' | 'required' | 'none' | 'omit';
+export type ImageDetail = 'low' | 'high' | 'auto' | 'original';
+
+export const DEFAULT_IMAGE_DETAIL: ImageDetail = 'high';
 
 export type ResponsesContentPart =
   | { type: 'input_text'; text: string }
-  | { type: 'input_image'; image_url: string; detail?: 'low' | 'high' | 'auto' | 'original' }
+  | { type: 'input_image'; image_url: string; detail?: ImageDetail }
   | { type: 'output_text'; text: string };
 
 export type ResponsesInputItem =
@@ -97,6 +100,8 @@ export interface ModelConfig {
   supportsToolCalling: boolean;
   /** Whether the model supports image/vision inputs */
   supportsVision?: boolean;
+  /** Image detail level sent to OpenAI-compatible vision endpoints */
+  imageDetail?: ImageDetail;
   /** Whether the model supports video attachments */
   supportsVideo?: boolean;
   /** Whether the model supports non-image file attachments */

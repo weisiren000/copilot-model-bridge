@@ -12,7 +12,7 @@
   <a href="https://marketplace.visualstudio.com/items?itemName=weisiren.cmb-copilot-model-bridge">
     <img src="https://img.shields.io/badge/VS%20Code-Marketplace-007ACC?style=flat-square&logo=visualstudiocode&logoColor=white" alt="VS Code Marketplace">
   </a>
-  <img src="https://img.shields.io/badge/Version-1.1.6-4C8BF5?style=flat-square" alt="Version 1.1.6">
+  <img src="https://img.shields.io/badge/Version-1.1.7-4C8BF5?style=flat-square" alt="Version 1.1.7">
   <img src="https://img.shields.io/badge/VS%20Code-%5E1.115.0-007ACC?style=flat-square" alt="VS Code 1.115.0+">
   <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
 </p>
@@ -35,6 +35,13 @@ Copilot Model Bridge registers your configured models in the Copilot Chat model 
 - Configure reasoning effort and preserve reasoning across multi-turn requests
 - Use native thinking parts when the host exposes them, with stable DataPart preservation and replay as the fallback
 - Use a visual config manager or command palette wizards
+
+## v1.1.7 Highlights
+
+- Fixed image tool results being serialized into massive text payloads that exhausted long-task context windows
+- Replayed image tool results as real multimodal input while preserving valid parallel tool-call ordering
+- Added image-aware and CJK-aware input token estimation with preflight context-limit checks
+- Added per-model image detail configuration for `low`, `high`, `auto`, and `original`
 
 ## v1.1.6 Highlights
 

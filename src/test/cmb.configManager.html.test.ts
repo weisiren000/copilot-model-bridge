@@ -101,6 +101,22 @@ test('renders model modal with context window, output, and calculated input fiel
   assert.doesNotMatch(html, /id="dialog-max-input"/);
 });
 
+test('renders image detail controls for new and existing models', () => {
+  const html = renderConfigManagerHtml(FIXTURE);
+  const dialogSource = readFileSync(join(
+    process.cwd(),
+    'src/webview/configManager/cmb.configManager.dialogModel.js'
+  ), 'utf8');
+  const inspectorSource = readFileSync(join(
+    process.cwd(),
+    'src/webview/configManager/cmb.configManager.inspectorPreview.js'
+  ), 'utf8');
+
+  assert.match(html, /id="dialog-image-detail"/);
+  assert.match(dialogSource, /CMB\.el\('dialog-image-detail'\)\.value/);
+  assert.match(inspectorSource, /data-key="imageDetail"/);
+});
+
 test('provides an xAI Grok preset using the Responses API', () => {
   const source = readFileSync(join(
     process.cwd(),

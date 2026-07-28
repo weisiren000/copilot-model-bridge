@@ -9,6 +9,10 @@ test('estimates string tokens with the text heuristic', () => {
   assert.equal(estimateStringTokens('123456789'), 3);
 });
 
+test('does not undercount CJK text with the ASCII heuristic', () => {
+  assert.equal(estimateStringTokens('正在检查上下文'), 7);
+});
+
 test('estimates text message parts with the text heuristic', () => {
   assert.equal(estimateChatMessageTokens([
     { type: 'text', text: '12345678' },
@@ -19,6 +23,14 @@ test('adds fixed token cost for image parts', () => {
   assert.equal(estimateChatMessageTokens([
     { type: 'image', byteLength: 128 },
   ]), 1024);
+});
+
+test('estimates PNG image tokens from pixel dimensions', () => {
+  assert.equal(estimateChatMessageTokens([{
+    type: 'data',
+    mimeType: 'image/png',
+    data: createPngHeader(2048, 1024),
+  }]), 2048);
 });
 
 test('estimates JSON and plain text data parts as decoded text', () => {
@@ -62,3 +74,12 @@ test('estimates mixed messages without ignoring non-text parts', () => {
     { type: 'toolCall', name: 'edit', input: { ok: true } },
   ]), 1029);
 });
+
+function createPngHeader(width: number, height: number): Uint8Array {
+  const data = new Uint8Array(24);
+  data.set([137, 80, 78, 71, 13, 10, 26, 10]);
+  const view = new DataView(data.buffer);
+  view.setUint32(16, width);
+  view.setUint32(20, height);
+  return data;
+}
